@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  bilara-backend:
+    build:
+      context: ./backend
+      dockerfile: backend.dockerfile
+    container_name: bilara-backend
+    ports:
+      - 8080:8080
+    networks:
+      - bilara-network
+    volumes:
+      - ./backend/app:/app/
+    env_file:
+      - .env
+
+networks:
+  bilara-network:
+    driver: bridge

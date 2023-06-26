@@ -1,16 +1,15 @@
-FROM python3.11.3
+FROM python:3.11.3
 
-WORKDIR /app/
-
-# Install Poetry
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python && \
-    cd /usr/local/bin && \
-    ln -s /opt/poetry/bin/poetry && \
-    poetry config virtualenvs.create false
+# Upgrade pip and install Poetry
+RUN pip install --upgrade pip && \
+    pip install poetry
 
 # Copy poetry.lock* in case it doesn't exist in the repo
 COPY ./app/pyproject.toml ./app/poetry.lock* /app/
 
+WORKDIR /app/
+RUN /usr/local/bin/poetry install
 
-COPY ./app /app
-ENV PYTHONPATH=/app
+COPY ./app ./.
+
+CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
