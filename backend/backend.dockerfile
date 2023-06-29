@@ -1,5 +1,7 @@
 FROM python:3.11.3
 
+ENV PYTHONUNBUFFERED 1
+
 # Upgrade pip and install Poetry
 RUN pip install --upgrade pip && \
     pip install poetry
@@ -9,7 +11,16 @@ COPY ./app/pyproject.toml ./app/poetry.lock* /app/
 
 WORKDIR /app/
 RUN /usr/local/bin/poetry install
+RUN /usr/local/bin/poetry add package_name
+
+
 
 COPY ./app ./.
 
-CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+RUN apt-get update && \
+    apt-get install -y git && \
+    mkdir -p /app/checkouts
+
+RUN chmod +x /app/scripts/entrypoint.sh
+
+CMD ["/app/scripts/entrypoint.sh"]

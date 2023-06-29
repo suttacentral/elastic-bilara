@@ -10,7 +10,8 @@ services:
     networks:
       - bilara-network
     volumes:
-      - ./backend/app:/app/
+      - ./backend/app:/app
+      - ./backend/app/checkouts:/app/checkouts
     env_file:
       - .env
 
