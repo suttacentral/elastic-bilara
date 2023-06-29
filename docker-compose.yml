@@ -6,12 +6,12 @@ services:
       dockerfile: backend.dockerfile
     container_name: bilara-backend
     ports:
-      - 8080:8080
+      - ${DOCKER_BACKEND_PORT}:${DOCKER_BACKEND_PORT}
     networks:
       - bilara-network
     volumes:
-      - ./backend/app:/app
-      - ./backend/app/checkouts:/app/checkouts
+      - ./backend:/app
+      - ./backend/checkouts:/app/checkouts
     env_file:
       - .env
 
