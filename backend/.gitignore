@@ -1,0 +1,6 @@
+__pycache__
+app.egg-info
+.mypy_cache
+.coverage
+htmlcov
+ca.crt

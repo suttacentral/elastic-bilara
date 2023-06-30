@@ -1,0 +1,124 @@
+version: '3.8'
+services:
+  bilara-backend:
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    build:
+      context: ./backend
+      dockerfile: backend.dockerfile
+    container_name: bilara-backend
+    ports:
+      - ${DOCKER_BACKEND_PORT}:${DOCKER_BACKEND_PORT}
+    networks:
+      - bilara-network
+    volumes:
+      - ./backend:/app
+      - ./backend/checkouts:/app/checkouts
+    env_file:
+      - .env
+
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: elasticsearch_setup
+    networks:
+      - bilara-network
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+      - ./scripts/elasticsearch_setup.sh:/scripts/elasticsearch_setup.sh
+    user: "0"
+    entrypoint: ["/bin/bash", "/scripts/elasticsearch_setup.sh"]
+    healthcheck:
+      test: [ "CMD-SHELL", "[ -f config/certs/elasticsearch/elasticsearch.crt ]" ]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+    env_file:
+      - .env
+
+
+  elasticsearch:
+    depends_on:
+      setup:
+        condition: service_healthy
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: elasticsearch
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - ${ES_REQUESTS_PORT}:${ES_REQUESTS_PORT}
+    networks:
+      - bilara-network
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - node.name=elasticsearch
+      - cluster.name=${CLUSTER_NAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/elasticsearch/elasticsearch.key
+      - xpack.security.http.ssl.certificate=certs/elasticsearch/elasticsearch.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/elasticsearch/elasticsearch.key
+      - xpack.security.transport.ssl.certificate=certs/elasticsearch/elasticsearch.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${LICENSE}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:${ES_REQUESTS_PORT} | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    env_file:
+      - .env
+
+  kibana:
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    container_name: kibana
+    ports:
+      - ${KIBANA_PORT}:${KIBANA_PORT}
+    networks:
+      - bilara-network
+    volumes:
+      - certs:/usr/share/kibana/config/certs
+      - kibana_data:/usr/share/kibana/data
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=${ES_URL}:${ES_REQUESTS_PORT}
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:${KIBANA_PORT} | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    env_file:
+      - .env
+
+
+volumes:
+  certs:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  kibana_data:
+    driver: local
+
+networks:
+  bilara-network:
+    driver: bridge
