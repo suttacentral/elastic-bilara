@@ -7,7 +7,13 @@ clean:
 	@$(COMPOSE) down -v
 	@rm ./backend/ca.crt
 
-app:
-	@$(COMPOSE) up
+up:
+	@$(COMPOSE) up -d
 	@make copy_cert
 
+build:
+	@$(COMPOSE) up --build -d
+	@make copy_cert
+
+down:
+	@$(COMPOSE) down
