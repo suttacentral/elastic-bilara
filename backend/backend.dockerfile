@@ -12,13 +12,11 @@ COPY ./pyproject.toml ./poetry.lock* /app/
 WORKDIR /app/
 RUN /usr/local/bin/poetry install
 
-
-
-COPY . .
-
 RUN apt-get update && \
     apt-get install -y git && \
     mkdir -p checkouts/
+
+COPY . .
 
 RUN chmod +x /app/scripts/entrypoint.sh
 
