@@ -1,8 +1,8 @@
-import os
 import secrets
-from typing import Any, Dict, List, Optional, Union
+from pathlib import Path
+from typing import List, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, EmailStr, HttpUrl, PostgresDsn, validator
+from pydantic import AnyHttpUrl, BaseSettings, validator
 
 
 class Settings(BaseSettings):
@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     SERVER_HOST: AnyHttpUrl = "http://localhost"
     PROJECT_NAME: str = "bilara-v2"
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    WORK_DIR: Path = Path(__file__).parent.parent.parent / "checkouts" / "unpublished"
+    ELASTIC_USERNAME: str
+    ELASTIC_PASSWORD: str
+    ES_REQUESTS_PORT: int
+    ES_URL: str
+    ES_SCHEME: str
+    ES_INDEX: str
+    ES_HOST: str
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
@@ -23,6 +31,7 @@ class Settings(BaseSettings):
 
     class Config:
         case_sensitive = True
+        env_file = ".env"
 
 
 settings = Settings()
