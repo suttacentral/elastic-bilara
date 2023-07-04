@@ -1,7 +1,9 @@
-from typing import List, Generator
 from pathlib import Path
-from elasticsearch import Elasticsearch, helpers
+from typing import Any, Generator, List
+
 from app.core.config import settings
+from elasticsearch import Elasticsearch, helpers
+
 from . import utils
 
 
@@ -43,7 +45,7 @@ class Search:
     def _populate_index(self, index: str) -> None:
         if self._is_index_empty(index):
             for data in self._yield_data():
-                actions = [{"_index": index, "_source": document} for document in data]
+                actions: list[dict[str, Any]] = [{"_index": index, "_source": document} for document in data]
                 helpers.bulk(
                     self._search,
                     actions,
@@ -89,7 +91,7 @@ class Search:
 
     def _yield_data(
         self,
-    ) -> Generator[dict[str, str], None, None]:
+    ) -> Generator[list, None, None]:
         buffer: list = []
         for file_path in utils.yield_file_path(settings.WORK_DIR):
             buffer.append(self._process_file(file_path))
@@ -99,14 +101,10 @@ class Search:
         if buffer:
             yield buffer
 
-    def _process_file(
-        self, file_path: Path
-    ) -> dict[str, str | bool | None | list[dict[str, str]]]:
+    def _process_file(self, file_path: Path) -> dict[str, str | bool | None | list[dict[str, str]]]:
         prefix: str = utils.get_prefix(file_path)
         filename: str = utils.get_filename(file_path)
-        segments: list[dict[str, str]] = self._prepare_json_data(
-            utils.get_json_data(file_path)
-        )
+        segments: list[dict[str, str]] = self._prepare_json_data(utils.get_json_data(file_path))
         muid: str = utils.get_muid(file_path)
         is_root: bool = utils.is_root(file_path)
         root_path: Path | None = utils.find_root_path(file_path)
