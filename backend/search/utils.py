@@ -10,7 +10,7 @@ def get_ca_cert_path() -> Path:
     return Path(__file__).parent.parent / "ca.crt"
 
 
-def get_json_data(file_path: Path) -> dict[str, str]:
+def get_json_data(file_path: Path) -> dict[str, str] | list[dict[str, str]]:
     with open(file_path, "r") as f:
         return json.load(f)
 
@@ -28,9 +28,7 @@ def is_root_in_path(file_path: Path) -> bool:
 
 
 def is_root(file_path: Path) -> bool:
-    return get_filename(file_path).split("_")[1].split("-")[
-        0
-    ] == "root" and is_root_in_path(file_path)
+    return get_filename(file_path).split("_")[1].split("-")[0] == "root" and is_root_in_path(file_path)
 
 
 def find_root_path(file_path: Path) -> Path | None:
@@ -48,9 +46,7 @@ def find_root_path(file_path: Path) -> Path | None:
 
 
 def get_muid(file_path: Path) -> str:
-    after_unpublished: tuple[str] = file_path.parts[
-        file_path.parts.index("unpublished") + 1 :
-    ]
+    after_unpublished: tuple[str] = file_path.parts[file_path.parts.index("unpublished") + 1 :]
     return "-".join(after_unpublished[:3])
 
 
