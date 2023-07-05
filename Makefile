@@ -9,7 +9,7 @@ clean:
 
 populate_elastic:
 	@echo Populating Elasticsearch with data..
-	@python -c "from search.search import Search; Search()"
+	@$(COMPOSE) exec bilara-backend python -c "from search.search import Search; Search()"
 	@echo Elasticsearch has been populated!
 
 up:

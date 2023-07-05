@@ -6,11 +6,13 @@ ENV PYTHONUNBUFFERED 1
 RUN pip install --upgrade pip && \
     pip install poetry
 
+RUN poetry config virtualenvs.create false
+
 # Copy poetry.lock* in case it doesn't exist in the repo
 COPY ./pyproject.toml ./poetry.lock* /app/
 
 WORKDIR /app/
-RUN /usr/local/bin/poetry install
+RUN poetry install --no-interaction --no-ansi --no-root
 
 RUN apt-get update && \
     apt-get install -y git && \
