@@ -1,4 +1,5 @@
 import secrets
+from datetime import timedelta
 from pathlib import Path
 from typing import List, Union
 
@@ -20,6 +21,12 @@ class Settings(BaseSettings):
     ES_SCHEME: str
     ES_INDEX: str
     ES_HOST: str
+    GITHUB_CLIENT_ID: str
+    GITHUB_CLIENT_SECRET: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: timedelta = timedelta(minutes=30)
+    REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
+    ALGORITHM: str = "HS256"
+    USERS_FILE: Path = Path(__file__).parent.parent.parent / "users.json"
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:

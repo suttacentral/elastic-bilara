@@ -9,11 +9,12 @@ python = "3.11.3"
 uvicorn = "^0.22.0"
 fastapi = "^0.98.0"
 httpx = "^0.24.1"
-pydantic = "^1.10.9"
+pydantic = {version="^1.10.9", extras=["email"]}
 gunicorn = "^20.1.0"
 pytest = "^7.4.0"
 elasticsearch = "8.8.0"
 python-dotenv = "^1.0.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 
 [tool.poetry.dev-dependencies]
 black = "^23.3.0"
