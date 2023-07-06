@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta
 
+import httpx
 from app.core.config import settings
 from app.services.auth.schema import TokenData
+from app.services.users.populate_data import add_user_to_users_json
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from httpx import HTTPStatusError, Response
 from jose import JWTError, jwt
 from starlette import status
 
@@ -49,3 +52,37 @@ def get_credentials_exception():
 def check_if_github_id_and_username_are_provided(github_id: str | None, username: str | None) -> None:
     if github_id is None or username is None:
         raise get_credentials_exception()
+
+
+async def get_github_data(code: str) -> dict[str, str | int]:
+    params: dict[str, str] = {
+        "client_id": settings.GITHUB_CLIENT_ID,
+        "client_secret": settings.GITHUB_CLIENT_SECRET,
+        "code": code,
+    }
+    headers: dict[str, str] = {"Accept": "application/json"}
+    async with httpx.AsyncClient() as client:
+        try:
+            response: Response = await client.post(
+                url="https://github.com/login/oauth/access_token",
+                params=params,
+                headers=headers,
+            )
+            response.raise_for_status()
+            data: dict = response.json()
+            token_type: str = data.get("token_type")
+            access_token: str = data.get("access_token")
+            headers.update({"Authorization": f"{token_type} {access_token}"})
+            response: Response = await client.get("https://api.github.com/user", headers=headers)
+            response.raise_for_status()
+            user_data: dict = response.json()
+            data = {
+                "github_id": user_data.get("id"),
+                "username": user_data.get("login"),
+                "email": user_data.get("email"),
+                "avatar_url": user_data.get("avatar_url"),
+            }
+        except HTTPStatusError as e:
+            return {"error": str(e)}
+    add_user_to_users_json(data)
+    return data
