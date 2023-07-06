@@ -10,11 +10,11 @@ def can_edit_translation(github_id: int, muid: str) -> bool:
     if muid.startswith("translation") and is_username_in_muid(user.username, muid):
         return True
     projects: list[dict] = get_json_data(settings.WORK_DIR / "_project-v2.json")
-    if user.role == Roles.PROOFREADER:
+    if user.role == Roles.PROOFREADER.value:
         return False
-    if user.role == Roles.ADMIN:
+    if user.role == Roles.ADMIN.value:
         return True
-    if user.role == Roles.TRANSLATOR:
+    if user.role == Roles.TRANSLATOR.value:
         if any(owns_project(user.username, project, muid) for project in projects):
             return True
     return False
