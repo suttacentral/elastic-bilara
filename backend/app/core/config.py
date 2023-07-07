@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = secrets.token_urlsafe(32)
     SERVER_NAME: str = "bilara-v2"
     SERVER_HOST: AnyHttpUrl = "http://localhost"
+    DOCKER_BACKEND_PORT: str = "8080"
     PROJECT_NAME: str = "bilara-v2"
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
     WORK_DIR: Path = Path(__file__).parent.parent.parent / "checkouts" / "unpublished"
@@ -27,6 +28,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: timedelta = timedelta(days=7)
     ALGORITHM: str = "HS256"
     USERS_FILE: Path = Path(__file__).parent.parent.parent / "users.json"
+    GITHUB_ACCESS_TOKEN_URL: AnyHttpUrl = "https://github.com/login/oauth/access_token"
+    GITHUB_USER_URL: AnyHttpUrl = "https://api.github.com/user"
+    GITHUB_AUTHORIZE_URL: AnyHttpUrl = "https://github.com/login/oauth/authorize"
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:

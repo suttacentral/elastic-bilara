@@ -1,66 +1,57 @@
 from typing import Any
 
 from app.core.config import settings
+from app.services.auth import utils
+from app.services.auth.models import AccessTokenOut, TokenOut
 from app.services.auth.schema import RefreshToken
-from app.services.auth.utils import (
-    check_if_github_id_and_username_are_provided,
-    create_jwt_token,
-    get_credentials_exception,
-    get_github_data,
-)
-from app.services.users.permissions import can_edit_translation
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
-from starlette.responses import RedirectResponse
 
 router = APIRouter()
 
 
-@router.get("/login")
+@router.get("/login", status_code=status.HTTP_302_FOUND)
 async def login() -> RedirectResponse:
     return RedirectResponse(
-        url=f"https://github.com/login/oauth/authorize?client_id={settings.GITHUB_CLIENT_ID}",
-        status_code=302,
+        url=f"{settings.GITHUB_AUTHORIZE_URL}?client_id={settings.GITHUB_CLIENT_ID}",
+        status_code=status.HTTP_302_FOUND,
     )
 
 
-@router.get("/token")
-async def token(code: str) -> dict[str, str]:
-    data: dict[str, str] = await get_github_data(code)
+@router.get("/token", response_model=AccessTokenOut)
+async def token(code: str) -> AccessTokenOut:
+    data: dict[str, str] = await utils.get_github_data(code)
     if "error" in data:
-        return data
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=data)
 
     token_data: dict[str, str] = {
         "sub": data["github_id"],
         "username": data["username"],
     }
-    access_token: str = create_jwt_token(
+    access_token: str = utils.create_jwt_token(
         data=token_data,
         expires_delta=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
-    refresh_token: str = create_jwt_token(
+    refresh_token: str = utils.create_jwt_token(
         data=token_data,
         expires_delta=settings.REFRESH_TOKEN_EXPIRE_DAYS,
         token_type="refresh",
     )
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-    }
+    return AccessTokenOut(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.post("/refresh")
-async def refresh(refresh_token: RefreshToken) -> dict[str, str]:
+@router.post("/refresh", response_model=TokenOut)
+async def refresh(refresh_token: RefreshToken) -> TokenOut:
     try:
         payload: dict[str, Any] = jwt.decode(refresh_token.refresh_token, settings.SECRET_KEY, settings.ALGORITHM)
         github_id: str = payload.get("sub")
         username: str = payload.get("username")
-        check_if_github_id_and_username_are_provided(github_id, username)
-        new_access_token = create_jwt_token(
+        utils.check_if_github_id_and_username_are_provided(github_id, username)
+        new_access_token = utils.create_jwt_token(
             data={"sub": github_id, "username": username},
             expires_delta=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         )
     except JWTError:
-        raise get_credentials_exception()
-    return {"access_token": new_access_token, "token_type": "bearer"}
+        raise utils.get_credentials_exception()
+    return TokenOut(access_token=new_access_token)

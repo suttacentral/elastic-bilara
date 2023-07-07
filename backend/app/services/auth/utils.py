@@ -3,12 +3,11 @@ from datetime import datetime, timedelta
 import httpx
 from app.core.config import settings
 from app.services.auth.schema import TokenData
-from app.services.users.populate_data import add_user_to_users_json
-from fastapi import Depends, HTTPException
+from app.services.users.utils import add_user_to_users_json
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from httpx import HTTPStatusError, Response
 from jose import JWTError, jwt
-from starlette import status
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -17,9 +16,9 @@ def create_jwt_token(*, data: dict, expires_delta: timedelta | None = None, toke
     to_encode = data.copy()
     if expires_delta is None:
         if token_type == "access":
-            expires_delta = timedelta(minutes=15)
+            expires_delta = settings.ACCESS_TOKEN_EXPIRE_MINUTES
         elif token_type == "refresh":
-            expires_delta = timedelta(days=7)
+            expires_delta = settings.REFRESH_TOKEN_EXPIRE_DAYS
         else:
             raise ValueError(f"Unknown token type {token_type}")
     expire = datetime.utcnow() + expires_delta
@@ -29,7 +28,7 @@ def create_jwt_token(*, data: dict, expires_delta: timedelta | None = None, toke
     return encoded_jwt
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, settings.ALGORITHM)
         github_id: str = payload.get("sub")
@@ -41,7 +40,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return token_data
 
 
-def get_credentials_exception():
+def get_credentials_exception() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -64,7 +63,7 @@ async def get_github_data(code: str) -> dict[str, str | int]:
     async with httpx.AsyncClient() as client:
         try:
             response: Response = await client.post(
-                url="https://github.com/login/oauth/access_token",
+                url=settings.GITHUB_ACCESS_TOKEN_URL,
                 params=params,
                 headers=headers,
             )
@@ -73,7 +72,7 @@ async def get_github_data(code: str) -> dict[str, str | int]:
             token_type: str = data.get("token_type")
             access_token: str = data.get("access_token")
             headers.update({"Authorization": f"{token_type} {access_token}"})
-            response: Response = await client.get("https://api.github.com/user", headers=headers)
+            response: Response = await client.get(settings.GITHUB_USER_URL, headers=headers)
             response.raise_for_status()
             user_data: dict = response.json()
             data = {

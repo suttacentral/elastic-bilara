@@ -1,5 +1,5 @@
 from app.core.config import settings
-from app.services.users.roles import Roles
+from app.services.users.roles import Role
 from app.services.users.schema import UserData
 from app.services.users.utils import get_user, is_username_in_muid
 from search.utils import get_json_data
@@ -7,14 +7,14 @@ from search.utils import get_json_data
 
 def can_edit_translation(github_id: int, muid: str) -> bool:
     user: UserData = get_user(github_id)
+    if user.role == Role.ADMIN.value:
+        return True
+    if user.role == Role.PROOFREADER.value:
+        return False
     if muid.startswith("translation") and is_username_in_muid(user.username, muid):
         return True
     projects: list[dict] = get_json_data(settings.WORK_DIR / "_project-v2.json")
-    if user.role == Roles.PROOFREADER.value:
-        return False
-    if user.role == Roles.ADMIN.value:
-        return True
-    if user.role == Roles.TRANSLATOR.value:
+    if user.role == Role.TRANSLATOR.value:
         if any(owns_project(user.username, project, muid) for project in projects):
             return True
     return False
