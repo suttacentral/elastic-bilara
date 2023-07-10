@@ -126,3 +126,28 @@ class Search:
 
     def _is_index_empty(self, index: str) -> bool:
         return self._search.count(index=index)["count"] == 0
+
+    def _build_unique_query(self, field: str = None, prefix: str = None):
+        query = {
+            "size": 0,
+            "aggs": {
+                "unique_data": {
+                    "terms": {
+                        "field": field,
+                        "size": self._search.count(index=settings.ES_INDEX)["count"],
+                        "order": {
+                            "_key": "asc",
+                        },
+                    }
+                }
+            },
+        }
+        if prefix:
+            query["query"] = {"prefix": {field: prefix}}
+        return query
+
+    def find_unique_data(self, field: str = None, prefix: str = None):
+        results = self._search.search(index=settings.ES_INDEX, body=self._build_unique_query(field, prefix))[
+            "aggregations"
+        ]["unique_data"]["buckets"]
+        return [result["key"] for result in results]
