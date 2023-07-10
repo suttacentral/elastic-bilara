@@ -7,6 +7,8 @@ import pytest_asyncio
 from _pytest.fixtures import FixtureRequest
 from app.core.config import settings
 from app.main import app
+from app.services.auth import utils
+from app.services.auth.schema import TokenData
 from app.services.users.roles import Role
 from app.services.users.schema import UserData
 from app.tests.services.users.factories import UserFactory
@@ -18,7 +20,7 @@ from httpx import AsyncClient
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(
         app=app,
-        base_url=f"{settings.SERVER_HOST}:{settings.DOCKER_BACKEND_PORT}{settings.API_V1_STR}",
+        base_url=f"{settings.SERVER_BACKEND_HOST}:{settings.DOCKER_BACKEND_PORT}{settings.API_V1_STR}",
     ) as ac:
         yield ac
 
@@ -99,3 +101,13 @@ def users_file(tmp_path: Path, request: type[FixtureRequest]) -> Path:
         users = users_mareker.args[0]
         file.write_text(json.dumps(users))
     return file
+
+
+@pytest.fixture
+def mock_get_current_user(user: UserData) -> Generator[None, Any, None]:
+    async def _mock_get_current_user_function() -> TokenData:
+        return TokenData(github_id=str(user.github_id), username=user.username)
+
+    app.dependency_overrides[utils.get_current_user] = _mock_get_current_user_function
+    yield
+    app.dependency_overrides = {}
