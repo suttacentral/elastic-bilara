@@ -12,7 +12,7 @@ from app.services.users.utils import (
 
 class TestUserUtils:
     @patch("app.services.users.utils.get_json_data")
-    def test_get_user(self, mock_get_json_data, users, github_data):
+    def test_get_user(self, mock_get_json_data, users, github_data) -> None:
         mock_get_json_data.return_value = [
             user.dict()
             for user in users(
@@ -44,7 +44,7 @@ class TestUserUtils:
         assert user.email == "test3@test.com"
 
     @patch("app.services.users.utils.get_json_data")
-    def test_get_user_invalid_id(self, mock_get_json_data, users, github_data):
+    def test_get_user_invalid_id(self, mock_get_json_data, users, github_data) -> None:
         mock_get_json_data.return_value = [user.dict() for user in users(n=3)]
 
         with pytest.raises(IndexError):
@@ -60,28 +60,28 @@ class TestUserUtils:
             get_user(github_data(github_id="invalid")["github_id"])
 
     @patch("app.services.users.utils.get_json_data")
-    def test_get_user_file_does_not_exist(self, mock_get_json_data, github_data):
+    def test_get_user_file_does_not_exist(self, mock_get_json_data, github_data) -> None:
         mock_get_json_data.side_effect = FileNotFoundError
 
         with pytest.raises(FileNotFoundError):
             get_user(github_data()["github_id"])
 
     @patch("app.services.users.utils.get_json_data")
-    def test_get_user_user_data_corrupted(self, mock_get_json_data, github_data):
+    def test_get_user_user_data_corrupted(self, mock_get_json_data, github_data) -> None:
         mock_get_json_data.side_effect = KeyError
         with pytest.raises(KeyError):
             get_user(github_data()["github_id"])
 
-    def test_is_user_in_muid_valid(self):
+    def test_is_user_in_muid_valid(self) -> None:
         assert is_username_in_muid("username", "translation-en-username")
 
-    def test_is_user_in_muid_invalid(self):
+    def test_is_user_in_muid_invalid(self) -> None:
         assert not is_username_in_muid("username", "translation-en-test")
         assert not is_username_in_muid("username", "translation-en-USERNAME")
         assert not is_username_in_muid("username", "")
         assert not is_username_in_muid("", "translation-en-username")
 
-    def test_check_creator_github_handle_in_list(self, github_data, projects, publications):
+    def test_check_creator_github_handle_in_list(self, github_data, projects, publications) -> None:
         username = github_data()["username"]
         assert any(username in project["creator_github_handle"] for project in projects(creator_github_handle=username))
         assert any(
@@ -89,7 +89,7 @@ class TestUserUtils:
             for publication in publications(creator_github_handle=username)
         )
 
-    def test_check_creator_github_handle_not_in_list(self, github_data, projects, publications):
+    def test_check_creator_github_handle_not_in_list(self, github_data, projects, publications) -> None:
         username = github_data(username="invalid")["username"]
         assert not any(username in project["creator_github_handle"] for project in projects())
         assert not any(username in publication["creator_github_handle"] for publication in publications())
@@ -170,7 +170,7 @@ class TestUserUtils:
         user_data,
         expected_result,
         users_file,
-    ):
+    ) -> None:
         settings.USERS_FILE = users_file
         mock_get_json_data.return_value = json.loads(settings.USERS_FILE.read_text())
         mock_get_user.return_value = {
@@ -214,7 +214,7 @@ class TestUserUtils:
         user_data,
         expected_result,
         users_file,
-    ):
+    ) -> None:
         settings.USERS_FILE = users_file
         mock_get_json_data.return_value = json.loads(settings.USERS_FILE.read_text())
 

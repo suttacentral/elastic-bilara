@@ -6,11 +6,11 @@ from app.services.users.roles import Role
 
 
 class TestUserPermissions:
-    def test_owns_project_valid_muid(self, user, project):
+    def test_owns_project_valid_muid(self, user, project) -> None:
         project = project(creator_github_handle=user.username)
         assert owns_project(user.username, project, project["translation_muids"])
 
-    def test_owns_project_invalid_muid(self, user, project):
+    def test_owns_project_invalid_muid(self, user, project) -> None:
         project = project(creator_github_handle=user.username)
         assert not owns_project(user.username, project, "invalid-muid")
 
@@ -26,7 +26,7 @@ class TestUserPermissions:
         ],
     )
     @patch("app.services.users.permissions.get_user")
-    def test_can_edit_translation_based_on_role(self, mock_get_user, user, muids, role, expected):
+    def test_can_edit_translation_based_on_role(self, mock_get_user, user, muids, role, expected) -> None:
         user.role = role
         mock_get_user.return_value = user
 
@@ -34,7 +34,7 @@ class TestUserPermissions:
 
     @patch("app.services.users.permissions.get_user")
     @patch("app.services.users.permissions.is_username_in_muid")
-    def test_can_edit_translation_username_in_muid(self, mock_is_user_in_muid, mock_get_user, user, muids):
+    def test_can_edit_translation_username_in_muid(self, mock_is_user_in_muid, mock_get_user, user, muids) -> None:
         mock_is_user_in_muid.return_value = True
         mock_get_user.return_value = user
         assert can_edit_translation(user.github_id, muids[0])
@@ -61,7 +61,7 @@ class TestUserPermissions:
         projects,
         owns_project_return_value,
         expected,
-    ):
+    ) -> None:
         mock_owns_project.return_value = owns_project_return_value
         mock_is_user_in_muid.return_value = False
         mock_get_user.return_value = user

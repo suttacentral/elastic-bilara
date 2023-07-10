@@ -16,7 +16,7 @@ class TestAuthUtils:
         ],
     )
     @freeze_time(datetime.utcnow())
-    def test_create_jwt_token(self, token_type, exp):
+    def test_create_jwt_token(self, token_type, exp) -> None:
         data = {"sub": "123", "username": "test"}
         token = create_jwt_token(data=data, token_type=token_type)
         decoded_token = jwt.decode(token, settings.SECRET_KEY, settings.ALGORITHM)
@@ -27,7 +27,7 @@ class TestAuthUtils:
         assert len(token.split(".")) == 3
         assert decoded_token["exp"] == int(expected_exp.timestamp())
 
-    def test_create_unknown_token_type(self):
+    def test_create_unknown_token_type(self) -> None:
         data = {"sub": "123", "username": "test"}
         token_type = "invalid"
         with pytest.raises(Exception) as e:
@@ -42,7 +42,7 @@ class TestAuthUtils:
         ],
     )
     @freeze_time(datetime.utcnow())
-    def test_token_expiry(self, token_type, exp):
+    def test_token_expiry(self, token_type, exp) -> None:
         data = {"sub": "123", "username": "test"}
         token = create_jwt_token(data=data, token_type=token_type)
         decoded_token = jwt.decode(token, settings.SECRET_KEY, settings.ALGORITHM)
