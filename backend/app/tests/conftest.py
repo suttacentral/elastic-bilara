@@ -104,8 +104,8 @@ def users_file(tmp_path: Path, request: type[FixtureRequest]) -> Path:
 
 
 @pytest.fixture
-def mock_get_current_user(user):
-    async def _mock_get_current_user_function():
+def mock_get_current_user(user: UserData) -> Generator[None, Any, None]:
+    async def _mock_get_current_user_function() -> TokenData:
         return TokenData(github_id=str(user.github_id), username=user.username)
 
     app.dependency_overrides[utils.get_current_user] = _mock_get_current_user_function
