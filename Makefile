@@ -20,6 +20,7 @@ up:
 build:
 	@$(COMPOSE) up --build -d
 	@make copy_cert
+	@sleep 60
 	@make populate_elastic
 
 down:

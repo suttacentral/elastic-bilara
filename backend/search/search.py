@@ -44,14 +44,29 @@ class Search:
 
     def _populate_index(self, index: str) -> None:
         if self._is_index_empty(index):
+            self._search.indices.put_settings(
+                index=index,
+                body={"index": {"refresh_interval": "180s", "number_of_replicas": 0}},
+            )
             for data in self._yield_data():
-                actions: list[dict[str, Any]] = [{"_index": index, "_source": document} for document in data]
+                actions: list[dict[str, Any]] = [
+                    {
+                        "_index": index,
+                        "_id": document["_id"],
+                        "_source": document["_source"],
+                    }
+                    for document in data
+                ]
                 helpers.bulk(
                     self._search,
                     actions,
                     chunk_size=self._batch_size,
                     raise_on_error=True,
                 )
+            self._search.indices.put_settings(
+                index=index,
+                body={"index": {"refresh_interval": "1s", "number_of_replicas": 1}},
+            )
 
     def _get_es_settings(self) -> dict:
         return {
@@ -102,6 +117,7 @@ class Search:
             yield buffer
 
     def _process_file(self, file_path: Path) -> dict[str, str | bool | None | list[dict[str, str]]]:
+        doc_id: str = utils.create_doc_id(file_path)
         prefix: str = utils.get_prefix(file_path)
         filename: str = utils.get_filename(file_path)
         segments: list[dict[str, str]] = self._prepare_json_data(utils.get_json_data(file_path))
@@ -109,13 +125,16 @@ class Search:
         is_root: bool = utils.is_root(file_path)
         root_path: Path | None = utils.find_root_path(file_path)
         return {
-            "file_path": str(file_path),
-            "prefix": prefix,
-            "filename": filename,
-            "segments": segments,
-            "muid": muid,
-            "is_root": is_root,
-            "root_path": str(root_path) if root_path else None,
+            "_id": doc_id,
+            "_source": {
+                "file_path": str(file_path),
+                "prefix": prefix,
+                "filename": filename,
+                "segments": segments,
+                "muid": muid,
+                "is_root": is_root,
+                "root_path": str(root_path) if root_path else None,
+            },
         }
 
     def _prepare_json_data(self, data: dict[str, str]) -> List[dict[str, str]]:
@@ -146,8 +165,48 @@ class Search:
             query["query"] = {"prefix": {field: prefix}}
         return query
 
+    def _scroll_search(self, query):
+        scroll = "1m"
+        size = 1000
+        response = self._search.search(index=settings.ES_INDEX, body=query, scroll=scroll, size=size)
+        old_scroll_id = response["_scroll_id"]
+        yield from response["hits"]["hits"]
+        while len(response["hits"]["hits"]):
+            response = self._search.scroll(scroll_id=old_scroll_id, scroll=scroll)
+            old_scroll_id = response["_scroll_id"]
+            yield from response["hits"]["hits"]
+
     def find_unique_data(self, field: str = None, prefix: str = None):
         results = self._search.search(index=settings.ES_INDEX, body=self._build_unique_query(field, prefix))[
             "aggregations"
         ]["unique_data"]["buckets"]
         return [result["key"] for result in results]
+
+    def get_root_paths(self, text: str, field: str = "muid") -> set[str]:
+        query = {"query": {"term": {field: text}}, "_source": ["root_path"]}
+        root_paths: set[str] = set()
+
+        for hit in self._scroll_search(query):
+            root_path = hit["_source"]["root_path"]
+            if root_path is not None:
+                root_paths.add(root_path)
+
+        return root_paths
+
+    def get_file_paths(self, muid: str, prefix: str = None, _type: str = "root_path") -> set[str]:
+        query = {
+            "query": {"bool": {"must": [{"term": {"muid": muid}}]}},
+            "_source": [_type],
+        }
+
+        if prefix is not None:
+            query["query"]["bool"]["must"].append({"match": {"prefix": prefix}})
+
+        paths: set[str] = set()
+
+        for hit in self._scroll_search(query):
+            path = hit["_source"][_type]
+            if path is not None:
+                paths.add(path)
+
+        return paths
