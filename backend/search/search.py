@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Generator, List
 
 from app.core.config import settings
-from elasticsearch import Elasticsearch, helpers
+from elasticsearch import Elasticsearch, RequestError, helpers
 
 from . import utils
 
@@ -210,3 +210,25 @@ class Search:
                 paths.add(path)
 
         return paths
+
+    def update_segments(self, file_path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
+        doc_id: str = utils.create_doc_id(file_path)
+        doc: dict[str, str | bool | None | list[dict[str, str]]] = self._search.get(index=settings.ES_INDEX, id=doc_id)[
+            "_source"
+        ]
+
+        segments_dict: dict[str, dict[str, str]] = {segment["uid"]: segment for segment in doc["segments"]}
+
+        for uid, new_segment in data.items():
+            if uid in segments_dict:
+                segments_dict[uid]["segment"] = new_segment
+            else:
+                segments_dict[uid] = {"uid": uid, "segment": new_segment}
+
+        doc["segments"] = list(segments_dict.values())
+
+        try:
+            self._search.index(index=settings.ES_INDEX, id=doc_id, body=doc)
+        except RequestError as e:
+            return False, e
+        return True, None
