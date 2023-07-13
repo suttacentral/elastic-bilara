@@ -1,7 +1,7 @@
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from elasticsearch import RequestError
 
 
 class TestProjects:
@@ -136,3 +136,111 @@ class TestProjects:
             "can_edit": can_edit,
             "data": data,
         }
+
+    @pytest.mark.asyncio
+    async def test_update_json_data_for_prefix_in_project_unauthenticated(self, async_client) -> None:
+        response = await async_client.patch("/projects/translation-en-test/an1.1-10/")
+        assert response.status_code == 401
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Not authenticated"}
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
+    async def test_update_json_data_for_prefix_in_project_cannot_edit_translation(
+        self, mock_can_edit_translation, async_client, mock_get_current_user
+    ) -> None:
+        mock_can_edit_translation.return_value = False
+        response = await async_client.patch("/projects/translation-en-test/an1.1-10/", json={"an1.1:0.1": "Test"})
+        assert response.status_code == 403
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Not allowed to edit this resource"}
+
+    @pytest.mark.asyncio
+    async def test_update_json_data_for_prefix_in_project_no_payload(self, async_client, mock_get_current_user) -> None:
+        response = await async_client.patch("/projects/translation-en-test/an1.1-10/")
+        assert response.status_code == 422
+        assert "detail" in response.json()
+        assert response.json() == {
+            "detail": [
+                {
+                    "loc": ["body"],
+                    "msg": "field required",
+                    "type": "value_error.missing",
+                }
+            ]
+        }
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
+    @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
+    async def test_update_json_data_for_prefix_in_project_invalid_prefix(
+        self,
+        mock_get_file_paths,
+        mock_can_edit_translation,
+        async_client,
+        mock_get_current_user,
+    ) -> None:
+        mock_get_file_paths.return_value = set()
+        mock_can_edit_translation.return_value = True
+        response = await async_client.patch(
+            "/projects/translation-en-test/nonexistent_prefix/",
+            json={"an1.1:0.1": "Test", "an1.1:0.2": "Test2"},
+        )
+        assert response.status_code == 404
+        assert "detail" in response.json()
+        assert response.json() == {
+            "detail": "Data for project 'translation-en-test' and prefix 'nonexistent_prefix' not found"
+        }
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "exception, data, code",
+        [
+            (OSError("Test"), {"an1.1:0.1": "Test", "an1.1:0.2": "Test2"}, 500),
+            (TypeError("Test"), {"an1.1:0.1": "Test", "an1.1:0.2": "Test2"}, 500),
+            (RequestError, {"an1.1:0.1": "Test", "an1.1:0.2": "Test2"}, 500),
+            (KeyError("Test"), {"an1.1:0.1111": "Test", "an1.1:0.2222": "Test2"}, 400),
+        ],
+    )
+    @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
+    @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
+    @patch("app.api.api_v1.endpoints.projects.update_file")
+    async def test_update_json_data_for_prefix_in_project_fail(
+        self,
+        mock_update_file,
+        mock_get_file_paths,
+        mock_can_edit_translation,
+        async_client,
+        mock_get_current_user,
+        exception,
+        data,
+        code,
+    ) -> None:
+        mock_get_file_paths.return_value = set("root/an1.1-10")
+        mock_can_edit_translation.return_value = True
+        mock_update_file.return_value = False, exception
+        response = await async_client.patch("/projects/translation-en-test/an1.1-10/", json=data)
+        assert response.status_code == code
+        assert "detail" in response.json()
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
+    @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
+    @patch("app.api.api_v1.endpoints.projects.update_file")
+    async def test_update_json_data_for_prefix_in_project_success(
+        self,
+        mock_update_file,
+        mock_get_file_paths,
+        mock_can_edit_translation,
+        async_client,
+        mock_get_current_user,
+    ) -> None:
+        data = {"an1.1:0.1": "Test", "an1.1:0.2": "Test2"}
+        mock_get_file_paths.return_value = set("root/an1.1-10")
+        mock_can_edit_translation.return_value = True
+        mock_update_file.return_value = True, None
+        response = await async_client.patch("/projects/translation-en-test/an1.1-10/", json=data)
+        assert response.status_code == 200
+        assert "can_edit" in response.json()
+        assert "data" in response.json()
+        assert response.json() == {"can_edit": True, "data": data}

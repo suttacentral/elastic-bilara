@@ -7,3 +7,8 @@ new version of bilara based on elasticsearch
 $ cp .env.example .env
 $ make build
 ```
+
+#### To run tests, use the following command
+```
+$ make test
+```
