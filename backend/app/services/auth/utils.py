@@ -75,10 +75,14 @@ async def get_github_data(code: str) -> dict[str, str | int]:
             response: Response = await client.get(settings.GITHUB_USER_URL, headers=headers)
             response.raise_for_status()
             user_data: dict = response.json()
+            if not user_data.get("email"):
+                email_data_response: Response = await client.get(settings.GITHUB_USER_URL + "/emails", headers=headers)
+                email_data_response.raise_for_status()
+                email: str = [item["email"] for item in email_data_response.json() if item.get("primary")][0]
             data = {
                 "github_id": user_data.get("id"),
                 "username": user_data.get("login"),
-                "email": user_data.get("email"),
+                "email": email if email else user_data.get("email"),
                 "avatar_url": user_data.get("avatar_url"),
             }
         except HTTPStatusError as e:

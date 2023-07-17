@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     GITHUB_ACCESS_TOKEN_URL: AnyHttpUrl = "https://github.com/login/oauth/access_token"
     GITHUB_USER_URL: AnyHttpUrl = "https://api.github.com/user"
     GITHUB_AUTHORIZE_URL: AnyHttpUrl = "https://github.com/login/oauth/authorize"
+    GITHUB_ACCESS_SCOPES: str = "user:email"
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
