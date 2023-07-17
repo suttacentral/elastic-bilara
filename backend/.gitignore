@@ -4,3 +4,4 @@ app.egg-info
 .coverage
 htmlcov
 ca.crt
+users.json

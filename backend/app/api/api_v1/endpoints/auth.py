@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get("/login", status_code=status.HTTP_302_FOUND)
 async def login() -> RedirectResponse:
     return RedirectResponse(
-        url=f"{settings.GITHUB_AUTHORIZE_URL}?client_id={settings.GITHUB_CLIENT_ID}",
+        url=f"{settings.GITHUB_AUTHORIZE_URL}?client_id={settings.GITHUB_CLIENT_ID}&scope={settings.GITHUB_ACCESS_SCOPES}",
         status_code=status.HTTP_302_FOUND,
     )
 
