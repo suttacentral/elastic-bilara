@@ -1,3 +1,5 @@
+from collections import Counter
+from collections.abc import KeysView
 from pathlib import Path
 from typing import Any, Generator, List
 
@@ -146,7 +148,7 @@ class Search:
     def _is_index_empty(self, index: str) -> bool:
         return self._search.count(index=index)["count"] == 0
 
-    def _build_unique_query(self, field: str = None, prefix: str = None):
+    def _build_unique_query(self, field: str = None, prefix: str = None) -> dict[str, Any]:
         query = {
             "size": 0,
             "aggs": {
@@ -165,7 +167,7 @@ class Search:
             query["query"] = {"prefix": {field: prefix}}
         return query
 
-    def _scroll_search(self, query):
+    def _scroll_search(self, query) -> Generator:
         scroll = "1m"
         size = 1000
         response = self._search.search(index=settings.ES_INDEX, body=query, scroll=scroll, size=size)
@@ -176,7 +178,7 @@ class Search:
             old_scroll_id = response["_scroll_id"]
             yield from response["hits"]["hits"]
 
-    def find_unique_data(self, field: str = None, prefix: str = None):
+    def find_unique_data(self, field: str = None, prefix: str = None) -> list[str]:
         results = self._search.search(index=settings.ES_INDEX, body=self._build_unique_query(field, prefix))[
             "aggregations"
         ]["unique_data"]["buckets"]
@@ -232,3 +234,97 @@ class Search:
         except RequestError as e:
             return False, e
         return True, None
+
+    def get_segments(self, **kwargs) -> dict[str, dict[str, str] | dict]:
+        uid: str | None = kwargs.pop("uid", None)
+        if uid:
+            if any(kwargs.values()):
+                return self._get_segments_by_uid_and_muids(uid, kwargs)
+            else:
+                return self._get_segments_by_uid(uid, kwargs.keys())
+        if any(kwargs.values()):
+            return self._get_segments_by_muids(kwargs)
+        return {}
+
+    def _build_get_segments_query(self, muid: str, uid: str = None, segment: str = None) -> dict[str, Any]:
+        query: dict[str, Any] = {
+            "bool": {
+                "must": [
+                    {"term": {"muid": muid}},
+                ]
+            }
+        }
+        if uid:
+            query["bool"]["must"].append(
+                {
+                    "nested": {
+                        "path": "segments",
+                        "query": {"prefix": {"segments.uid": uid}},
+                        "inner_hits": {"size": 100},
+                    }
+                }
+            )
+        if segment:
+            query["bool"]["must"].append(
+                {
+                    "nested": {
+                        "path": "segments",
+                        "query": {"match_phrase": {"segments.segment": segment}},
+                        "inner_hits": {"size": 100},
+                    }
+                }
+            )
+        return query
+
+    def _get_segments_by_uid_and_muids(self, uid: str, muids: dict[str, str | None]) -> dict[str, dict[str, str]]:
+        muid_data: dict[str, dict[str, str]] = self._get_segments_by_muids(muids)
+        uid_data: dict[str, dict[str, str]] = self._get_segments_by_uid(uid, muids.keys())
+        common_uids: set[str] = set.intersection(set(muid_data.keys()), set(uid_data.keys()))
+        return {uid: uid_data[uid] for uid in common_uids if uid in uid_data}
+
+    def _get_segments_by_muids(self, muids: dict[str, str | None]) -> dict[str, dict[str, str]]:
+        result: dict[str, dict[str, str]] = {}
+        for muid, segment in muids.items():
+            es_result = self._search.search(
+                index=settings.ES_INDEX,
+                query=self._build_get_segments_query(muid=muid, segment=segment),
+                size=1000,
+            )
+            result[muid] = self._get_inner_hits(es_result)
+        common_uids: list[str] = self._get_common_uids(result)
+        data: dict[str, dict[str, str]] = {}
+        for common_uid in common_uids:
+            if item := self._get_segments_by_uid(common_uid, result.keys()):
+                data.update(item)
+        return data
+
+    def _get_segments_by_uid(self, uid: str, muids: KeysView[str]) -> dict[str, dict[str, str]]:
+        result: dict[str, dict[str, str]] = {}
+        for muid in muids:
+            result[muid] = {}
+            es_result = self._search.search(
+                index=settings.ES_INDEX,
+                query=self._build_get_segments_query(muid=muid, uid=uid),
+                size=1000,
+            )
+            result[muid] = self._get_inner_hits(es_result)
+        common_uids: list[str] = self._get_common_uids(result)
+        return {
+            common_uid: {muid: data.get(common_uid, "") for muid, data in result.items()} for common_uid in common_uids
+        }
+
+    def _get_inner_hits(self, es_result: dict[str, Any]) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for hit in es_result["hits"]["hits"]:
+            if inner_hits := hit.get("inner_hits"):
+                data = inner_hits["segments"]["hits"]["hits"]
+                for item in data:
+                    result[item["_source"]["uid"]] = item["_source"]["segment"]
+        return result
+
+    def _get_common_uids(self, data: dict[str, dict[str, str]]) -> list[str]:
+        uids: Counter[str] = Counter([uid for d in data.values() for uid in d.keys()])
+        common_uids: list[str] = [uid for uid, count in uids.items() if count > 1]
+        if not common_uids:
+            common_uids = [uid for uid, count in uids.items() if count == 1]
+        return common_uids
