@@ -11,7 +11,7 @@ from jose import JWTError, jwt
 router = APIRouter()
 
 
-@router.get("/login", status_code=status.HTTP_302_FOUND)
+@router.get("/login/", status_code=status.HTTP_302_FOUND)
 async def login() -> RedirectResponse:
     return RedirectResponse(
         url=f"{settings.GITHUB_AUTHORIZE_URL}?client_id={settings.GITHUB_CLIENT_ID}&scope={settings.GITHUB_ACCESS_SCOPES}",
@@ -19,7 +19,7 @@ async def login() -> RedirectResponse:
     )
 
 
-@router.get("/token", response_model=AccessTokenOut)
+@router.get("/token/", response_model=AccessTokenOut)
 async def token(code: str) -> AccessTokenOut:
     data: dict[str, str] = await utils.get_github_data(code)
     if "error" in data:
@@ -41,7 +41,7 @@ async def token(code: str) -> AccessTokenOut:
     return AccessTokenOut(access_token=access_token, refresh_token=refresh_token)
 
 
-@router.post("/refresh", response_model=TokenOut)
+@router.post("/refresh/", response_model=TokenOut)
 async def refresh(refresh_token: RefreshToken) -> TokenOut:
     try:
         payload: dict[str, Any] = jwt.decode(refresh_token.refresh_token, settings.SECRET_KEY, settings.ALGORITHM)
