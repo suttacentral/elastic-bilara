@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     ES_URL: str
     ES_SCHEME: str
     ES_INDEX: str
+    ES_SEGMENTS_INDEX: str
     ES_HOST: str
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str

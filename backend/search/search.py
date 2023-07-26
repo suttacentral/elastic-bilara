@@ -32,39 +32,71 @@ class Search:
             )
             self._search.options(ignore_status=400)
             self._create_index(settings.ES_INDEX)
-            self._populate_index(settings.ES_INDEX)
+            self._create_index(settings.ES_SEGMENTS_INDEX)
+            self._populate_index(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX)
 
     def _create_index(self, index: str) -> None:
         if not self._index_exists(index):
+            mapping = self._get_es_mappings() if index == settings.ES_INDEX else self._get_es_mappings("segments")
             self._search.indices.create(
                 index=index,
                 settings=self._get_es_settings(),
-                mappings=self._get_es_mappings(),
+                mappings=mapping,
             )
 
-    def _populate_index(self, index: str) -> None:
+    def _populate_index(self, index: str, segments_index: str) -> None:
         if self._is_index_empty(index):
             self._search.indices.put_settings(
                 index=index,
                 body={"index": {"refresh_interval": "180s", "number_of_replicas": 0}},
             )
+            self._search.indices.put_settings(
+                index=segments_index,
+                body={"index": {"refresh_interval": "180s", "number_of_replicas": 0}},
+            )
             for data in self._yield_data():
-                actions: list[dict[str, Any]] = [
-                    {
+                actions_main: list[dict[str, Any]] = []
+                actions_segments: list[dict[str, Any]] = []
+                for document in data:
+                    source: dict[str, Any] = document["_source"]
+                    main_doc = {
                         "_index": index,
                         "_id": document["_id"],
-                        "_source": document["_source"],
+                        "_source": {**source},
                     }
-                    for document in data
-                ]
+                    actions_main.append(main_doc)
+                    file_path = Path(source["file_path"])
+                    for item in source["segments"]:
+                        uid = item["uid"]
+                        segments_doc = {
+                            "_index": segments_index,
+                            "_id": utils.create_doc_id(file_path, uid),
+                            "_source": {
+                                "main_doc_id": document["_id"],
+                                "muid": source["muid"],
+                                "uid": uid,
+                                "segment": item["segment"],
+                            },
+                        }
+                        actions_segments.append(segments_doc)
                 helpers.bulk(
                     self._search,
-                    actions,
+                    actions_main,
+                    chunk_size=self._batch_size,
+                    raise_on_error=True,
+                )
+                helpers.bulk(
+                    self._search,
+                    actions_segments,
                     chunk_size=self._batch_size,
                     raise_on_error=True,
                 )
             self._search.indices.put_settings(
                 index=index,
+                body={"index": {"refresh_interval": "1s", "number_of_replicas": 1}},
+            )
+            self._search.indices.put_settings(
+                index=segments_index,
                 body={"index": {"refresh_interval": "1s", "number_of_replicas": 1}},
             )
 
@@ -81,28 +113,44 @@ class Search:
             }
         }
 
-    def _get_es_mappings(self) -> dict:
-        return {
-            "properties": {
-                "file_path": {"type": "keyword"},
-                "prefix": {"type": "keyword"},
-                "filename": {"type": "keyword"},
-                "segments": {
-                    "type": "nested",
-                    "properties": {
-                        "uid": {"type": "keyword"},
-                        "segment": {
-                            "type": "text",
-                            "analyzer": "lowercase_analyzer",
-                            "search_analyzer": "lowercase_analyzer",
+    def _get_es_mappings(self, _type="main") -> dict:
+        if _type == "main":
+            mapping = {
+                "properties": {
+                    "file_path": {"type": "keyword"},
+                    "prefix": {"type": "keyword"},
+                    "filename": {"type": "keyword"},
+                    "segments": {
+                        "type": "nested",
+                        "properties": {
+                            "uid": {"type": "keyword"},
+                            "segment": {
+                                "type": "text",
+                                "analyzer": "lowercase_analyzer",
+                                "search_analyzer": "lowercase_analyzer",
+                            },
+                            "muid": {"type": "keyword"},
                         },
                     },
-                },
-                "muid": {"type": "keyword"},
-                "is_root": {"type": "boolean"},
-                "root_path": {"type": "keyword"},
+                    "muid": {"type": "keyword"},
+                    "is_root": {"type": "boolean"},
+                    "root_path": {"type": "keyword"},
+                }
             }
-        }
+        elif _type == "segments":
+            mapping = {
+                "properties": {
+                    "main_doc_id": {"type": "keyword"},
+                    "muid": {"type": "keyword"},
+                    "uid": {"type": "keyword"},
+                    "segment": {
+                        "type": "text",
+                        "analyzer": "lowercase_analyzer",
+                        "search_analyzer": "lowercase_analyzer",
+                    },
+                }
+            }
+        return mapping
 
     def _yield_data(
         self,
@@ -116,7 +164,7 @@ class Search:
         if buffer:
             yield buffer
 
-    def _process_file(self, file_path: Path) -> dict[str, str | bool | None | list[dict[str, str]]]:
+    def _process_file(self, file_path: Path) -> dict[str, Any]:
         doc_id: str = utils.create_doc_id(file_path)
         prefix: str = utils.get_prefix(file_path)
         filename: str = utils.get_filename(file_path)
@@ -146,7 +194,7 @@ class Search:
     def _is_index_empty(self, index: str) -> bool:
         return self._search.count(index=index)["count"] == 0
 
-    def _build_unique_query(self, field: str = None, prefix: str = None):
+    def _build_unique_query(self, field: str = None, prefix: str = None) -> dict[str, Any]:
         query = {
             "size": 0,
             "aggs": {
@@ -165,7 +213,7 @@ class Search:
             query["query"] = {"prefix": {field: prefix}}
         return query
 
-    def _scroll_search(self, query):
+    def _scroll_search(self, query) -> Generator:
         scroll = "1m"
         size = 1000
         response = self._search.search(index=settings.ES_INDEX, body=query, scroll=scroll, size=size)
@@ -176,7 +224,7 @@ class Search:
             old_scroll_id = response["_scroll_id"]
             yield from response["hits"]["hits"]
 
-    def find_unique_data(self, field: str = None, prefix: str = None):
+    def find_unique_data(self, field: str = None, prefix: str = None) -> list[str]:
         results = self._search.search(index=settings.ES_INDEX, body=self._build_unique_query(field, prefix))[
             "aggregations"
         ]["unique_data"]["buckets"]
@@ -212,10 +260,16 @@ class Search:
         return paths
 
     def update_segments(self, file_path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
+        try:
+            self.update_segments_main_index(file_path, data)
+            self.update_segments_segments_index(file_path, data)
+        except RequestError as e:
+            return False, e
+        return True, None
+
+    def update_segments_main_index(self, file_path: Path, data: dict[str, str]) -> None:
         doc_id: str = utils.create_doc_id(file_path)
-        doc: dict[str, str | bool | None | list[dict[str, str]]] = self._search.get(index=settings.ES_INDEX, id=doc_id)[
-            "_source"
-        ]
+        doc: dict[str, Any] = self._search.get(index=settings.ES_INDEX, id=doc_id)["_source"]
 
         segments_dict: dict[str, dict[str, str]] = {segment["uid"]: segment for segment in doc["segments"]}
 
@@ -226,9 +280,189 @@ class Search:
                 segments_dict[uid] = {"uid": uid, "segment": new_segment}
 
         doc["segments"] = list(segments_dict.values())
+        self._search.index(index=settings.ES_INDEX, id=doc_id, body=doc)
 
-        try:
-            self._search.index(index=settings.ES_INDEX, id=doc_id, body=doc)
-        except RequestError as e:
-            return False, e
-        return True, None
+    def update_segments_segments_index(self, file_path: Path, data: dict[str, str]) -> None:
+        uids: list[str] = list(data.keys())
+        doc_ids: list[str] = [utils.create_doc_id(file_path, uid) for uid in uids]
+        for doc_id in doc_ids:
+            doc: dict[str, Any] = self._search.get(index=settings.ES_SEGMENTS_INDEX, id=doc_id)["_source"]
+            doc["segment"] = data[doc["uid"]]
+            self._search.index(index=settings.ES_SEGMENTS_INDEX, id=doc_id, body=doc)
+
+    def get_segments(self, size: int, page: int, muids: dict[str, str]) -> dict[str, dict[str, str]] | dict:
+        from_: int = page * size
+        uid: str | None = muids.pop("uid", None)
+        if uid:
+            if any(muids.values()):
+                return self._uid_muids_lookup(size, from_, uid, muids)
+            else:
+                return self._uid_lookup(size, from_, uid, muids)
+        if any(muids.values()):
+            return self._muids_lookup(size, from_, muids)
+        return {}
+
+    def _uid_lookup(self, size: int, from_: int, uid: str | None, muids: dict[str, str]) -> dict[str, dict[str, str]]:
+        body: dict[str, Any] = self._build_search_body(size, from_, muids, uid)
+        es_results: dict[str, Any] = self._search.search(
+            index=settings.ES_SEGMENTS_INDEX,
+            body=body,
+        )
+        return self._get_results(es_results)
+
+    def _muids_lookup(self, size: int, from_: int, muids: dict[str, str]) -> dict[str, dict[str, str]]:
+        body: dict[str, Any] = self._build_search_body(size, from_, muids)
+        es_results: dict[str, Any] = self._search.search(
+            index=settings.ES_SEGMENTS_INDEX,
+            body=body,
+        )
+        return self._sort_segments(self._get_segments_for_remaining_muids(self._get_results(es_results), muids))
+
+    def _uid_muids_lookup(
+        self, size: int, from_: int, uid: str | None, muids: dict[str, str]
+    ) -> dict[str, dict[str, str]]:
+        body: dict[str, Any] = self._build_search_body(size, from_, muids, uid)
+        es_results: dict[str, Any] = self._search.search(
+            index=settings.ES_SEGMENTS_INDEX,
+            body=body,
+        )
+        return self._sort_segments(self._get_segments_for_remaining_muids(self._get_results(es_results), muids))
+
+    def _build_search_body(
+        self,
+        size: int,
+        from_: int,
+        muids: dict[str, str],
+        uid: str | None = None,
+    ) -> dict[str, Any]:
+        if uid and not any(muids.values()):
+            doc_count = hits_size = len(muids)
+            body: dict[str, Any] = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"bool": {"should": [{"terms": {"muid": [*muids.keys()]}}]}},
+                            {"prefix": {"uid": {"value": uid}}},
+                        ]
+                    }
+                }
+            }
+        else:
+            doc_count, hits_size = self._get_min_doc_count_and_hot_hits_size(muids)
+            body: dict[str, Any] = {
+                "query": {
+                    "bool": {"should": []},
+                }
+            }
+            for muid, lookup in muids.items():
+                body["query"]["bool"]["should"].append(
+                    {
+                        "bool": {
+                            "must": [
+                                {"term": {"muid": {"value": muid}}},
+                                {"match_phrase": {"segment": lookup}},
+                            ]
+                        }
+                    }
+                )
+                if uid:
+                    body["query"]["bool"]["should"][0]["bool"]["must"].append({"prefix": {"uid": {"value": uid}}})
+        body["aggs"] = self._build_aggs(doc_count, hits_size, size, from_)
+        body["size"] = 0
+        return body
+
+    def _get_min_doc_count_and_hot_hits_size(self, muids: dict[str, str]) -> tuple[int, int]:
+        doc_count: int = sum(1 for v in muids.values() if v != "")
+        hits_size: int = len(muids)
+        return doc_count, hits_size
+
+    def _build_aggs(self, doc_count: int, hits_size: int, size: int, from_: int) -> dict[str, Any]:
+        return {
+            "uids": {
+                "terms": {
+                    "field": "uid",
+                    "min_doc_count": doc_count,
+                    "size": 10000,
+                },
+                "aggs": {
+                    "top_uid_hits": {
+                        "top_hits": {
+                            "_source": {"includes": ["muid", "segment"]},
+                            "size": hits_size,
+                        }
+                    },
+                    "uids_bucket_sort": {"bucket_sort": {"sort": [], "from": from_, "size": size}},
+                },
+            }
+        }
+
+    def _get_results(self, es_results: dict[str, Any]) -> dict[str, dict[str, str]]:
+        results: dict[str, dict[str, str]] = {}
+        for data in es_results["aggregations"]["uids"]["buckets"]:
+            uid: str = data["key"]
+            results[uid]: dict[str, str] = {}
+            for hit in data["top_uid_hits"]["hits"]["hits"]:
+                source: dict[str, str] = hit["_source"]
+                results[uid][source["muid"]] = source["segment"]
+        return results
+
+    def _sort_segments(self, results: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+        return dict(sorted(results.items(), key=lambda item: len(item[1]), reverse=True))
+
+    def _get_segments_for_remaining_muids(self, results, muids) -> dict[str, dict[str, str]]:
+        if not results:
+            return {}
+        uids: list[str] = list(results.keys())
+        muids_to_remove: list[str] = results[uids[0]].keys()
+        for muid in muids_to_remove:
+            del muids[muid]
+        missing_data: dict[str, dict[str, str]] = self._get_missing_data(uids, muids.keys())
+        data: dict[str, dict[str, str]] = {
+            uid: {**results.get(uid, {}), **missing_data.get(uid, {})} for uid in set(results) | set(missing_data)
+        }
+        return data
+
+    def _get_missing_data(self, uids, muids) -> dict[str, dict[str, str]]:
+        size: int = len(uids) * len(muids)
+        if size > 10000:
+            return self._get_missing_data_by_chunks(uids, muids)
+        body: dict[str, Any] = self._build_missing_data_body(uids, muids, size)
+        es_results: dict[str, Any] = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=body)
+        results: dict[str, dict[str, str]] = {uid: {} for uid in uids}
+        if hits := es_results.get("hits").get("hits"):
+            for hit in hits:
+                if source := hit.get("_source"):
+                    results[source.get("uid")][source.get("muid")] = source.get("segment")
+        return results
+
+    def _get_missing_data_by_chunks(self, uids, muids) -> dict[str, dict[str, str]]:
+        chunk_size: int = 10000
+        results: dict[str, dict[str, str]] = {uid: {} for uid in uids}
+        body: dict[str, Any] = self._build_missing_data_body(uids, muids, chunk_size)
+        body["sort"] = [{"uid": "asc"}, {"muid": "asc"}]
+        while True:
+            es_results: dict[str, Any] = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=body)
+
+            if not es_results.get("hits").get("hits"):
+                break
+
+            for hit in es_results.get("hits").get("hits"):
+                if source := hit.get("_source"):
+                    results[source.get("uid")][source.get("muid")] = source.get("segment")
+
+            last_hit: dict[str, Any] = es_results.get("hits").get("hits")[-1]
+            body["search_after"] = last_hit.get("sort")
+        return results
+
+    def _build_missing_data_body(self, uids, muids, size) -> dict[str, Any]:
+        return {
+            "size": size,
+            "query": {
+                "bool": {
+                    "must": [
+                        {"terms": {"uid": [*uids]}},
+                        {"bool": {"should": [{"terms": {"muid": [*muids]}}]}},
+                    ]
+                }
+            },
+        }
