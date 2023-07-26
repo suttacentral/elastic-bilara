@@ -60,5 +60,7 @@ def yield_file_path(work_dir: Path, level: int = 0) -> Generator[Path, None, Non
             yield full_path
 
 
-def create_doc_id(file_path: Path) -> str:
+def create_doc_id(file_path: Path, uid: str | None = None) -> str:
+    if uid is not None:
+        return hashlib.sha256((str(file_path) + uid).encode()).hexdigest()
     return hashlib.sha256(str(file_path).encode()).hexdigest()
