@@ -4,6 +4,8 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+      worker:
+        condition: service_started
     build:
       context: ./backend
       dockerfile: backend.dockerfile
@@ -110,6 +112,28 @@ services:
     env_file:
       - .env
 
+  redis:
+    image: "bitnami/redis:7.0.12"
+    environment:
+        - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+        - bilara-network
+    ports:
+        - ${REDIS_PORT}:${REDIS_PORT}
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: backend.dockerfile
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+    networks:
+        - bilara-network
+    command: "celery -A app.celery:celery_app worker --loglevel=info"
+    env_file:
+        - .env
 
 volumes:
   certs:
