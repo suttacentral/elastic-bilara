@@ -27,16 +27,12 @@ class GitManager:
         self.published.checkout(self.published.lookup_reference(f"refs/heads/{name}"))
 
     def copy_files(self, file_paths: list[Path] | None = None) -> list[Path]:
-        # TODO: if there are multiple api hits, there are multiple changes per commit, which include wrong data
         # TODO: changed_files is not working properly with pull requests, still empty commits
         paths: list[Path] = file_paths or []
         changed_files = [path for path in paths if self.has_changes("unpublished", path)]
         for path in changed_files:
             file_content: Blob | None = GitManager.read_file(self.unpublished, path)
             GitManager.write_file(Path(self.published.workdir) / path, file_content)
-        # for path in paths:
-        #     file_content: Blob | None = GitManager.read_file(self.unpublished, path)
-        #     GitManager.write_file(Path(self.published.workdir) / path, file_content)
         GitManager.add(self.published, changed_files)
         return changed_files
 
