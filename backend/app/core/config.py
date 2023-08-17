@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     GITHUB_REPO: str
     CELERY_BROKER_URL: str
     CELERY_BACKEND_URL: str
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_PASSWORD: str
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:

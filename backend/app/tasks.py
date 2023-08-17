@@ -9,9 +9,7 @@ from pygit2 import GitError
 from redis import Redis
 from redis.lock import Lock
 
-redis_conn = Redis(host="redis", port=6379, password="test")
-
-lock = Lock(redis_conn, "lock")
+lock = Lock(Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD), "lock")
 
 
 class PrTask(Task):
