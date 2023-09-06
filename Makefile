@@ -27,4 +27,4 @@ down:
 	@$(COMPOSE) down
 
 test:
-	@$(COMPOSE) exec bilara-backend pytest /app/app/tests
+	@$(COMPOSE) exec bilara-backend pytest /app/app/tests -vv
