@@ -9,7 +9,11 @@ from pygit2 import GitError
 from redis import Redis
 from redis.lock import Lock
 
-lock = Lock(Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD), "lock")
+lock = Lock(
+    Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, password=settings.REDIS_PASSWORD),
+    "lock",
+    blocking_timeout=300,
+)
 
 
 class PrTask(Task):
@@ -18,29 +22,31 @@ class PrTask(Task):
         paths = [utils.clean_path(path) for path in file_paths]
         user_data = UserData(**user)
         manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
-        branch = utils.get_branch_name(user_data, paths)
+        branch = utils.get_branch_name(manager, paths)
         manager._cleanup(branch)
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
-@app.task(name="commit", auto_retry_for=(IOError, GitError), retry_kwargs={"max_retries": 5}, retry_backoff=True)
-def commit(user: dict, file_path: str):
+@app.task(
+    name="commit",
+    auto_retry_for=(IOError, GitError, GithubException),
+    retry_kwargs={"max_retries": 15},
+    retry_backoff=True,
+)
+def commit(user: dict, file_path: str) -> bool:
     with lock:
         path = utils.clean_path(file_path)
+        if not path:
+            return False
         user_data = UserData(**user)
         manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
         message = f"Translations by {user_data.username} to {path}"
-        GitManager.add(manager.unpublished, [path])
-        GitManager.commit(manager.unpublished, manager.author, manager.committer, message)
-        return user
-
-
-@app.task(name="push", auto_retry_for=(IOError, GitError), retry_kwargs={"max_retries": 10}, retry_backoff=True)
-def push(user: dict, remote: str = "origin", branch: str = "unpublished"):
-    with lock:
-        user_data = UserData(**user)
-        manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
-        GitManager.push(manager.unpublished, remote, branch)
+        if GitManager.add(manager.unpublished, [path]) and GitManager.commit(
+            manager.unpublished, manager.author, manager.committer, message, [path]
+        ):
+            GitManager.push(manager.unpublished, "origin", "unpublished")
+            return True
+        return False
 
 
 @app.task(
@@ -54,8 +60,10 @@ def pr(user, file_paths) -> str:
     with lock:
         user_data = UserData(**user)
         paths = [utils.clean_path(path) for path in file_paths]
+        if not paths:
+            return ""
         manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
-        branch = utils.get_branch_name(user_data, paths)
+        branch = utils.get_branch_name(manager, paths)
         commit_message = utils.get_pr_commit_message(branch)
         pr_title = utils.get_pr_title(branch)
         pr_body = utils.get_pr_body(user_data)
