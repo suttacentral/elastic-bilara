@@ -8,14 +8,15 @@ from app.services.users.schema import UserData
 
 def get_project_title(branch: str) -> str:
     parts = branch.split("_")
-    if len(parts) > 4:
+    if len(parts) > 5:
         return "/".join(parts[:-1]) + "_" + parts[-1]
     return "/".join(parts)
 
 
-def get_branch_name(user: UserData, file_paths: list[Path] = None) -> str:
+def get_branch_name(manager: GitManager, file_paths: list[Path] = None) -> str:
     paths = file_paths or []
-    manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user)
+    if not paths:
+        raise ValueError("No file paths provided.")
     project_head = get_project_head(paths[0])
     project_pr = manager.get_pr(project_head)
     file_heads = get_file_heads(paths)
@@ -39,7 +40,12 @@ def get_file_heads(paths: list[Path] = None) -> dict[Path, str]:
 
 
 def get_project_head(path: Path) -> str:
-    return "_".join(str(path).split("/")[:4])
+    parts: tuple = path.parts[:-1]
+    if len(parts) == 6 and parts[-3] not in parts[-2]:
+        return str(Path().joinpath(*parts[:-1])).replace("/", "_")
+    elif len(parts) > 6 and parts[-3] in parts[-2]:
+        return str(Path().joinpath(*parts[:-2])).replace("/", "_")
+    return str(Path().joinpath(*parts)).replace("/", "_")
 
 
 def clean_path(path: str) -> Path:
@@ -62,8 +68,28 @@ def get_pr_body(user: UserData) -> str:
 
 
 def find_mismatched_paths(file_paths: list[str] = None) -> tuple[bool, list[str]]:
+    """
+    Identify paths that don't match the most common project head in a list of file paths.
+
+    The function determines the "project head" of each path, identifies the most common project head,
+    and then finds paths that don't match this most common head.
+
+    Args:
+    - file_paths (list[str], optional): A list of file paths to check for mismatched project heads.
+      Defaults to None.
+
+    Returns: - tuple[bool, list[str]]: - A boolean indicating whether all paths have the same, most common project
+    head (True if they match, False otherwise). - A list of mismatched paths that don't have the most common project
+    head. If all paths match, the list is empty.
+
+    Example: - For input ["directory1/directory2/file1", "directory1/directory2/file2",
+    "directoryA/directoryB/file2"], if "directory1/directory2" is the most common project head, the function returns
+    (False, ["/directoryA/directoryB/file2"]).
+    """
     paths: list[Path] = [clean_path(path) for path in file_paths] if file_paths else []
+    if not paths:
+        return True, []
     project_heads: list[str] = [get_project_head(path) for path in paths]
     most_common_head, _ = Counter(project_heads).most_common(1)[0]
-    mismatched_paths: list[str] = [head for head in project_heads if head != most_common_head]
+    mismatched_paths: list[str] = [f"/{path}" for path, head in zip(paths, project_heads) if head != most_common_head]
     return len(mismatched_paths) == 0, mismatched_paths
