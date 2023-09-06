@@ -1,7 +1,14 @@
 from app.api.api_v1.api import api_router
 from app.core.config import settings
+from app.db.database import Base, engine
+from app.db.models.path import Path
+from app.db.models.remark import Remark
+from app.db.models.segment_uid import SegmentUID
+from app.db.models.user import User
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+
+Base.metadata.create_all(bind=engine, checkfirst=True)
 
 app = FastAPI(title=settings.PROJECT_NAME)
 

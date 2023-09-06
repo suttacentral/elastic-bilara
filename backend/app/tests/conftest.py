@@ -6,12 +6,12 @@ import pytest
 import pytest_asyncio
 from _pytest.fixtures import FixtureRequest
 from app.core.config import settings
+from app.db.models.user import Role
+from app.db.schemas.user import UserBase
 from app.main import app
 from app.services.auth import utils
 from app.services.auth.schema import TokenData
 from app.services.git.manager import GitManager
-from app.services.users.roles import Role
-from app.services.users.schema import UserData
 from app.tests.services.users.factories import UserFactory
 from app.tests.utils.factories import ProjectFactory, PublicationFactory
 from app.tests.utils.git import create_repo_structure_with_content
@@ -29,16 +29,16 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture()
-def users() -> Callable[[int, dict[str, Any]], list[UserData]]:
-    def _users(n=3, **kwargs) -> list[UserData]:
+def users() -> Callable[[int, dict[str, Any]], list[UserBase]]:
+    def _users(n=3, **kwargs) -> list[UserBase]:
         return UserFactory.create_users(n, **kwargs)
 
     return _users
 
 
 @pytest.fixture()
-def user(github_data) -> UserData:
-    return UserData(**github_data(), role=Role.TRANSLATOR.value)
+def user(github_data) -> UserBase:
+    return UserBase(**github_data(), role=Role.WRITER.value)
 
 
 @pytest.fixture()
@@ -107,7 +107,7 @@ def users_file(tmp_path: Path, request: type[FixtureRequest]) -> Path:
 
 
 @pytest.fixture
-def mock_get_current_user(user: UserData) -> Generator[None, Any, None]:
+def mock_get_current_user(user: UserBase) -> Generator[None, Any, None]:
     async def _mock_get_current_user_function() -> TokenData:
         return TokenData(github_id=str(user.github_id), username=user.username)
 

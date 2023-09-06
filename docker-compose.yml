@@ -6,6 +6,8 @@ services:
         condition: service_healthy
       worker:
         condition: service_started
+#      db:
+#        condition: service_healthy
     build:
       context: ./backend
       dockerfile: backend.dockerfile
@@ -52,6 +54,7 @@ services:
       - ${ES_REQUESTS_PORT}:${ES_REQUESTS_PORT}
     networks:
       - bilara-network
+#    restart: always
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
@@ -112,6 +115,23 @@ services:
     env_file:
       - .env
 
+  db:
+    image: bitnami/postgresql:15.3.0
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - ${POSTGRESQL_PORT}:${POSTGRESQL_PORT}
+    networks:
+      - bilara-network
+#    restart: always
+    environment:
+      - POSTGRESQL_DATABASE
+      - POSTGRESQL_USERNAME
+      - POSTGRESQL_PASSWORD
+      - POSTGRESQL_POSTGRES_PASSWORD
+
+#    entrypoint:  ["/bin/bash", "/scripts/postgres_setup.sh"]
+
   redis:
     image: "bitnami/redis:7.0.12"
     environment:
@@ -141,6 +161,8 @@ volumes:
   elasticsearch_data:
     driver: local
   kibana_data:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:

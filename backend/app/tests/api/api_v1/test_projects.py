@@ -185,12 +185,15 @@ class TestProjects:
         response = await async_client.patch("/projects/translation-en-test/an1.1-10/")
         assert response.status_code == 422
         assert "detail" in response.json()
+        print(response.json())
         assert response.json() == {
             "detail": [
                 {
+                    "type": "missing",
                     "loc": ["body"],
-                    "msg": "field required",
-                    "type": "value_error.missing",
+                    "msg": "Field required",
+                    "input": None,
+                    "url": "https://errors.pydantic.dev/2.1/v/missing",
                 }
             ]
         }
