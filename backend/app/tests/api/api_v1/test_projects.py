@@ -63,23 +63,47 @@ class TestProjects:
         assert response.json() == {"detail": "Not authenticated"}
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "muid, prefix, _type",
+        [
+            ("translation-en-test", None, "root_path"),
+            ("translation-en-test", None, "file_path"),
+            ("translation-en-test", "an", "root_path"),
+            ("translation-en-test", "sn", "file_path"),
+        ],
+    )
     @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
-    async def test_get_root_paths_for_project(self, mock_get_file_paths, async_client, mock_get_current_user) -> None:
+    async def test_get_paths_for_project(
+        self, mock_get_file_paths, muid, prefix, _type, async_client, mock_get_current_user
+    ):
         mock_get_file_paths.return_value = {"root/path1", "root/path2"}
-        response = await async_client.get("/projects/translation-en-test/")
+
+        url = f"/projects/{muid}/"
+        if prefix:
+            url += f"?prefix={prefix}"
+        if _type:
+            url += f"{'?' if not prefix else '&'}_type={_type}"
+
+        response = await async_client.get(url)
+
         assert response.status_code == 200
         assert "root_paths" in response.json()
         assert len(response.json()["root_paths"]) == 2
         assert response.json() == {"root_paths": ["root/path1", "root/path2"]}
-        mock_get_file_paths.assert_called_once_with(muid="translation-en-test")
+        print(mock_get_file_paths.call_args_list)
+        mock_get_file_paths.assert_called_once_with(muid=muid, _type=_type, prefix=prefix)
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("_type", ["root_path", "file_path"])
     @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
-    async def test_get_root_paths_for_project_muid_does_not_exist(
-        self, mock_get_file_paths, async_client, mock_get_current_user
+    async def test_get_paths_for_project_muid_does_not_exist(
+        self, mock_get_file_paths, _type, async_client, mock_get_current_user
     ) -> None:
         mock_get_file_paths.return_value = set()
-        response = await async_client.get("/projects/nonexistent_muid/")
+
+        url = f"/projects/nonexistent_muid/?_type={_type}"
+        response = await async_client.get(url)
+
         assert response.status_code == 404
         assert "detail" in response.json()
         assert response.json() == {"detail": "Project 'nonexistent_muid' not found"}
@@ -135,6 +159,7 @@ class TestProjects:
         assert response.json() == {
             "can_edit": can_edit,
             "data": data,
+            "task_id": None,
         }
 
     @pytest.mark.asyncio
@@ -218,12 +243,13 @@ class TestProjects:
     ) -> None:
         mock_get_file_paths.return_value = set("root/an1.1-10")
         mock_can_edit_translation.return_value = True
-        mock_update_file.return_value = False, exception
+        mock_update_file.return_value = False, exception, None
         response = await async_client.patch("/projects/translation-en-test/an1.1-10/", json=data)
         assert response.status_code == code
         assert "detail" in response.json()
 
     @pytest.mark.asyncio
+    @patch("app.tasks.commit.delay")
     @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
     @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
     @patch("app.api.api_v1.endpoints.projects.update_file")
@@ -232,15 +258,18 @@ class TestProjects:
         mock_update_file,
         mock_get_file_paths,
         mock_can_edit_translation,
+        mock_commit,
         async_client,
         mock_get_current_user,
     ) -> None:
         data = {"an1.1:0.1": "Test", "an1.1:0.2": "Test2"}
         mock_get_file_paths.return_value = set("root/an1.1-10")
         mock_can_edit_translation.return_value = True
-        mock_update_file.return_value = True, None
+        mock_commit.return_value = "test_task_id"
+        mock_update_file.return_value = True, None, "test_task_id"
         response = await async_client.patch("/projects/translation-en-test/an1.1-10/", json=data)
         assert response.status_code == 200
         assert "can_edit" in response.json()
         assert "data" in response.json()
-        assert response.json() == {"can_edit": True, "data": data}
+        assert "task_id" in response.json()
+        assert response.json() == {"can_edit": True, "data": data, "task_id": "test_task_id"}
