@@ -4,8 +4,7 @@ from pathlib import Path
 
 from app.services.users.schema import UserData
 from app.services.users.utils import get_user
-from app.tasks import commit, push
-from celery import chain
+from app.tasks import commit
 from search.search import Search
 from search.utils import get_json_data
 
@@ -46,7 +45,7 @@ def update_file(
 
     written, file_error = write_json_data(path, file_data)
     if written:
-        result = chain(commit.s(user.dict(), str(path)), push.s())()
+        result = commit.delay(user.dict(), str(path))
         task_id = result.id
 
     if file_error:
@@ -61,7 +60,25 @@ def update_file(
 def write_json_data(path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
     try:
         with open(path, "w") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            json.dump(sort_data(data), f, indent=2, ensure_ascii=False)
     except (OSError, TypeError) as e:
         return False, e
     return True, None
+
+
+def sort_data(data: dict[str, str]):
+    if all(len(key.split(":")[-2:]) >= 2 for key in data.keys()):
+        return {
+            uid: segment
+            for uid, segment in sorted(
+                data.items(),
+                key=lambda item: [int(part) if part.isdigit() else part for part in item[0].split(":")[-2:]],
+            )
+        }
+    elif all(":" in key and key.split(":")[-1][0].isdigit() for key in data.keys()):
+        return {
+            uid: segment for uid, segment in sorted(data.items(), key=lambda item: float(item[0].split(":")[-1][2:]))
+        }
+    elif all(":" in key for key in data.keys()):
+        return {uid: segment for uid, segment in sorted(data.items(), key=lambda item: item[0].split(":")[1])}
+    return {uid: segment for uid, segment in sorted(data.items())}
