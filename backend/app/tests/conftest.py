@@ -9,11 +9,14 @@ from app.core.config import settings
 from app.main import app
 from app.services.auth import utils
 from app.services.auth.schema import TokenData
+from app.services.git.manager import GitManager
 from app.services.users.roles import Role
 from app.services.users.schema import UserData
 from app.tests.services.users.factories import UserFactory
 from app.tests.utils.factories import ProjectFactory, PublicationFactory
+from app.tests.utils.git import create_repo_structure_with_content
 from httpx import AsyncClient
+from pygit2 import Commit, Repository, Signature, init_repository
 
 
 @pytest_asyncio.fixture
@@ -111,3 +114,64 @@ def mock_get_current_user(user: UserData) -> Generator[None, Any, None]:
     app.dependency_overrides[utils.get_current_user] = _mock_get_current_user_function
     yield
     app.dependency_overrides = {}
+
+
+@pytest.fixture(autouse=True)
+def setup_git_repos(tmpdir):
+    """Creates temporary Git repositories for testing."""
+    published_dir = tmpdir / "published"
+    unpublished_dir = tmpdir / "unpublished"
+    remote_dir = tmpdir / "remote"
+
+    init_repository(str(published_dir))
+    init_repository(str(unpublished_dir))
+    remote_repo = init_repository(str(remote_dir))
+
+    create_repo_structure_with_content(published_dir)
+    create_repo_structure_with_content(unpublished_dir)
+    create_repo_structure_with_content(remote_dir)
+
+    author = committer = Signature("Test", "test@test.com")
+
+    for branch_name in ["published", "unpublished"]:
+        index = remote_repo.index
+        index.add_all()
+        index.write()
+        tree = index.write_tree()
+        if remote_repo.is_empty:
+            remote_repo.create_commit("HEAD", author, committer, f"Initial commit in {branch_name}", tree, [])
+            remote_repo.create_branch(branch_name, remote_repo.head.peel(Commit))
+        else:
+            remote_repo.create_commit(
+                "HEAD",
+                author,
+                committer,
+                f"Additional commit in {branch_name}",
+                tree,
+                [remote_repo.head.peel(Commit).id],
+            )
+            remote_repo.create_branch(branch_name, remote_repo.head.peel(Commit))
+
+    for repo_dir, branch_name in [(published_dir, "published"), (unpublished_dir, "unpublished")]:
+        repo = Repository(str(repo_dir))
+
+        if repo.is_empty:
+            index = repo.index
+            index.add_all()
+            index.write()
+            tree = index.write_tree()
+            repo.create_commit("HEAD", author, committer, "Initial commit", tree, [])
+
+        if "origin" not in repo.remotes:
+            repo.remotes.create("origin", str(remote_dir))
+        repo.create_branch(branch_name, repo.head.peel(Commit))
+        repo.create_reference(f"refs/remotes/origin/{branch_name}", repo.head.peel(Commit).id)
+
+    return published_dir, unpublished_dir, remote_dir
+
+
+@pytest.fixture
+def git_manager(setup_git_repos, user):
+    """Provides an instance of the GitManager class for testing."""
+    published_dir, unpublished_dir, _ = setup_git_repos
+    return GitManager(published_dir, unpublished_dir, user)
