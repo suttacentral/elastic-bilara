@@ -23,26 +23,14 @@ class TestProjectsUtils:
         assert sort_paths(paths) == []
 
     @pytest.mark.parametrize(
-        "update_segments_return, data, expected_result, expected_error_type, open_error",
+        "update_segments_return, data, expected_result, expected_error_type, open_error, commit",
         [
-            ((True, None), {"key1": "value1"}, True, None, None),
-            ((True, None), {"key3": "value3"}, True, None, None),
-            ((True, None), {"key4": "value4"}, False, KeyError, None),
-            (
-                (False, Exception("Search service error")),
-                {"key1": "value1"},
-                False,
-                Exception,
-                None,
-            ),
-            ((True, None), {"key1": "value1"}, False, OSError, OSError("File error")),
-            (
-                (True, None),
-                {"key1": "value1"},
-                False,
-                TypeError,
-                TypeError("Type error"),
-            ),
+            ((True, None), {"key1": "value1"}, True, None, None, True),
+            ((True, None), {"key3": "value3"}, True, None, None, True),
+            ((True, None), {"key4": "value4"}, False, KeyError, None, False),
+            ((False, Exception("Search service error")), {"key1": "value1"}, False, Exception, None, False),
+            ((True, None), {"key1": "value1"}, False, OSError, OSError("File error"), False),
+            ((True, None), {"key1": "value1"}, False, TypeError, TypeError("Type error"), False),
         ],
     )
     def test_update_file(
@@ -52,7 +40,9 @@ class TestProjectsUtils:
         expected_result,
         expected_error_type,
         open_error,
+        commit,
         tmp_path,
+        user,
     ):
         path = tmp_path / "file.json"
         root_path = tmp_path / "root.json"
@@ -81,10 +71,14 @@ class TestProjectsUtils:
 
         with patch("app.services.projects.utils.search") as mock_search, patch(
             "builtins.open", side_effect=open_side_effect
-        ):
+        ), patch("app.tasks.commit.delay") as mock_commit, patch(
+            "app.services.projects.utils.get_user"
+        ) as mock_get_user:
+            mock_get_user.return_value = user
             mock_search.update_segments.return_value = update_segments_return
+            result, error, task_id = update_file(path, data, root_path, user)
 
-            result, error = update_file(path, data, root_path)
+            assert mock_commit.called == commit
 
         assert result == expected_result
         if expected_error_type is None:

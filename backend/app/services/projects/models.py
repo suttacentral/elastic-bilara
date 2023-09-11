@@ -12,3 +12,4 @@ class RootPathsOut(BaseModel):
 class JSONDataOut(BaseModel):
     can_edit: bool
     data: dict[str, str]
+    task_id: str | None = None

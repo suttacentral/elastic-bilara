@@ -3,7 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import List, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, validator
+from pydantic import AnyHttpUrl, BaseSettings, EmailStr, validator
 
 
 class Settings(BaseSettings):
@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "bilara-v2"
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
     WORK_DIR: Path = Path(__file__).parent.parent.parent / "checkouts" / "unpublished"
+    PUBLISHED_DIR: Path = Path(__file__).parent.parent.parent / "checkouts" / "published"
     ELASTIC_USERNAME: str
     ELASTIC_PASSWORD: str
     ES_REQUESTS_PORT: int
@@ -33,6 +34,15 @@ class Settings(BaseSettings):
     GITHUB_USER_URL: AnyHttpUrl = "https://api.github.com/user"
     GITHUB_AUTHORIZE_URL: AnyHttpUrl = "https://github.com/login/oauth/authorize"
     GITHUB_ACCESS_SCOPES: str = "user:email"
+    GITHUB_USERNAME: str
+    GITHUB_EMAIL: EmailStr
+    GITHUB_TOKEN: str
+    GITHUB_REPO: str
+    CELERY_BROKER_URL: str
+    CELERY_BACKEND_URL: str
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_PASSWORD: str
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:

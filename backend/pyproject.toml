@@ -17,6 +17,10 @@ python-dotenv = "^1.0.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 pytest-asyncio = "^0.21.0"
 freezegun = "^1.2.2"
+pygit2 = "^1.12.2"
+celery = "^5.3.1"
+redis = "^4.6.0"
+pygithub = "^1.59.0"
 
 [tool.poetry.dev-dependencies]
 black = "^23.3.0"

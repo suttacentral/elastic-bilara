@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Generator, List
 
 from app.core.config import settings
-from elasticsearch import Elasticsearch, RequestError, helpers
+from elasticsearch import Elasticsearch, NotFoundError, RequestError, helpers
 
 from . import utils
 
@@ -241,14 +241,16 @@ class Search:
 
         return root_paths
 
-    def get_file_paths(self, muid: str, prefix: str = None, _type: str = "root_path") -> set[str]:
+    def get_file_paths(self, muid: str, prefix: str = None, exact: bool = False, _type: str = "root_path") -> set[str]:
         query = {
             "query": {"bool": {"must": [{"term": {"muid": muid}}]}},
             "_source": [_type],
         }
 
-        if prefix is not None:
-            query["query"]["bool"]["must"].append({"match": {"prefix": prefix}})
+        if prefix is not None and not exact:
+            query["query"]["bool"]["must"].append({"prefix": {"prefix": prefix}})
+        elif prefix is not None and exact:
+            query["query"]["bool"]["must"].append({"term": {"prefix": prefix}})
 
         paths: set[str] = set()
 
@@ -263,7 +265,7 @@ class Search:
         try:
             self.update_segments_main_index(file_path, data)
             self.update_segments_segments_index(file_path, data)
-        except RequestError as e:
+        except (RequestError, NotFoundError) as e:
             return False, e
         return True, None
 
@@ -285,9 +287,16 @@ class Search:
     def update_segments_segments_index(self, file_path: Path, data: dict[str, str]) -> None:
         uids: list[str] = list(data.keys())
         doc_ids: list[str] = [utils.create_doc_id(file_path, uid) for uid in uids]
-        for doc_id in doc_ids:
-            doc: dict[str, Any] = self._search.get(index=settings.ES_SEGMENTS_INDEX, id=doc_id)["_source"]
-            doc["segment"] = data[doc["uid"]]
+        for uid, doc_id in zip(uids, doc_ids):
+            try:
+                doc: dict[str, Any] = self._search.get(index=settings.ES_SEGMENTS_INDEX, id=doc_id)["_source"]
+            except NotFoundError:
+                doc: dict[str, Any] = {
+                    "main_doc_id": utils.create_doc_id(file_path),
+                    "muid": utils.get_muid(file_path),
+                    "uid": uid,
+                }
+            doc["segment"] = data[uid]
             self._search.index(index=settings.ES_SEGMENTS_INDEX, id=doc_id, body=doc)
 
     def get_segments(self, size: int, page: int, muids: dict[str, str]) -> dict[str, dict[str, str]] | dict:

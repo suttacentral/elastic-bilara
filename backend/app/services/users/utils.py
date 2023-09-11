@@ -38,6 +38,6 @@ def add_user_to_users_json(data: dict[str, str | int]) -> tuple[bool, UserData |
 
     users.append(add_role(data).dict())
     with open(settings.USERS_FILE, "w") as f:
-        json.dump(users, f, indent=4)
+        json.dump(users, f, indent=2, ensure_ascii=False)
 
     return True, get_user(data["github_id"])
