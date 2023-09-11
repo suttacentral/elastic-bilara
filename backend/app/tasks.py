@@ -16,7 +16,22 @@ lock = Lock(
 )
 
 
-class PrTask(Task):
+class GitTask(Task):
+    auto_retry_for = (OSError, ConnectionError, TimeoutError, GitError, GithubException)
+    max_retries = 15
+    initial_backoff = 0.1098
+    backoff_factor = 2
+
+    def __call__(self, *args, **kwargs):
+        try:
+            return super().__call__(*args, **kwargs)
+        except self.auto_retry_for as exc:
+            retry_count = self.request.retries
+            backoff = self.initial_backoff * (self.backoff_factor**retry_count)  # at most an hour
+            self.retry(exc=exc, countdown=backoff, max_retries=self.max_retries)
+
+
+class PrTask(GitTask):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         user, file_paths = args
         paths = [utils.clean_path(path) for path in file_paths]
@@ -27,12 +42,7 @@ class PrTask(Task):
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
-@app.task(
-    name="commit",
-    auto_retry_for=(IOError, GitError, GithubException),
-    retry_kwargs={"max_retries": 15},
-    retry_backoff=True,
-)
+@app.task(name="commit", base=GitTask)
 def commit(user: dict, file_path: str) -> bool:
     with lock:
         path = utils.clean_path(file_path)
@@ -49,13 +59,7 @@ def commit(user: dict, file_path: str) -> bool:
         return False
 
 
-@app.task(
-    base=PrTask,
-    name="pr",
-    auto_retry_for=(IOError, GitError, GithubException),
-    retry_kwargs={"max_retries": 15},
-    retry_backoff=True,
-)
+@app.task(name="pr", base=PrTask)
 def pr(user, file_paths) -> str:
     with lock:
         user_data = UserData(**user)
