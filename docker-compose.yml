@@ -137,6 +137,7 @@ services:
     image: bitnami/nginx
     volumes:
       - ./bilara_server_block.conf:/opt/bitnami/nginx/conf/server_blocks/bilara_server_block.conf:ro
+      - ./nginx_logs:/var/log/nginx
       - ./frontend:/var/www/html:ro
     ports:
       - ${DOCKER_BACKEND_PORT}:${NGINX_PORT}
