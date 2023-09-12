@@ -10,8 +10,8 @@ services:
       context: ./backend
       dockerfile: backend.dockerfile
     container_name: bilara-backend
-    ports:
-      - ${DOCKER_BACKEND_PORT}:${DOCKER_BACKEND_PORT}
+#    ports:
+#      - ${DOCKER_BACKEND_PORT}:${DOCKER_BACKEND_PORT}
     networks:
       - bilara-network
     volumes:
@@ -134,6 +134,18 @@ services:
     command: "celery -A app.celery:celery_app worker --loglevel=info"
     env_file:
         - .env
+
+  nginx:
+    image: bitnami/nginx
+    volumes:
+      - ./bilara_server_block.conf:/opt/bitnami/nginx/conf/server_blocks/bilara_server_block.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - ${DOCKER_BACKEND_PORT}:${NGINX_PORT}
+    depends_on:
+      - bilara-backend
+    networks:
+      - bilara-network
 
 volumes:
   certs:
