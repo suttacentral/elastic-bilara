@@ -91,17 +91,6 @@ class TestUserRoles:
         with pytest.raises(ValidationError):
             add_role(data)
 
-    # @patch("app.services.users.utils.get_json_data")
-    # def test_get_role(self, mock_get_json_data, github_data, users) -> None:
-    #     users_data = users(n=3, github_id=[1, 2, 3], role=["reviewer", "writer", "administrator"])
-    #     mock_get_json_data.return_value = [user.dict() for user in users_data]
-    #     user = get_user(github_data(github_id=1)["github_id"])
-    #     assert user.role == users_data[0].role
-    #     user = get_user(github_data(github_id=2)["github_id"])
-    #     assert user.role == users_data[1].role
-    #     user = get_user(github_data(github_id=3)["github_id"])
-    #     assert user.role == users_data[2].role
-
     @patch("app.services.users.utils.get_user")
     def test_get_role_user_does_not_exist(self, mock_get_user) -> None:
         mock_get_user.side_effect = IndexError

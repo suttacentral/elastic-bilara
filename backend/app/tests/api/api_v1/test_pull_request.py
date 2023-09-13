@@ -89,4 +89,4 @@ class TestPullRequest:
         assert response.status_code == expected_status
         assert response.json() == expected_response
         if is_consistent:
-            mock_pr.delay.assert_called_once_with(user.dict(), paths)
+            mock_pr.delay.assert_called_once_with(user.model_dump(), paths)

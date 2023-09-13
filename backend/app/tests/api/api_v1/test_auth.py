@@ -63,7 +63,7 @@ class TestAuth:
         mock_new_access_token = "mock_new_access_token"
         mock_create_jwt_token.return_value = mock_new_access_token
 
-        response = await async_client.post("/refresh/", json=mock_refresh_token.dict())
+        response = await async_client.post("/refresh/", json=mock_refresh_token.model_dump())
 
         assert response.status_code == 200
         assert response.json() == {

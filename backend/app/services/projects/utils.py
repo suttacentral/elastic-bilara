@@ -45,7 +45,7 @@ def update_file(
 
     written, file_error = write_json_data(path, file_data)
     if written:
-        result = commit.delay(user.dict(), str(path))
+        result = commit.delay(user.model_dump(), str(path))
         task_id = result.id
 
     if file_error:
