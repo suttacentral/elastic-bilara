@@ -2,8 +2,8 @@ from collections import Counter
 from pathlib import Path
 
 from app.core.config import settings
+from app.db.schemas.user import UserBase
 from app.services.git.manager import GitManager
-from app.services.users.schema import UserData
 
 
 def get_project_title(branch: str) -> str:
@@ -60,7 +60,7 @@ def get_pr_title(branch: str) -> str:
     return f"New translations for {get_project_title(branch)}"
 
 
-def get_pr_body(user: UserData) -> str:
+def get_pr_body(user: UserBase) -> str:
     return (
         f"Request made by {user.username}\n\nPlease do not modify this branch directly. Changes should be\nmade "
         f"via the Bilara Translation App and the Pull Request\nupdated from Bilara."

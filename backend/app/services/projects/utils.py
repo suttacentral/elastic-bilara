@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from app.services.users.schema import UserData
+from app.db.schemas.user import UserBase
 from app.services.users.utils import get_user
 from app.tasks import commit
 from search.search import Search
@@ -21,9 +21,9 @@ def sort_paths(paths: set[str]) -> list[str]:
 
 
 def update_file(
-    path: Path, data: dict[str, str], root_path: Path, user: UserData
+    path: Path, data: dict[str, str], root_path: Path, user: UserBase
 ) -> tuple[bool, Exception | None, str | None]:
-    user: UserData = get_user(int(user.github_id))
+    user: UserBase = get_user(int(user.github_id))
     root_data: dict[str, str] = get_json_data(root_path)
     task_id = None
 

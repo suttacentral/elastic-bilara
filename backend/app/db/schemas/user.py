@@ -27,6 +27,3 @@ class User(UserBase):
     is_active: bool
 
     remarks: list[Remark]
-
-
-# User.model_validate()
