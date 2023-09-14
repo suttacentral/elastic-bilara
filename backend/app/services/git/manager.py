@@ -33,6 +33,7 @@ class GitManager:
         self.author: Signature = Signature(name=user.username, email=user.email)
         self.committer: Signature = Signature(name=settings.GITHUB_USERNAME, email=settings.GITHUB_EMAIL)
         self.github: Github = Github(settings.GITHUB_TOKEN)
+        self.repo_owner: str = settings.GITHUB_REPO.split("/")[0]
 
     def checkout(self, name: str = "published", force: bool = False) -> None:
         self.published.remotes["origin"].fetch(prune=True)
@@ -81,7 +82,7 @@ class GitManager:
 
     def get_prs(self, head: str, state="open") -> PaginatedList[PullRequest]:
         return self.github.get_repo(settings.GITHUB_REPO).get_pulls(
-            state=state, head=f"{self.author.name}:{head}", base="published"
+            state=state, head=f"{self.repo_owner}:{head}", base="published"
         )
 
     def get_pr(self, head: str, state="open") -> PullRequest | None:
@@ -101,7 +102,7 @@ class GitManager:
             self._cleanup(branch)
             return
         self._process_branch_changes(branch, [path], message)
-        self.open_pr(title=pr_title, body=pr_body, head=f"{self.author.name}:{branch}")
+        self.open_pr(title=pr_title, body=pr_body, head=f"{self.repo_owner}:{branch}")
 
     def handle_multiple_files(self, paths: list[Path], branch, message, pr_title: str = None, pr_body: str = None):
         project_pr = self.get_pr(branch)
@@ -119,7 +120,7 @@ class GitManager:
         project_files = list(set(changed_files) - set(files_in_pr))
         self._process_branch_changes(branch, project_files, message)
         if not project_pr:
-            self.open_pr(title=pr_title, body=pr_body, head=f"{self.author.name}:{branch}")
+            self.open_pr(title=pr_title, body=pr_body, head=f"{self.repo_owner}:{branch}")
 
     def has_changes(self, branch_name: str, path: Path) -> bool:
         unpublished_commit: bytes = GitManager.get_latest_commit(self.unpublished, path)
