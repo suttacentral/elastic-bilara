@@ -3,11 +3,7 @@ from unittest.mock import patch
 
 import pytest
 from app.core.config import settings
-from app.services.users.utils import (
-    add_user_to_users_json,
-    get_user,
-    is_username_in_muid,
-)
+from app.services.users.utils import add_user_to_db, get_user, is_username_in_muid
 
 
 class TestUserUtils:

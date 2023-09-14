@@ -25,7 +25,7 @@ def check_creator_github_handle_in_list(username: str, item_list: list[dict]) ->
     return username in [item["creator_github_handle"] for item in item_list]
 
 
-def add_user_to_users_json(data: dict[str, str | int]) -> tuple[bool, UserBase | None]:
+def add_user_to_db(data: dict[str, str | int]) -> tuple[bool, UserBase | None]:
     if not data.get("github_id"):
         return False, None
 
