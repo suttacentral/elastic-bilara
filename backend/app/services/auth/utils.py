@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import httpx
 from app.core.config import settings
 from app.services.auth.schema import TokenData
-from app.services.users.utils import add_user_to_users_json
+from app.services.users.utils import add_user_to_db
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from httpx import HTTPStatusError, Response
@@ -87,5 +87,5 @@ async def get_github_data(code: str) -> dict[str, str | int]:
             }
         except HTTPStatusError as e:
             return {"error": str(e)}
-    add_user_to_users_json(data)
+    add_user_to_db(data)
     return data

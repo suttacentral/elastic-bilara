@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Annotated
 
+from app.db.schemas.user import UserBase
 from app.services.auth import utils
 from app.services.projects.models import JSONDataOut, ProjectsOut, RootPathsOut
 from app.services.projects.utils import sort_paths, update_file
 from app.services.users.permissions import can_edit_translation
-from app.services.users.schema import UserData
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from search.search import Search
 from search.utils import get_json_data
@@ -17,7 +17,7 @@ search = Search()
 
 @router.get("/", response_model=ProjectsOut)
 async def get_projects(
-    user: Annotated[UserData, Depends(utils.get_current_user)],
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
     prefix: str | None = None,
 ) -> ProjectsOut:
     return ProjectsOut(projects=search.find_unique_data(field="muid", prefix=prefix))
@@ -25,7 +25,7 @@ async def get_projects(
 
 @router.get("/{muid}/", response_model=RootPathsOut)
 async def get_root_paths_for_project(
-    user: Annotated[UserData, Depends(utils.get_current_user)],
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
     muid: str,
     prefix: str | None = None,
     _type: Annotated[str, Query(enum=["root_path", "file_path"], min_length=9, max_length=9)] = "root_path",
@@ -38,7 +38,7 @@ async def get_root_paths_for_project(
 
 @router.get("/{muid}/{prefix}/", response_model=JSONDataOut)
 async def get_json_data_for_prefix_in_project(
-    user: Annotated[UserData, Depends(utils.get_current_user)], muid: str, prefix: str
+    user: Annotated[UserBase, Depends(utils.get_current_user)], muid: str, prefix: str
 ) -> JSONDataOut:
     file: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True, _type="file_path")
     if not file:
@@ -53,7 +53,7 @@ async def get_json_data_for_prefix_in_project(
 
 @router.patch("/{muid}/{prefix}/", response_model=JSONDataOut)
 async def update_json_data_for_prefix_in_project(
-    user: Annotated[UserData, Depends(utils.get_current_user)],
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
     muid: str,
     prefix: str,
     data: dict[str, str],

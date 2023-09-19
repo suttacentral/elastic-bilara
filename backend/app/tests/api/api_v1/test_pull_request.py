@@ -21,10 +21,12 @@ class TestPullRequest:
         assert response.json() == {
             "detail": [
                 {
+                    "input": [],
                     "loc": ["body", "paths"],
-                    "msg": "ensure this value has at least 1 items",
-                    "type": "value_error.list.min_items",
-                    "ctx": {"limit_value": 1},
+                    "msg": "List should have at least 1 item after validation, not 0",
+                    "type": "too_short",
+                    "url": "https://errors.pydantic.dev/2.3/v/too_short",
+                    "ctx": {"field_type": "List", "min_length": 1, "actual_length": 0},
                 }
             ]
         }
@@ -87,4 +89,4 @@ class TestPullRequest:
         assert response.status_code == expected_status
         assert response.json() == expected_response
         if is_consistent:
-            mock_pr.delay.assert_called_once_with(user.dict(), paths)
+            mock_pr.delay.assert_called_once_with(user.model_dump(), paths)

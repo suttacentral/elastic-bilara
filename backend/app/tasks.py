@@ -1,8 +1,8 @@
 from app.celery import celery_app as app
 from app.core.config import settings
+from app.db.schemas.user import UserBase
 from app.services.git import utils
 from app.services.git.manager import GitManager
-from app.services.users.schema import UserData
 from celery import Task
 from github import GithubException
 from pygit2 import GitError
@@ -35,7 +35,7 @@ class PrTask(GitTask):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         user, file_paths = args
         paths = [utils.clean_path(path) for path in file_paths]
-        user_data = UserData(**user)
+        user_data = UserBase(**user)
         manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
         branch = utils.get_branch_name(manager, paths)
         manager._cleanup(branch)
@@ -48,7 +48,7 @@ def commit(user: dict, file_path: str) -> bool:
         path = utils.clean_path(file_path)
         if not path:
             return False
-        user_data = UserData(**user)
+        user_data = UserBase(**user)
         manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
         message = f"Translations by {user_data.username} to {path}"
         if GitManager.add(manager.unpublished, [path]) and GitManager.commit(
@@ -62,7 +62,7 @@ def commit(user: dict, file_path: str) -> bool:
 @app.task(name="pr", base=PrTask)
 def pr(user, file_paths) -> str:
     with lock:
-        user_data = UserData(**user)
+        user_data = UserBase(**user)
         paths = [utils.clean_path(path) for path in file_paths]
         if not paths:
             return ""

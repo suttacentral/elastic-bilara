@@ -3,7 +3,7 @@ from typing import Literal
 
 import app.services.git.utils as utils
 from app.core.config import settings
-from app.services.users.schema import UserData
+from app.db.schemas.user import UserBase
 from github import Github
 from github.PaginatedList import PaginatedList
 from github.PullRequest import PullRequest
@@ -26,7 +26,7 @@ class GitManager:
     _protected_branches = ("published", "unpublished")
     _git_status = (GIT_STATUS_INDEX_NEW, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW)
 
-    def __init__(self, published: Path, unpublished: Path, user: UserData) -> None:
+    def __init__(self, published: Path, unpublished: Path, user: UserBase) -> None:
         self.user = user
         self.published: Repository = Repository(published)
         self.unpublished: Repository = Repository(unpublished)

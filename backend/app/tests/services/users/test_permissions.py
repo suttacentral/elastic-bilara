@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
+from app.db.models.user import Role
 from app.services.users.permissions import can_edit_translation, owns_project
-from app.services.users.roles import Role
 
 
 class TestUserPermissions:
@@ -22,7 +22,7 @@ class TestUserPermissions:
         "role, expected",
         [
             (Role.ADMIN.value, True),
-            (Role.PROOFREADER.value, False),
+            (Role.REVIEWER.value, False),
         ],
     )
     @patch("app.services.users.permissions.get_user")
@@ -50,7 +50,7 @@ class TestUserPermissions:
     @patch("app.services.users.permissions.is_username_in_muid")
     @patch("app.services.users.permissions.get_json_data")
     @patch("app.services.users.permissions.owns_project")
-    def test_can_edit_translation_user_is_translator(
+    def test_can_edit_translation_user_is_writer(
         self,
         mock_owns_project,
         mock_get_json_data,

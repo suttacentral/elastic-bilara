@@ -1,8 +1,8 @@
 from typing import Annotated
 
+from app.db.schemas.user import UserBase
 from app.services.auth.utils import get_current_user
 from app.services.search.models import SearchSegmentOut
-from app.services.users.schema import UserData
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from search.search import Search
 
@@ -17,7 +17,7 @@ es = Search()
     response_model=SearchSegmentOut,
 )
 async def search(
-    user: Annotated[UserData, Depends(get_current_user)],
+    user: Annotated[UserBase, Depends(get_current_user)],
     request: Request,
     uid: str | None = None,
     size: int = 10,

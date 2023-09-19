@@ -188,9 +188,11 @@ class TestProjects:
         assert response.json() == {
             "detail": [
                 {
+                    "type": "missing",
                     "loc": ["body"],
-                    "msg": "field required",
-                    "type": "value_error.missing",
+                    "msg": "Field required",
+                    "input": None,
+                    "url": "https://errors.pydantic.dev/2.3/v/missing",
                 }
             ]
         }
