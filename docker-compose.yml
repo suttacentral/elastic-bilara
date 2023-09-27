@@ -3,7 +3,7 @@ services:
   bilara-backend:
     depends_on:
       nginx:
-        condition: service_started
+        condition: service_healthy
       elasticsearch:
         condition: service_healthy
       worker:
@@ -17,6 +17,7 @@ services:
     volumes:
       - ./backend:/app
       - ./backend/checkouts:/app/checkouts
+      - certs:/app/certs
     env_file:
       - .env
 
@@ -111,8 +112,6 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     ports:
       - ${POSTGRESQL_PORT}:${POSTGRESQL_PORT}
-    networks:
-      - bilara-network
 #    restart: always
     environment:
       - POSTGRESQL_DATABASE
@@ -150,8 +149,17 @@ services:
       - ./bilara_server_block.conf:/opt/bitnami/nginx/conf/server_blocks/bilara_server_block.conf:ro
       - ./logs/nginx:/var/logs/nginx
       - ./frontend:/var/www/html
+      - certs:/certs
+      - ./scripts/generate_nginx_certs.sh:/scripts/generate_nginx_certs.sh
     ports:
-      - ${DOCKER_BACKEND_PORT}:80
+      - 9080:80
+      - ${DOCKER_BACKEND_PORT}:443
+    entrypoint: ["/bin/bash", "/scripts/generate_nginx_certs.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /certs/key.pem && test -f /certs/cert.pem"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
 
 volumes:
   certs:

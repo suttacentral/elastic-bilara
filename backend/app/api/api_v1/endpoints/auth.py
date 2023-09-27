@@ -3,8 +3,7 @@ from typing import Any
 from app.core.config import settings
 from app.services.auth import utils
 from app.services.auth.models import AccessTokenOut, TokenOut
-from app.services.auth.schema import RefreshToken
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Response, Request
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 
@@ -20,7 +19,7 @@ async def login() -> RedirectResponse:
 
 
 @router.get("/token/", response_model=AccessTokenOut)
-async def token(code: str) -> AccessTokenOut:
+async def token(response: Response, code: str) -> AccessTokenOut:
     data: dict[str, str] = await utils.get_github_data(code)
     if "error" in data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=data)
@@ -38,13 +37,17 @@ async def token(code: str) -> AccessTokenOut:
         expires_delta=settings.REFRESH_TOKEN_EXPIRE_DAYS,
         token_type="refresh",
     )
-    return AccessTokenOut(access_token=access_token, refresh_token=refresh_token)
+    utils.set_auth_cookies(response, access_token, refresh_token)
+    return AccessTokenOut(access_token="Token stored in cookies", refresh_token="Token stored in cookies")
 
 
 @router.post("/refresh/", response_model=TokenOut)
-async def refresh(refresh_token: RefreshToken) -> TokenOut:
+async def refresh(request: Request, response: Response) -> TokenOut:
+    raw_refresh_token = request.cookies.get("refresh_token")
+    if not raw_refresh_token:
+        raise utils.get_credentials_exception()
     try:
-        payload: dict[str, Any] = jwt.decode(refresh_token.refresh_token, settings.SECRET_KEY, settings.ALGORITHM)
+        payload: dict[str, Any] = jwt.decode(raw_refresh_token, settings.SECRET_KEY, settings.ALGORITHM)
         github_id: str = payload.get("sub")
         username: str = payload.get("username")
         utils.check_if_github_id_and_username_are_provided(github_id, username)
@@ -52,6 +55,14 @@ async def refresh(refresh_token: RefreshToken) -> TokenOut:
             data={"sub": github_id, "username": username},
             expires_delta=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         )
+        utils.set_auth_cookies(response, new_access_token)
     except JWTError:
         raise utils.get_credentials_exception()
-    return TokenOut(access_token=new_access_token)
+    return TokenOut(access_token="Token stored in cookies")
+
+
+@router.post("/logout/", status_code=status.HTTP_200_OK)
+async def logout(response: Response) -> dict[str, str]:
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+    return {"detail": "Successfully logged out"}

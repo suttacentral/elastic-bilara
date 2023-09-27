@@ -2,19 +2,21 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bilara</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
     <script src="./static/js/auth.js"></script>
+    <script src="./static/js/nav.js"></script>
     <link rel="stylesheet" href="./static/css/style.css">
 </head>
 
 <body class="flex flex-col min-h-screen">
     <header class="bg-indigo h-12 border drop-shadow-sm">
         <nav class="h-full">
-            <ul class="flex items-center h-full">
+            <ul class="flex items-center h-full" x-data="">
                 <li class="mx-4 uppercase tracking-wide font-bold"><a href="/">Bilara</a></li>
                 <li>
                     <details class="relative">
@@ -23,17 +25,25 @@
                     </details>
                 </li>
                 <li class="ml-auto mr-4">
-                    <a href="api/v1/login/"
-                    class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer">Login</a>
+                    <a class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+                        @click.prevent="await logout()">Logout
+                    </a>
                 </li>
             </ul>
         </nav>
     </header>
 
-    <main class="flex-grow flex-col text-center" x-init="await getToken()">
-        <p class="mt-8">Your submissions will be committed under your Github username. </p>
-        <p>Preferably, use your real name for your Github account.</p>
-        <p>To log in, use the log in button on the header.</p>
+    <main class="flex-grow flex-col">
+        <div class="py-5 mx-auto max-w-4xl" x-data="fileTree()">
+            <div x-cloak x-show="loading" class="modal">
+                <div class="spinner"></div>
+            </div>
+            <ul>
+                <template x-for="(level, i) in levels">
+                    <li class="my-0.5" x-html="renderLevel(level,i)"></li>
+                </template>
+            </ul>
+        </div>
     </main>
 
     <footer class="flex justify-around items-center h-28 border drop-shadow-sm">
