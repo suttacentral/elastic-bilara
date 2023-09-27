@@ -9,7 +9,7 @@ class TestSearch:
         response = await async_client.get("/search/")
         assert response.status_code == 401
         assert "detail" in response.json()
-        assert response.json() == {"detail": "Not authenticated"}
+        assert response.json() == {"detail": "Could not validate credentials"}
 
     @pytest.mark.asyncio
     async def test_search_no_query_parameters(self, async_client, mock_get_current_user) -> None:

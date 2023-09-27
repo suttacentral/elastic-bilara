@@ -37,4 +37,4 @@ class TestTaskStatus:
         task_id = "test_task_id"
         response = await async_client.get(f"/tasks/{task_id}/")
         assert response.status_code == 401
-        assert response.json() == {"detail": "Not authenticated"}
+        assert response.json() == {"detail": "Could not validate credentials"}

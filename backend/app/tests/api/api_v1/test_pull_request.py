@@ -10,7 +10,7 @@ class TestPullRequest:
         response = await async_client.post("/pr/", json=payload)
         assert response.status_code == 401
         assert "detail" in response.json()
-        assert response.json() == {"detail": "Not authenticated"}
+        assert response.json() == {"detail": "Could not validate credentials"}
 
     @pytest.mark.asyncio
     async def test_create_pull_request_empty_paths(self, mock_get_current_user, async_client):
