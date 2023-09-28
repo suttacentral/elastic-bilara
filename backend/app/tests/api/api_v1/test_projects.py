@@ -26,7 +26,7 @@ class TestProjects:
         response = await async_client.get("/projects/")
         assert response.status_code == 401
         assert "detail" in response.json()
-        assert response.json() == {"detail": "Not authenticated"}
+        assert response.json() == {"detail": "Could not validate credentials"}
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -57,10 +57,11 @@ class TestProjects:
 
     @pytest.mark.asyncio
     async def test_get_root_paths_for_project_unauthenticated(self, async_client) -> None:
+
         response = await async_client.get("/projects/translation-en-test/")
         assert response.status_code == 401
         assert "detail" in response.json()
-        assert response.json() == {"detail": "Not authenticated"}
+        assert response.json() == {"detail": "Could not validate credentials"}
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -113,7 +114,7 @@ class TestProjects:
         response = await async_client.get("/projects/translation-en-test/an1.1-10/")
         assert response.status_code == 401
         assert "detail" in response.json()
-        assert response.json() == {"detail": "Not authenticated"}
+        assert response.json() == {"detail": "Could not validate credentials"}
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
@@ -167,7 +168,7 @@ class TestProjects:
         response = await async_client.patch("/projects/translation-en-test/an1.1-10/")
         assert response.status_code == 401
         assert "detail" in response.json()
-        assert response.json() == {"detail": "Not authenticated"}
+        assert response.json() == {"detail": "Could not validate credentials"}
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.projects.can_edit_translation")

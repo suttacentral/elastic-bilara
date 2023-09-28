@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 
-import httpx
+from fastapi import Response as fastapi_Response
 from app.core.config import settings
 from app.services.auth.schema import TokenData
 from app.services.users.utils import add_user_to_db
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from httpx import HTTPStatusError, Response
+from httpx import AsyncClient, HTTPStatusError, Response
 from jose import JWTError, jwt
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -28,7 +28,10 @@ def create_jwt_token(*, data: dict, expires_delta: timedelta | None = None, toke
     return encoded_jwt
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
+async def get_current_user(request: Request) -> TokenData:
+    token = request.cookies.get("access_token")
+    if not token:
+        raise get_credentials_exception()
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, settings.ALGORITHM)
         github_id: str = payload.get("sub")
@@ -60,7 +63,7 @@ async def get_github_data(code: str) -> dict[str, str | int]:
         "code": code,
     }
     headers: dict[str, str] = {"Accept": "application/json"}
-    async with httpx.AsyncClient() as client:
+    async with AsyncClient() as client:
         try:
             response: Response = await client.post(
                 url=settings.GITHUB_ACCESS_TOKEN_URL,
@@ -89,3 +92,25 @@ async def get_github_data(code: str) -> dict[str, str | int]:
             return {"error": str(e)}
     add_user_to_db(data)
     return data
+
+
+def set_auth_cookies(response: fastapi_Response, access_token: str, refresh_token: str | None = None):
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES.total_seconds(),
+    )
+
+    if refresh_token:
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            path="/",
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds(),
+        )
