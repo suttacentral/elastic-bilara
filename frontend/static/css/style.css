@@ -37,3 +37,65 @@
         transform: rotate(360deg);
     }
 }
+
+.loading::after {
+    content: "";
+    border: 2px solid #ccc;
+    border-top-color: #000;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: inline-block;
+    animation: spin 0.75s linear infinite;
+}
+
+.success::after {
+    content: url('data:image/svg+xml;utf8,\
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">\
+        <path d="M8 20l8 8 16-16" stroke="%2308a108" stroke-width="4" fill="none"/>\
+        <polygon points="16,23 17.09,25.41 15.27,24.45 13.45,25.41 14.54,23 13.45,20.59 15.27,21.55 17.09,20.59" fill="%23d4915d">\
+            <animate attributeName="opacity" from="0" to="1" dur="2.5s" begin="2s" repeatCount="indefinite" />\
+        </polygon>\
+        <polygon points="28,19 29.09,21.41 27.27,20.45 25.45,21.41 26.54,19 25.45,16.59 27.27,17.55 29.09,16.59" fill="%23d4915d">\
+            <animate attributeName="opacity" from="0" to="1" dur="2.5s" begin="2.5s" repeatCount="indefinite" />\
+        </polygon>\
+        <polygon points="22,27 23.09,29.41 21.27,28.45 19.45,29.41 20.54,27 19.45,24.59 21.27,25.55 23.09,24.59" fill="%23d4915d">\
+            <animate attributeName="opacity" from="0" to="1" dur="2.5s" begin="3s" repeatCount="indefinite" />\
+        </polygon>\
+    </svg>');
+    display: inline-block;
+}
+
+
+.failure::after {
+    content: url('data:image/svg+xml;utf8,\
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">\
+        <path d="M10 10l20 20M10 30L30 10" stroke="%23d20e0e" stroke-width="4" fill="none"/>\
+        <polygon points="20,15 21.09,17.41 19.27,16.45 17.45,17.41 18.54,15 17.45,12.59 19.27,13.55 21.09,12.59" fill="%234b0ed2">\
+            <animate attributeName="opacity" from="0" to="1" dur="2.5s" begin="2s" repeatCount="indefinite" />\
+        </polygon>\
+        <polygon points="30,10 31.09,12.41 29.27,11.45 27.45,12.41 28.54,10 27.45,7.59 29.27,8.55 31.09,7.59" fill="%234b0ed2">\
+            <animate attributeName="opacity" from="0" to="1" dur="2.5s" begin="2.5s" repeatCount="indefinite" />\
+        </polygon>\
+        <polygon points="25,30 26.09,32.41 24.27,31.45 22.45,32.41 23.54,30 22.45,27.59 24.27,28.55 26.09,27.59" fill="%234b0ed2">\
+            <animate attributeName="opacity" from="0" to="1" dur="2.5s" begin="3s" repeatCount="indefinite" />\
+        </polygon>\
+    </svg>');
+    display: inline-block;
+}
+
+.projects::after {
+    content: "";
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid black;
+    display: inline-block;
+    transition: transform 0.3s ease-in-out;
+    margin-left: 0.25rem;
+}
+
+.projects.opened::after {
+    transform: rotate(180deg);
+}
