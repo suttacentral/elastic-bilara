@@ -20,7 +20,10 @@ async def get_projects(
     user: Annotated[UserBase, Depends(utils.get_current_user)],
     prefix: str | None = None,
 ) -> ProjectsOut:
-    return ProjectsOut(projects=search.find_unique_data(field="muid", prefix=prefix))
+    projects = search.find_unique_data(field="muid", prefix=prefix)
+    if not projects:
+        projects = search.get_distinct_data(field="muid", prefix=prefix)
+    return ProjectsOut(projects=projects)
 
 
 @router.get("/{muid}/", response_model=RootPathsOut)
