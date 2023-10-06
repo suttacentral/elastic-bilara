@@ -1,11 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-<!--we have access to the prefix, source muid and project muid-->
-<h1>TEST FROM TRANSLATION</h1>
-</body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Bilara</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script
+			defer
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"
+		></script>
+		<script src="./static/js/auth.js"></script>
+		<script src="./static/js/translation.js"></script>
+		<link rel="stylesheet" href="./static/css/style.css" />
+	</head>
+
+	<body class="flex flex-col min-h-screen">
+		<header class="bg-indigo h-12 border drop-shadow-sm">
+			<nav class="h-full">
+				<ul class="flex items-center h-full" x-data="">
+					<li class="mx-4 uppercase tracking-wide font-bold">
+						<a href="/">Bilara</a>
+					</li>
+					<li>
+						<details class="relative">
+							<summary>How to</summary>
+							<div class="absolute"></div>
+							<!-- Add this later-->
+						</details>
+					</li>
+					<li class="ml-auto mr-4">
+						<a
+							class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+							@click.prevent="await logout()"
+							>Logout
+						</a>
+					</li>
+				</ul>
+			</nav>
+		</header>
+
+		<main
+			class="flex-grow grid grid-cols-[3fr_minmax(16rem,_0.5fr)] my-2"
+			x-data="fetchTranslation()"
+		>
+			<div class="flex flex-wrap">
+				<template x-for="(translation, index) in translations" :key="index">
+					<div
+						class="flex flex-col gap-4 border rounded h-[1200px] overflow-y-auto basis-1/3"
+					>
+						<h2
+							x-text="translation.muid"
+							class="self-center mt-4"
+							x-bind:id="translation.muid"
+						></h2>
+						<div class="overflow-y-auto overflow-x-hidden flex-grow">
+							<ul class="flex-col">
+								<template
+									x-for="uid in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
+									:key="uid"
+								>
+									<li
+										class="flex w-auto gap-2 align-middle h-[12rem] mb-0.5 px-1 text-center"
+									>
+										<label
+											x-text="uid"
+											x-bind:for="`${translation.muid} ${uid}`"
+											class="basis-1/4 self-center"
+										></label>
+										<textarea
+											x-bind:id="`${translation.muid} ${uid}`"
+											x-bind:value="getValue(translation, uid)"
+											x-bind:readonly="!translation.canEdit"
+											x-on:input="setValue(translation, uid, $event.target.value)"
+											x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)"
+											class="border rounded flex-grow resize-none"
+										>
+										</textarea>
+										<div class="w-[2.5rem] self-center"></div>
+									</li>
+								</template>
+							</ul>
+						</div>
+						<div class="flex justify-center align-middle">
+							<button
+								x-show="translation.canEdit"
+								x-text="'Commit Changes'"
+								x-on:click="await updateHandler(translation.muid, translation.data, $event.target.nextElementSibling)"
+								class="border rounded py-2 px-1 max-w-md self-center mb-3.5"
+							></button>
+							<div></div>
+						</div>
+					</div>
+				</template>
+			</div>
+			<section class="border-1 rounded border-b basis-1/6">
+				<div x-data="{closed: true, selectedProjects: {}}">
+					<h3
+						class="projects cursor-pointer border p-2 text-center"
+						:class="{ closed: closed, opened: !closed }"
+						x-on:click="closed = !closed"
+					>
+						Related projects
+					</h3>
+					<template x-for="project in relatedProjects" :key="project">
+						<div
+							x-cloak
+							x-show="!closed"
+							x-transition:enter="transition ease-out duration-300"
+							x-transition:enter-start="opacity-0"
+							x-transition:enter-end="opacity-100"
+							x-transition:leave="transition ease-in duration-300"
+							x-transition:leave-start="opacity-100"
+							x-transition:leave-end="opacity-0"
+							@click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project)"
+							:class="{ 'bg-green-100': selectedProjects[project] }"
+							class="hover:bg-green-50 cursor-pointer p-2 border-t text-xl text-center"
+						>
+							<label x-text="project" class="cursor-pointer"></label>
+						</div>
+					</template>
+				</div>
+				<div>
+					<!--            Search goes here-->
+				</div>
+			</section>
+		</main>
+
+		<footer class="flex justify-around items-center h-28 border drop-shadow-sm">
+			<p>Computer Assisted Translation for SuttaCentral</p>
+			<ul>
+				<li><a href="https://suttacentral.net/">SuttaCentral</a></li>
+				<li><a href="https://github.com/suttacentral/bilara">Github</a></li>
+				<li><a href="https://discourse.suttacentral.net/">Forum</a></li>
+			</ul>
+		</footer>
+	</body>
 </html>

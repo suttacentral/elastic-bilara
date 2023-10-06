@@ -475,3 +475,14 @@ class Search:
                 }
             },
         }
+
+    def get_distinct_data(self, field: str, prefix: str = None) -> list[str]:
+        query: dict[str, Any] = self._build_unique_query(field=field)
+        query["query"] = {"term": {"prefix": {"value": prefix}}}
+        result: list[dict[str, Any]] = (
+            self._search.search(index=settings.ES_INDEX, body=query)
+            .get("aggregations")
+            .get("unique_data")
+            .get("buckets")
+        )
+        return [item["key"] for item in result]
