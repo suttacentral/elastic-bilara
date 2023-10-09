@@ -1,12 +1,32 @@
 from pathlib import Path
 from typing import Annotated
 
-from app.db.schemas.user import UserBase
+from app.core.config import settings
+from app.db.schemas.user import User, UserBase
 from app.services.auth import utils
-from app.services.directories.utils import create_directory, validate_root_data, create_file
-from app.services.projects.models import JSONDataOut, ProjectsOut, PathsOut
-from app.services.projects.utils import sort_paths, update_file
-from app.services.users.permissions import can_edit_translation, can_create_projects
+from app.services.directories.utils import (
+    create_directory,
+    create_file,
+    validate_root_data,
+)
+from app.services.projects.models import JSONDataOut, PathsOut, ProjectsOut
+from app.services.projects.utils import (
+    OverrideException,
+    create_new_project_file_names,
+    create_project_file,
+    get_root_file_names,
+    sort_paths,
+    update_file,
+)
+from app.services.users.permissions import (
+    can_create_projects,
+    can_edit_translation,
+    is_admin_or_superuser,
+    is_user_active,
+    is_user_in_admin_group,
+)
+from app.services.users.utils import get_user
+from app.tasks import commit
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from search.search import Search
@@ -85,6 +105,44 @@ async def update_json_data_for_prefix_in_project(
             code = status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=code, detail=str(error).strip("'"))
     return JSONDataOut(can_edit=True, data=data, task_id=task_id)
+
+
+@router.post(
+    "/create/",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
+)
+async def create_new_project(
+    current_user: Annotated[UserBase, Depends(utils.get_current_user)],
+    user_github_id: int,
+    published_root_path: str,
+    translation_language: str,
+):
+    current_user = get_user(current_user.github_id)
+    source_user = get_user(user_github_id)
+    if not source_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_github_id} not found")
+
+    new_project_paths = create_new_project_file_names(source_user.username, translation_language, published_root_path)
+    source_root_files_names = get_root_file_names(published_root_path)
+    try:
+        for root_file, new_file_path in zip(source_root_files_names, new_project_paths):
+            create_project_file(Path(root_file), Path(new_file_path))
+    except OverrideException as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    search.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, [Path(path) for path in new_project_paths])
+    result = commit.delay(
+        current_user.model_dump(),
+        new_project_paths,
+        f"Creating new project for {source_user.username} in {translation_language.upper()} language",
+    )
+
+    return {
+        "user": source_user.username,
+        "translation_language": translation_language,
+        "new_project_paths": new_project_paths,
+        "commit_task_id": result.id,
+    }
 
 
 @router.post("/{path:path}/")

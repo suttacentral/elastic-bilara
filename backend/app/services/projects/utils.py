@@ -1,9 +1,11 @@
+import glob
 import json
+import os
 import re
 from pathlib import Path
 
+from app.db.schemas.user import User, UserBase
 from app.core.text_types import TextType
-from app.db.schemas.user import UserBase
 from app.services.git import utils
 from app.services.users.utils import get_user
 from app.tasks import commit
@@ -76,3 +78,59 @@ def sort_data(data: dict[str, str], path: Path):
     if root_path:
         root_data = get_json_data(root_path)
         return {uid: data[uid] for uid in root_data if uid in data}
+
+
+def remove_filename_from_path(path: str) -> str:
+    if path.endswith(".json"):
+        tree = path.split("/")
+        tree.pop()
+        path = "/".join(tree)
+    return path if path.endswith("/") else path + "/"
+
+
+def create_new_project_path(username: str, translation_language: str, root_path: str) -> str:
+    common_parent_directory, specific_root_directory = root_path.split("/published/")
+    specific_root_directory = remove_filename_from_path(specific_root_directory)
+    common_path_to_root_text = specific_root_directory.split("/")[3:]
+    return (
+        common_parent_directory
+        + "/unpublished/translation/"
+        + f"{translation_language.lower()}/{username.lower()}/"
+        + "/".join(common_path_to_root_text)
+    )
+
+
+def separate_file_name_suffixes(root_path: str) -> list[str]:
+    root_path = remove_filename_from_path(root_path)
+    return [file_name.split("_")[0] for file_name in os.listdir(root_path)]
+
+
+def create_new_project_file_names(username: str, translation_language_code: str, root_path) -> list[str]:
+    new_translation_path = create_new_project_path(username, translation_language_code, root_path)
+    file_name_prefixes = separate_file_name_suffixes(root_path)
+    return [
+        new_translation_path + new_file_path + f"_translation-{translation_language_code}-{username}.json"
+        for new_file_path in file_name_prefixes
+    ]
+
+
+def create_project_file(segments_root_path: Path, new_file_path: Path):
+    if Path(new_file_path).exists():
+        raise OverrideException(f"Cannot overwrite existing file {new_file_path}")
+    segment_ids = get_json_data(segments_root_path).keys()
+    data = {key: "" for key in segment_ids}
+    if not new_file_path.parent.exists():
+        new_file_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(new_file_path, "w+") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def get_root_file_names(root_path: str):
+    path = Path(root_path)
+    if path.is_file():
+        root_path = remove_filename_from_path(root_path)
+    return glob.glob(root_path + "*.json")
+
+
+class OverrideException(Exception):
+    pass
