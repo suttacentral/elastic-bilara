@@ -11,6 +11,7 @@
 		></script>
 		<script src="./static/js/auth.js"></script>
 		<script src="./static/js/translation.js"></script>
+		<script src="./static/js/search.js"></script>
 		<link rel="stylesheet" href="./static/css/style.css" />
 	</head>
 
@@ -40,7 +41,7 @@
 		</header>
 
 		<main
-			class="flex-grow grid grid-cols-[3fr_minmax(16rem,_0.5fr)] my-2"
+			class="flex-grow grid grid-cols-[2fr_minmax(16rem,_0.5fr)] my-2"
 			x-data="fetchTranslation()"
 		>
 			<div class="flex flex-wrap">
@@ -86,7 +87,7 @@
 								x-show="translation.canEdit"
 								x-text="'Commit Changes'"
 								x-on:click="await updateHandler(translation.muid, translation.data, $event.target.nextElementSibling)"
-								class="border rounded py-2 px-1 max-w-md self-center mb-3.5"
+								class="rounded py-2 px-1 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer self-center mb-3.5"
 							></button>
 							<div></div>
 						</div>
@@ -94,9 +95,12 @@
 				</template>
 			</div>
 			<section class="border-1 rounded border-b basis-1/6">
-				<div x-data="{closed: true, selectedProjects: {}}">
+				<div
+					x-data="{closed: true, selectedProjects: {}}"
+					class="border rounded"
+				>
 					<h3
-						class="projects cursor-pointer border p-2 text-center"
+						class="arrow cursor-pointer border p-2 text-center"
 						:class="{ closed: closed, opened: !closed }"
 						x-on:click="closed = !closed"
 					>
@@ -120,8 +124,142 @@
 						</div>
 					</template>
 				</div>
-				<div>
-					<!--            Search goes here-->
+				<div class="border rounded px-2 py-1" x-data="search()">
+					<div x-data="{closed: closed, opened: !closed}">
+						<h3
+							class="arrow text-center p-2 cursor-pointer"
+							:class="{ closed: closed, opened: !closed }"
+							x-on:click="closed = !closed"
+						>
+							Search
+						</h3>
+						<div
+							x-cloak
+							x-show="!closed"
+							x-transition:enter="transition ease-out duration-300"
+							x-transition:enter-start="opacity-0"
+							x-transition:enter-end="opacity-100"
+							x-transition:leave="transition ease-in duration-300"
+							x-transition:leave-start="opacity-100"
+							x-transition:leave-end="opacity-0"
+						>
+							<div class="relative">
+								<span
+									class="absolute inset-y-0 left-0 pl-3 flex items-center cursor-pointer"
+									x-on:click="$event.target.nextElementSibling.focus()"
+									>🔎</span
+								>
+								<input
+									type="text"
+									x-model="projectQuery"
+									x-on:input="updateSuggestions"
+									class="border rounded border-slate-600 pl-10 pr-10 w-full px-2 py-1"
+									x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
+									id="project-query"
+								/>
+								<span
+									x-cloak
+									x-show="projectQuery.length"
+									x-on:click="projectQuery = ''; updateSuggestions()"
+									class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+									>❌</span
+								>
+							</div>
+							<ul class="max-h-[12rem] overflow-y-auto">
+								<template x-for="suggestion in suggestions">
+									<li
+										x-text="suggestion"
+										x-on:click="toggleSelectedProjects(suggestion)"
+										:class="{ 'bg-green-100': selectedProjects[suggestion] }"
+										class="px-2 py-1 cursor-pointer hover:bg-green-50"
+									></li>
+								</template>
+							</ul>
+							<div>
+								<template x-for="(value, key) in fields">
+									<div class="flex-col align-middle gap-2">
+										<div class="relative inline-block my-2">
+											<label
+												x-bind:for="'search-'+key"
+												x-text="key"
+												class="border rounded-full px-2 py-1 my-3 cursor-pointer"
+											>
+											</label>
+											<span
+												x-show="key !== 'uid'"
+												x-cloak
+												class="absolute text-xs cursor-pointer px-1 py-0.5"
+												style="top: -0.5em; right: -0.5em"
+												x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null"
+											>
+												❌
+											</span>
+										</div>
+										<input
+											class="border rounded border-slate-600 w-full px-1"
+											type="text"
+											x-bind:id="'search-'+key"
+											x-model="fields[key]"
+										/>
+									</div>
+								</template>
+							</div>
+							<div class="my-2">
+								<label class="border rounded-full py-1 px-2" for="size"
+									>Page Size:</label
+								>
+								<select
+									name="size"
+									id="size"
+									x-model="size"
+									class="border rounded border-slate-600 px-1"
+								>
+									<template x-for="pageSize in [1,5,10,25,50,100]">
+										<option
+											x-text="pageSize"
+											x-bind:value="pageSize"
+											x-bind:selected="pageSize === 10"
+										></option>
+									</template>
+								</select>
+							</div>
+							<div class="flex gap-2 my-1 justify-center">
+								<button
+									x-on:click="await previousHandler(); scrollTop('#resultsContainer')"
+									x-cloak
+									x-show="currentPage > 0"
+									id="previousPage"
+									class="rounded py-1 px-2 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+								>
+									Previous
+								</button>
+								<button
+									id="search"
+									x-on:click="await searchHandler($event); scrollTop('#resultsContainer')"
+									class="rounded py-1 px-2 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+								>
+									Search
+								</button>
+								<button
+									x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
+									x-bind:disabled="!isNextPage"
+									x-cloak
+									x-show="isNextPage"
+									id="nextPage"
+									class="rounded py-1 px-2 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+								>
+									Next
+								</button>
+							</div>
+							<div
+								x-cloak
+								x-show="Object.keys(results).length"
+								x-html="renderResults()"
+								class="max-h-[48rem] overflow-y-auto"
+								id="resultsContainer"
+							></div>
+						</div>
+					</div>
 				</div>
 			</section>
 		</main>

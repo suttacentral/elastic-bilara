@@ -84,7 +84,7 @@
     display: inline-block;
 }
 
-.projects::after {
+.arrow::after {
     content: "";
     width: 0;
     height: 0;
@@ -96,6 +96,6 @@
     margin-left: 0.25rem;
 }
 
-.projects.opened::after {
+.arrow.opened::after {
     transform: rotate(180deg);
 }
