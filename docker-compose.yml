@@ -6,7 +6,9 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
-      worker:
+      worker_pr:
+        condition: service_started
+      worker_commit:
         condition: service_started
 #      db:
 #        condition: service_healthy
@@ -129,16 +131,29 @@ services:
     ports:
         - ${REDIS_PORT}:${REDIS_PORT}
 
-  worker:
+  worker_pr:
     build:
       context: ./backend
       dockerfile: backend.dockerfile
-    container_name: worker
+    container_name: worker_pr
     depends_on:
       - redis
     volumes:
       - ./backend:/app
-    command: "celery -A app.celery:celery_app worker --loglevel=info"
+    command: "celery -A app.celery:celery_app worker -Q pr_queue -c 1 --loglevel=info"
+    env_file:
+        - .env
+
+  worker_commit:
+    build:
+      context: ./backend
+      dockerfile: backend.dockerfile
+    container_name: worker_commit
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+    command: "celery -A app.celery:celery_app worker -Q commit_queue -c 1 --loglevel=info"
     env_file:
         - .env
 
