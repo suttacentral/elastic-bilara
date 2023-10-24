@@ -3,7 +3,7 @@ from typing import Annotated
 
 from app.db.schemas.user import UserBase
 from app.services.auth import utils
-from app.services.projects.models import JSONDataOut, ProjectsOut, RootPathsOut
+from app.services.projects.models import JSONDataOut, ProjectsOut, PathsOut
 from app.services.projects.utils import sort_paths, update_file
 from app.services.users.permissions import can_edit_translation
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -26,17 +26,22 @@ async def get_projects(
     return ProjectsOut(projects=projects)
 
 
-@router.get("/{muid}/", response_model=RootPathsOut)
-async def get_root_paths_for_project(
+@router.get("/{muid}/", response_model=PathsOut)
+async def get_paths_for_project(
     user: Annotated[UserBase, Depends(utils.get_current_user)],
     muid: str,
     prefix: str | None = None,
     _type: Annotated[str, Query(enum=["root_path", "file_path"], min_length=9, max_length=9)] = "root_path",
-) -> RootPathsOut:
+) -> PathsOut:
     data: list[str] = sort_paths(search.get_file_paths(muid=muid, _type=_type, prefix=prefix))
     if not data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project '{muid}' not found")
-    return RootPathsOut(root_paths=data)
+    return PathsOut(paths=data)
+
+
+@router.get("/{muid}/can-edit/", response_model=dict[str, bool])
+async def get_can_edit(user: Annotated[UserBase, Depends(utils.get_current_user)], muid: str) -> dict[str, bool]:
+    return {"can_edit": can_edit_translation(int(user.github_id), muid)}
 
 
 @router.get("/{muid}/{prefix}/", response_model=JSONDataOut)
