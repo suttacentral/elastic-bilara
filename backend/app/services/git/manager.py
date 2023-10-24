@@ -182,6 +182,7 @@ class GitManager:
     def write_file(dest_path: Path, data: bytes) -> None:
         if not data:
             return None
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
         with open(dest_path, "wb") as f:
             f.write(data)
 
