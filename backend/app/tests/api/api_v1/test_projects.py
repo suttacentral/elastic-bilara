@@ -88,9 +88,9 @@ class TestProjects:
         response = await async_client.get(url)
 
         assert response.status_code == 200
-        assert "root_paths" in response.json()
-        assert len(response.json()["root_paths"]) == 2
-        assert response.json() == {"root_paths": ["root/path1", "root/path2"]}
+        assert "paths" in response.json()
+        assert len(response.json()["paths"]) == 2
+        assert response.json() == {"paths": ["root/path1", "root/path2"]}
         print(mock_get_file_paths.call_args_list)
         mock_get_file_paths.assert_called_once_with(muid=muid, _type=_type, prefix=prefix)
 
@@ -276,3 +276,20 @@ class TestProjects:
         assert "data" in response.json()
         assert "task_id" in response.json()
         assert response.json() == {"can_edit": True, "data": data, "task_id": "test_task_id"}
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("can_edit", [True, False])
+    @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
+    async def test_get_can_edit(self, mock_can_edit_translation, can_edit, async_client, mock_get_current_user) -> None:
+        mock_can_edit_translation.return_value = can_edit
+        response = await async_client.get("/projects/translation-en-test/can-edit/")
+        assert response.status_code == 200
+        assert "can_edit" in response.json()
+        assert response.json() == {"can_edit": can_edit}
+
+    @pytest.mark.asyncio
+    async def test_get_can_edit_unauthenticated(self, async_client) -> None:
+        response = await async_client.get("/projects/translation-en-test/can-edit/")
+        assert response.status_code == 401
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Could not validate credentials"}

@@ -5,8 +5,8 @@ class ProjectsOut(BaseModel):
     projects: list[str]
 
 
-class RootPathsOut(BaseModel):
-    root_paths: list[str]
+class PathsOut(BaseModel):
+    paths: list[str]
 
 
 class JSONDataOut(BaseModel):
