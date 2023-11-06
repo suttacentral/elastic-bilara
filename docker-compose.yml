@@ -130,6 +130,7 @@ services:
         - REDIS_PASSWORD=${REDIS_PASSWORD}
     ports:
         - ${REDIS_PORT}:${REDIS_PORT}
+    restart: always
 
   worker_pr:
     build:
@@ -143,6 +144,7 @@ services:
     command: "celery -A app.celery:celery_app worker -Q pr_queue -c 1 --loglevel=info"
     env_file:
         - .env
+    restart: always
 
   worker_commit:
     build:
@@ -156,6 +158,7 @@ services:
     command: "celery -A app.celery:celery_app worker -Q commit_queue -c 1 --loglevel=info"
     env_file:
         - .env
+    restart: always
 
   nginx:
     image: bitnami/nginx
