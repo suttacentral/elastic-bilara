@@ -50,6 +50,22 @@ def commit(user: dict, file_path: str) -> bool:
     return False
 
 
+@app.task(name="commit_batch", base=GitTask)
+def commit_batch(user: dict, file_paths: list[str], message: str) -> bool:
+    with lock:
+        paths = [utils.clean_path(path) for path in file_paths]
+        if not all(paths):
+            return False
+        user_data = UserBase(**user)
+        manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
+        if GitManager.add(manager.unpublished, paths) and GitManager.commit(
+            manager.unpublished, manager.author, manager.committer, message, paths
+        ):
+            GitManager.push(manager.unpublished, "origin", "unpublished")
+            return True
+        return False
+
+
 @app.task(name="pr", base=PrTask, queue="pr_queue")
 def pr(user, file_paths) -> str:
     user_data = UserBase(**user)
