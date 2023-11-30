@@ -34,24 +34,10 @@ class PrTask(GitTask):
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
-@app.task(name="commit", base=GitTask, queue="commit_queue")
-def commit(user: dict, file_path: str) -> bool:
-    path = utils.clean_path(file_path)
-    if not path:
-        return False
-    user_data = UserBase(**user)
-    manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
-    message = f"Translations by {user_data.username} to {path}"
-    if GitManager.add(manager.unpublished, [path]) and GitManager.commit(
-        manager.unpublished, manager.author, manager.committer, message, [path]
-    ):
-        GitManager.push(manager.unpublished, "origin", "unpublished")
-        return True
-    return False
-
-
 @app.task(name="commit_batch", base=GitTask, queue="commit_queue")
-def commit_batch(user: dict, file_paths: list[str], message: str) -> bool:
+def commit(user: dict, file_paths: list[str], message: str) -> bool:
+    if isinstance(file_paths, str):
+        file_paths = [file_paths]
     paths = [utils.clean_path(path) for path in file_paths]
     if not all(paths):
         return False

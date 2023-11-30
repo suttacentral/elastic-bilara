@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 from app.db.schemas.user import UserBase
+from app.services.git import utils
 from app.services.users.utils import get_user
 from app.tasks import commit
 from search.search import Search
@@ -44,8 +45,9 @@ def update_file(
         return False, elastic_error, task_id
 
     written, file_error = write_json_data(path, file_data)
+    cleaned_path_string = str(utils.clean_path(str(path)))
     if written:
-        result = commit.delay(user.model_dump(), str(path))
+        result = commit.delay(user.model_dump(), str(path), f"Translations by {user.username} to {cleaned_path_string}")
         task_id = result.id
 
     if file_error:
