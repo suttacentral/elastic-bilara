@@ -34,7 +34,7 @@ class PrTask(GitTask):
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
-@app.task(name="commit_batch", base=GitTask, queue="commit_queue")
+@app.task(name="commit", base=GitTask, queue="commit_queue")
 def commit(user: dict, file_paths: list[str], message: str) -> bool:
     if isinstance(file_paths, str):
         file_paths = [file_paths]
