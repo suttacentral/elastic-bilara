@@ -49,7 +49,12 @@ def get_project_head(path: Path) -> str:
 
 
 def clean_path(path: str) -> Path:
-    return Path(path.removeprefix("/app/checkouts/unpublished/"))
+    return (
+        Path(path.removeprefix("/app/checkouts/unpublished/"))
+        if "/app/checkouts/unpublished/" in path
+        else Path(path.removeprefix("checkouts/unpublished/"))
+    )
+
 
 
 def get_pr_commit_message(branch: str) -> str:
