@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from app.db.models.user import Role
-from app.services.users.permissions import can_edit_translation, owns_project
+from app.services.users.permissions import can_edit_translation, owns_project, can_create_projects
 
 
 class TestUserPermissions:
@@ -68,3 +68,18 @@ class TestUserPermissions:
         mock_get_json_data.return_value = projects()
 
         assert can_edit_translation(user.github_id, muids[0]) == expected
+
+    @pytest.mark.parametrize(
+        "role, expected",
+        [
+            (Role.REVIEWER.value, False),
+            (Role.WRITER.value, False),
+            (Role.ADMIN.value, True),
+            (Role.SUPERUSER.value, True),
+        ],
+    )
+    @patch("app.services.users.permissions.get_user")
+    def test_can_create_projects(self, mock_get_user, user, role, expected) -> None:
+        user.role = role
+        mock_get_user.return_value = user
+        assert can_create_projects(user.github_id) == expected

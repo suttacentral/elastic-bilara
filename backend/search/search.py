@@ -486,3 +486,58 @@ class Search:
             .get("buckets")
         )
         return [item["key"] for item in result]
+
+    def is_in_index(self, query: dict[str, Any]):
+        result: list[dict[str, Any]] = self._search.search(index=settings.ES_INDEX, query=query).get("hits").get("hits")
+        data = []
+        if result:
+            data = [item.get("_source") for item in result]
+        return bool(data)
+
+    def add_to_index(self, path: Path) -> tuple[bool, Exception | None]:
+        data = self._process_file(path)
+        source: dict[str, Any] = data["_source"]
+        try:
+            self._search.index(index=settings.ES_INDEX, id=data["_id"], body=data["_source"])
+        except RequestError as e:
+            return False, e
+        segment_actions: list[dict[str, Any]] = []
+        for item in source["segments"]:
+            segments_doc = {
+                "_index": settings.ES_SEGMENTS_INDEX,
+                "_id": utils.create_doc_id(path, item["uid"]),
+                "_source": {
+                    "main_doc_id": data["_id"],
+                    "muid": source["muid"],
+                    "uid": item["uid"],
+                    "segment": item["segment"],
+                },
+            }
+            segment_actions.append(segments_doc)
+        try:
+            helpers.bulk(
+                self._search,
+                segment_actions,
+                chunk_size=self._batch_size,
+                raise_on_error=True,
+            )
+        except RequestError as e:
+            return False, e
+        return True, None
+
+    def get_muids_by_prefix(self, prefix: str) -> set[str]:
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"prefix": {"prefix": prefix}},
+                    ]
+                }
+            },
+            "_source": ["muid", "file_path"],
+        }
+        return {
+            hit["_source"]["muid"]
+            for hit in self._scroll_search(query)
+            if any(prefix == str(parent.name) for parent in Path(hit["_source"]["file_path"]).parents)
+        }

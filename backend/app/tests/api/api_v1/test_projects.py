@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from elasticsearch import RequestError
+from fastapi import status
 
 
 class TestProjects:
@@ -57,7 +58,6 @@ class TestProjects:
 
     @pytest.mark.asyncio
     async def test_get_root_paths_for_project_unauthenticated(self, async_client) -> None:
-
         response = await async_client.get("/projects/translation-en-test/")
         assert response.status_code == 401
         assert "detail" in response.json()
@@ -293,3 +293,91 @@ class TestProjects:
         assert response.status_code == 401
         assert "detail" in response.json()
         assert response.json() == {"detail": "Could not validate credentials"}
+
+    @pytest.mark.asyncio
+    async def test_create_project_unauthenticated(self, async_client) -> None:
+        response = await async_client.post("/projects/root/pli/ms/sutta/test/")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Could not validate credentials"}
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_create_projects")
+    async def test_create_project_invalid_permissions(
+        self, mock_can_create_projects, async_client, mock_get_current_user_admin
+    ) -> None:
+        mock_can_create_projects.return_value = False
+        response = await async_client.post("/projects/root/pli/ms/sutta/test/")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "You are not allowed to create projects"}
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_create_projects")
+    async def test_create_project_data_and_not_json_suffix(
+        self, mock_can_create_projects, async_client, mock_get_current_user_admin
+    ) -> None:
+        mock_can_create_projects.return_value = True
+        response = await async_client.post("/projects/root/pli/ms/sutta/test/", json={"test1:0.1": "test"})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Path root/pli/ms/sutta/test and related were not created"}
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_create_projects")
+    @patch("app.api.api_v1.endpoints.projects.create_directory")
+    @pytest.mark.parametrize(
+        "create_dir_result,expected_status,expected_message",
+        [
+            (True, status.HTTP_201_CREATED, "Directory root/pli/ms/sutta/test and related have been created"),
+            (False, status.HTTP_400_BAD_REQUEST, "Directory root/pli/ms/sutta/test and related were not created"),
+        ],
+    )
+    async def test_create_project_directory(
+        self,
+        mock_create_directory,
+        mock_can_create_projects,
+        async_client,
+        mock_get_current_user_admin,
+        create_dir_result,
+        expected_status,
+        expected_message,
+    ) -> None:
+        mock_can_create_projects.return_value = True
+        mock_create_directory.return_value = create_dir_result
+        response = await async_client.post("/projects/root/pli/ms/sutta/test/")
+        assert response.status_code == expected_status
+        assert "detail" in response.json()
+        assert response.json() == {"detail": expected_message}
+
+    @pytest.mark.parametrize("validate_root_data", [(True,), (False,)])
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_create_projects")
+    @patch("app.api.api_v1.endpoints.projects.create_file")
+    @patch("app.api.api_v1.endpoints.projects.validate_root_data")
+    @pytest.mark.parametrize(
+        "create_file_result,expected_status,expected_message",
+        [
+            (True, status.HTTP_201_CREATED, "File root/pli/ms/sutta/test.json and related have been created"),
+            (False, status.HTTP_400_BAD_REQUEST, "File root/pli/ms/sutta/test.json and related were not created"),
+        ],
+    )
+    async def test_create_project_file(
+        self,
+        mock_validate_root_data,
+        mock_create_file,
+        mock_can_create_projects,
+        async_client,
+        mock_get_current_user_admin,
+        validate_root_data,
+        create_file_result,
+        expected_status,
+        expected_message,
+    ) -> None:
+        mock_can_create_projects.return_value = True
+        mock_validate_root_data.return_value = validate_root_data
+        mock_create_file.return_value = create_file_result
+        response = await async_client.post("/projects/root/pli/ms/sutta/test.json/", json={"test1:0.1": "test"})
+        assert response.status_code == expected_status
+        assert "detail" in response.json()
+        assert response.json() == {"detail": expected_message}

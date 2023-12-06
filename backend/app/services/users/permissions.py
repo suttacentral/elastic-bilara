@@ -26,3 +26,10 @@ def owns_project(
     muid: str,
 ) -> bool:
     return project.get("translation_muids") == muid and project.get("creator_github_handle") == username
+
+
+def can_create_projects(github_id: int) -> bool:
+    user: UserBase = get_user(github_id)
+    if user.role == Role.ADMIN.value or user.role == Role.SUPERUSER.value:
+        return True
+    return False

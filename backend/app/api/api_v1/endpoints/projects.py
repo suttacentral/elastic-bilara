@@ -3,10 +3,12 @@ from typing import Annotated
 
 from app.db.schemas.user import UserBase
 from app.services.auth import utils
+from app.services.directories.utils import create_directory, validate_root_data, create_file
 from app.services.projects.models import JSONDataOut, ProjectsOut, PathsOut
 from app.services.projects.utils import sort_paths, update_file
-from app.services.users.permissions import can_edit_translation
+from app.services.users.permissions import can_edit_translation, can_create_projects
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from search.search import Search
 from search.utils import get_json_data
 
@@ -83,3 +85,21 @@ async def update_json_data_for_prefix_in_project(
             code = status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=code, detail=str(error).strip("'"))
     return JSONDataOut(can_edit=True, data=data, task_id=task_id)
+
+
+@router.post("/{path:path}/")
+async def create_project(
+    user: Annotated[UserBase, Depends(utils.get_current_user)], path: str, data: dict[str, str] | None = None
+):
+    if not can_create_projects(int(user.github_id)):
+        raise HTTPException(status_code=403, detail="You are not allowed to create projects")
+    if not data and not path.endswith(".json"):
+        if not create_directory(Path(path)):
+            raise HTTPException(status_code=400, detail=f"Directory {path} and related were not created")
+        return JSONResponse(status_code=201, content={"detail": f"Directory {path} and related have been created"})
+    if data and path.endswith(".json"):
+        validate_root_data(Path(path), data)
+        if not create_file(user, Path(path), data):
+            raise HTTPException(status_code=400, detail=f"File {path} and related were not created")
+        return JSONResponse(status_code=201, content={"detail": f"File {path} and related have been created"})
+    raise HTTPException(status_code=400, detail=f"Path {path} and related were not created")
