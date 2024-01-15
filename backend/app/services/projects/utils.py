@@ -2,12 +2,13 @@ import json
 import re
 from pathlib import Path
 
+from app.core.text_types import TextType
 from app.db.schemas.user import UserBase
 from app.services.git import utils
 from app.services.users.utils import get_user
 from app.tasks import commit
 from search.search import Search
-from search.utils import get_json_data
+from search.utils import get_json_data, find_root_path
 
 search = Search()
 
@@ -62,25 +63,16 @@ def update_file(
 def write_json_data(path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
     try:
         with open(path, "w") as f:
-            json.dump(sort_data(data), f, indent=2, ensure_ascii=False)
+            json.dump(sort_data(data, path), f, indent=2, ensure_ascii=False)
     except (OSError, TypeError) as e:
         return False, e
     return True, None
 
 
-def sort_data(data: dict[str, str]):
-    if all(len(key.split(":")[-2:]) >= 2 for key in data.keys()):
-        return {
-            uid: segment
-            for uid, segment in sorted(
-                data.items(),
-                key=lambda item: [int(part) if part.isdigit() else part for part in item[0].split(":")[-2:]],
-            )
-        }
-    elif all(":" in key and key.split(":")[-1][0].isdigit() for key in data.keys()):
-        return {
-            uid: segment for uid, segment in sorted(data.items(), key=lambda item: float(item[0].split(":")[-1][2:]))
-        }
-    elif all(":" in key for key in data.keys()):
-        return {uid: segment for uid, segment in sorted(data.items(), key=lambda item: item[0].split(":")[1])}
-    return {uid: segment for uid, segment in sorted(data.items())}
+def sort_data(data: dict[str, str], path: Path):
+    if TextType.ROOT.value in path.parts:
+        return data
+    root_path = find_root_path(path)
+    if root_path:
+        root_data = get_json_data(root_path)
+        return {uid: data[uid] for uid in root_data if uid in data}

@@ -44,8 +44,8 @@ class TestProjectsUtils:
         tmp_path,
         user,
     ):
-        path = tmp_path / "file.json"
-        root_path = tmp_path / "root.json"
+        path = tmp_path / "test1_file.json"
+        root_path = tmp_path / "test1_root.json"
 
         with open(path, "w") as f:
             json.dump({"key1": "old_value1", "key2": "old_value2"}, f)
