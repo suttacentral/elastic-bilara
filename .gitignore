@@ -78,3 +78,4 @@ cython_debug/
 backend/checkouts/
 
 logs/
+/.env.local.dev

@@ -2,6 +2,7 @@ import json
 
 from app.core.config import settings
 from app.db.database import get_sess
+from app.db.models.user import Role
 from app.db.models.user import User as mUser
 from app.db.schemas.user import User, UserBase
 from app.services.users.roles import add_role
@@ -37,3 +38,11 @@ def add_user_to_db(data: dict[str, str | int]) -> tuple[bool, UserBase | None]:
         sess.commit()
 
         return True, get_user(data["github_id"])
+
+
+def is_user_active(user: UserBase) -> bool:
+    return user.is_active
+
+
+def get_roles() -> list[str]:
+    return [role.value for role in Role]
