@@ -35,7 +35,7 @@ class PrTask(GitTask):
 
 
 @app.task(name="commit", base=GitTask, queue="commit_queue")
-def commit(user: dict, file_paths: list[str], message: str) -> bool:
+def commit(user: dict, file_paths: list[str], message: str, add: bool = True) -> bool:
     if isinstance(file_paths, str):
         file_paths = [file_paths]
     paths = [utils.clean_path(path) for path in file_paths]
@@ -43,12 +43,17 @@ def commit(user: dict, file_paths: list[str], message: str) -> bool:
         return False
     user_data = UserBase(**user)
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
-    if GitManager.add(manager.unpublished, paths) and GitManager.commit(
-        manager.unpublished, manager.author, manager.committer, message, paths
-    ):
-        GitManager.push(manager.unpublished, "origin", "unpublished")
-        return True
-    return False
+
+    def git_operation(action: bool) -> bool:
+        operation = GitManager.add if action else GitManager.remove
+        if operation(manager.unpublished, paths) and GitManager.commit(
+            manager.unpublished, manager.author, manager.committer, message, paths
+        ):
+            GitManager.push(manager.unpublished, "origin", "unpublished")
+            return True
+        return False
+
+    return git_operation(add)
 
 
 @app.task(name="pr", base=PrTask, queue="pr_queue")
