@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
-from typing import Any, AsyncGenerator, Callable, Generator
+from typing import Any, AsyncGenerator, Callable, Generator, Iterator
+from unittest.mock import MagicMock, Mock
 
 import pytest
 import pytest_asyncio
 from _pytest.fixtures import FixtureRequest
 from app.core.config import settings
+from app.core.text_types import TextType
 from app.db.models.user import Role
 from app.db.schemas.user import UserBase
 from app.main import app
@@ -116,6 +118,18 @@ def mock_get_current_user(user: UserBase) -> Generator[None, Any, None]:
     app.dependency_overrides = {}
 
 
+@pytest.fixture
+def mock_get_current_user_admin(user: UserBase) -> Generator[None, Any, None]:
+    user.role = Role.ADMIN.value
+
+    async def _mock_get_current_user_function() -> TokenData:
+        return TokenData(github_id=str(user.github_id), username=user.username)
+
+    app.dependency_overrides[utils.get_current_user] = _mock_get_current_user_function
+    yield
+    app.dependency_overrides = {}
+
+
 @pytest.fixture(autouse=True)
 def setup_git_repos(tmpdir):
     """Creates temporary Git repositories for testing."""
@@ -175,3 +189,56 @@ def git_manager(setup_git_repos, user):
     """Provides an instance of the GitManager class for testing."""
     published_dir, unpublished_dir, _ = setup_git_repos
     return GitManager(published_dir, unpublished_dir, user)
+
+
+@pytest.fixture()
+def mock_path_obj() -> Callable[[bool, str], MagicMock]:
+    def _mock_path_obj(is_dir_value: bool, return_value: str):
+        mock_path = MagicMock()
+        mock_path.is_dir = Mock(return_value=is_dir_value)
+        mock_path.exists = Mock(return_value=is_dir_value)
+        mock_path.relative_to = Mock(return_value=return_value)
+        mock_path.name = return_value
+        return mock_path
+
+    return _mock_path_obj
+
+
+@pytest.fixture
+def mock_paths(mocker) -> Callable[[dict[str, list[Path]]], MagicMock]:
+    def _mock_paths(custom_paths: dict[str, list[Path]]) -> MagicMock:
+        mock_rglob = mocker.patch.object(Path, "rglob", autospec=True)
+
+        full_paths = {text_type.value: [] for text_type in TextType}
+        full_paths.update(custom_paths)
+
+        def side_effect(self, arg1: str) -> Iterator[Path]:
+            if arg1 == "*":
+                text_type = str(self).split("/")[-1]
+                return iter(full_paths.get(text_type, []))
+            return iter([])
+
+        mock_rglob.side_effect = side_effect
+        return mock_rglob
+
+    return _mock_paths
+
+
+@pytest.fixture
+def mock_path_exists(mocker):
+    mock_exists = mocker.patch.object(Path, "exists", autospec=True)
+
+    def _mock_exists(paths):
+        all_existing_paths = []
+        for path in paths:
+            helper_path = Path()
+            for part in path.parts:
+                helper_path /= part
+                all_existing_paths.append(helper_path)
+
+        def exists_side_effect(self):
+            return self in all_existing_paths
+
+        mock_exists.side_effect = exists_side_effect
+
+    return _mock_exists
