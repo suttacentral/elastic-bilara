@@ -11,8 +11,10 @@ from pygit2 import (
     GIT_CHECKOUT_FORCE,
     GIT_STATUS_INDEX_MODIFIED,
     GIT_STATUS_INDEX_NEW,
+    GIT_STATUS_INDEX_DELETED,
     GIT_STATUS_WT_MODIFIED,
     GIT_STATUS_WT_NEW,
+    GIT_STATUS_WT_DELETED,
     Commit,
     Oid,
     RemoteCallbacks,
@@ -24,7 +26,14 @@ from pygit2 import (
 
 class GitManager:
     _protected_branches = ("published", "unpublished")
-    _git_status = (GIT_STATUS_INDEX_NEW, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW)
+    _git_status = (
+        GIT_STATUS_INDEX_NEW,
+        GIT_STATUS_INDEX_MODIFIED,
+        GIT_STATUS_INDEX_DELETED,
+        GIT_STATUS_WT_MODIFIED,
+        GIT_STATUS_WT_NEW,
+        GIT_STATUS_WT_DELETED,
+    )
 
     def __init__(self, published: Path, unpublished: Path, user: UserBase) -> None:
         self.user = user
@@ -164,6 +173,16 @@ class GitManager:
             return False
         for path in paths:
             repo.index.add(path)
+        repo.index.write()
+        return True
+
+    @staticmethod
+    def remove(repo: Repository, file_paths: list[Path] | None = None) -> bool:
+        paths: list[Path] = file_paths or []
+        if not paths:
+            return False
+        for path in paths:
+            repo.index.remove(path)
         repo.index.write()
         return True
 
