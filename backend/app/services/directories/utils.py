@@ -18,12 +18,25 @@ from app.tasks import commit
 es = Search()
 
 
-def validate_path(path: str):
+def validate_dir_path(path: str):
     target_path: Path = settings.WORK_DIR / path
     if not target_path.exists() or not target_path.is_dir():
         raise HTTPException(status_code=404, detail=f"Path {path} not found")
     if str(target_path.relative_to(settings.WORK_DIR)).split("/")[0] not in {item.value for item in TextType}:
         raise HTTPException(status_code=400, detail=f"Path {path} not allowed")
+    return target_path
+
+
+def validate_path(path: str):
+    target_path: Path = settings.WORK_DIR / path
+    if not target_path.is_dir() and target_path.suffix != ".json":
+        raise HTTPException(status_code=400, detail=f"Path {path} not allowed")
+    if not target_path.exists():
+        raise HTTPException(status_code=404, detail=f"Path {path} not found")
+    if str(target_path.relative_to(settings.WORK_DIR)).split("/")[0] not in {item.value for item in TextType}:
+        raise HTTPException(status_code=400, detail=f"Path {path} not allowed")
+    if any(target_path.stem == text_type.value for text_type in TextType):
+        raise HTTPException(status_code=400, detail=f"Cannot delete {target_path.stem} directory")
     return target_path
 
 
@@ -147,6 +160,15 @@ def replace_muids(path: Path) -> Path:
     return Path(str(path).replace(path.stem.split("_")[-1], get_muid(path).replace("-blurb", "")))
 
 
-def get_matches(target_path: Path) -> set[Path]:
+def get_matches(target_path: Path, exact: bool = False) -> set[Path]:
     finder = Finder()
-    return finder.find(target_path)
+    return finder.find(target_path, exact)
+
+
+def get_language(path: Path) -> str:
+    path = Path(str(path).replace(str(settings.WORK_DIR), "").removeprefix("/"))
+    muid = get_muid_from_path(path)
+    language = muid.split("-", 2)[1]
+    if language == "misc":
+        language = None
+    return language
