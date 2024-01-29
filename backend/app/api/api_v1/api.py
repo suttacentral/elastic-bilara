@@ -16,3 +16,4 @@ api_router.include_router(
     tags=["users"],
     dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
 )
+api_router.include_router(users.router_exposed, tags=["users"])

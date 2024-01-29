@@ -133,6 +133,12 @@ async def get_roles() -> list[str]:
     return utils.get_roles()
 
 
-@router.get("/me", description="Get current user data")
-async def get_current_user_data(user: Annotated[User, Depends(auth_utils.get_current_user)]):
-    return RedirectResponse(url=f"{user.github_id}/")
+router_exposed = APIRouter(prefix="/users", dependencies=[Depends(auth_utils.get_current_user)])
+
+
+@router_exposed.get("/me", response_model=User, description="Get current user data")
+async def get_current_user_data(user: Annotated[User, Depends(auth_utils.get_current_user)]) -> User:
+    try:
+        return utils.get_user(user.github_id)
+    except ValidationError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user.github_id} not found")
