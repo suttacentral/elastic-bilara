@@ -1,9 +1,12 @@
+from datetime import datetime
 from typing import Any
 
 from app.core.config import settings
+from app.db.schemas.user import User
 from app.services.auth import utils
 from app.services.auth.models import AccessTokenOut, TokenOut
-from fastapi import APIRouter, HTTPException, status, Response, Request
+from app.services.users import utils as user_utils
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 
@@ -23,6 +26,13 @@ async def token(response: Response, code: str) -> AccessTokenOut:
     data: dict[str, str] = await utils.get_github_data(code)
     if "error" in data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=data)
+
+    user: User = user_utils.get_user(int(data["github_id"]))
+    if not user:
+        user_utils.add_user_to_db(data)
+    else:
+        user.last_login = datetime.utcnow()
+        user_utils.update_user(user)
 
     token_data: dict[str, str] = {
         "sub": data["github_id"],

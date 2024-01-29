@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from app.db.database import get_sess
 from app.db.models.user import User as mUser
@@ -126,6 +126,22 @@ async def set_user_role(github_id: int, role: str) -> User:
             return User.model_validate(user)
     except ValidationError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {github_id} not found")
+
+
+@router.patch("/{github_id}/", response_model=User, description="Update user data")
+async def update_user_data(github_id: int, payload: dict[str, Any]) -> User:
+    try:
+        user = utils.get_user(github_id)
+    except ValidationError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    try:
+        for key, value in payload.items():
+            setattr(user, key, value)
+        return utils.update_user(user)
+    except ValidationError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request data")
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Invalid data")
 
 
 @router.get("/roles", response_model=list[str], description="Get all roles")
