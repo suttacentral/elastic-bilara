@@ -9,6 +9,7 @@ from app.services.users import utils as user_utils
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
+from pydantic import ValidationError
 
 router = APIRouter()
 
@@ -27,8 +28,9 @@ async def token(response: Response, code: str) -> AccessTokenOut:
     if "error" in data:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=data)
 
-    user: User = user_utils.get_user(int(data["github_id"]))
-    if not user:
+    try:
+        user: User = user_utils.get_user(int(data["github_id"]))
+    except ValidationError:
         user_utils.add_user_to_db(data)
     else:
         user.last_login = datetime.utcnow()

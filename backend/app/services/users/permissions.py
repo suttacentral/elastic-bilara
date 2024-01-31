@@ -31,7 +31,6 @@ def owns_project(
     return project.get("translation_muids") == muid and project.get("creator_github_handle") == username
 
 
-
 def is_user_in_admin_group(user: UserBase) -> bool:
     return user.role in [Role.ADMIN.value, Role.SUPERUSER.value]
 
@@ -70,7 +69,6 @@ def is_user_active(request: Request) -> bool:
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"User is not active")
     return True
-
 
 
 def can_create_projects(github_id: int) -> bool:
