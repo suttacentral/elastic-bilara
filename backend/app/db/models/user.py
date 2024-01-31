@@ -9,7 +9,7 @@ from sqlalchemy import Enum as pgEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
-class Role(enum.Enum):
+class Role(str, enum.Enum):
     ADMIN = "administrator"
     SUPERUSER = "superuser"
     WRITER = "writer"

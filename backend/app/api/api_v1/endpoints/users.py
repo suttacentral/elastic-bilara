@@ -1,13 +1,13 @@
 from typing import Annotated, Any, Optional
 
 from app.db.database import get_sess
+from app.db.models.user import Role
 from app.db.models.user import User as mUser
 from app.db.schemas.user import User, UserBase
 from app.services.auth import utils as auth_utils
 from app.services.users import utils
 from app.services.users.utils import is_user_active
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import RedirectResponse
 from pydantic_core import ValidationError
 
 router = APIRouter(prefix="/users")
@@ -112,7 +112,7 @@ async def deactivate_user(github_id: int) -> User:
 
 
 @router.patch("/{github_id}/role", response_model=User, description="Set user a role")
-async def set_user_role(github_id: int, role: str) -> User:
+async def set_user_role(github_id: int, role: Role) -> User:
     if role not in utils.get_roles():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Role {role} not found")
     try:
