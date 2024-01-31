@@ -133,7 +133,7 @@ async def update_user_data(github_id: int, payload: dict[str, Any]) -> User:
     try:
         user = utils.get_user(github_id)
     except ValidationError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {github_id} not found")
     try:
         for key, value in payload.items():
             setattr(user, key, value)

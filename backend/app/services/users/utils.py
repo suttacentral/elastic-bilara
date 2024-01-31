@@ -42,11 +42,13 @@ def add_user_to_db(data: dict[str, str | int]) -> tuple[bool, UserBase | None]:
 
 def update_user(user_data: User | dict[str, Any]) -> User:
     user_data: User = User.model_validate(user_data)
-    if not get_user(user_data.github_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_data.github_id} not found")
     try:
         with get_sess() as sess:
             user = sess.query(mUser).filter(mUser.github_id == user_data.github_id).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_data.github_id} not found"
+                )
             for key, value in user_data.model_dump().items():
                 setattr(user, key, value)
             sess.commit()

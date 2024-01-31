@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Any, AsyncGenerator, Callable, Generator, Iterator
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, create_autospec, patch
 
 import pytest
 import pytest_asyncio
@@ -19,6 +19,7 @@ from app.tests.utils.factories import ProjectFactory, PublicationFactory
 from app.tests.utils.git import create_repo_structure_with_content
 from httpx import AsyncClient
 from pygit2 import Commit, Repository, Signature, init_repository
+from sqlalchemy.orm import Session
 
 
 @pytest_asyncio.fixture
@@ -242,3 +243,11 @@ def mock_path_exists(mocker):
         mock_exists.side_effect = exists_side_effect
 
     return _mock_exists
+
+
+@pytest.fixture
+def mock_session():
+    with patch("app.db.database.SessionLocal") as mock_session_local:
+        mock_session = create_autospec(Session, instance=True)
+        mock_session_local.return_value = mock_session
+        yield mock_session
