@@ -39,22 +39,6 @@ class TestUserUtils:
         assert not any(username in publication["creator_github_handle"] for publication in publications())
 
 
-@pytest.fixture
-def mock_user():
-    return mUser(
-        id=1,
-        github_id=12345,
-        username="test_user",
-        email="test@example.com",
-        avatar_url=None,
-        role="reviewer",
-        created_on=datetime.datetime.utcnow(),
-        last_login=datetime.datetime.utcnow(),
-        is_active=True,
-        remarks=[],
-    )
-
-
 @pytest.mark.parametrize(
     "id_, github_id, username, email, avatar_url, role, is_active",
     [
@@ -92,13 +76,17 @@ def test_is_user_active(mock_user):
     assert is_user_active(mock_user)
 
 
+def test_is_user_not_active(mock_user):
+    mock_user.is_active = False
+    assert not is_user_active(mock_user)
+
+
 def test_get_roles():
     assert get_roles() == ["administrator", "superuser", "writer", "reviewer"]
 
 
 def test_update_user_role_update(mock_session, mock_user):
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user
-    mock_session.commit.return_value = None
 
     user_data = {
         "id": mock_user.id,
@@ -112,16 +100,16 @@ def test_update_user_role_update(mock_session, mock_user):
         "last_login": mock_user.last_login,
         "remarks": [],
     }
-
+    assert mock_user.role == "reviewer"
     result_user = update_user(user_data)
 
     assert isinstance(result_user, User)
+    assert result_user.role == "administrator"
     assert result_user.github_id == mock_user.github_id
     assert result_user.id == mock_user.id
     assert result_user.username == mock_user.username
     assert result_user.email == mock_user.email
     assert result_user.avatar_url == mock_user.avatar_url
-    assert result_user.role == "administrator"
     assert result_user.is_active == mock_user.is_active
 
 
@@ -135,7 +123,7 @@ def test_update_user_github_id_not_found(mock_session, mock_user):
         "email": mock_user.email,
         "avatar_url": mock_user.avatar_url,
         "role": mock_user.role,
-        "is_active": True,
+        "is_active": mock_user.is_active,
         "created_on": mock_user.created_on,
         "last_login": mock_user.last_login,
         "remarks": [],
@@ -150,7 +138,7 @@ def test_update_user_id_update_fail_integrity_error(mock_session, mock_user):
     mock_session.commit.side_effect = IntegrityError(None, None, None)
     user_data = {
         "id": 1,
-        "github_id": 123456,
+        "github_id": 123456,  # unique identifier which update_user uses to find the user
         "username": mock_user.username,
         "email": mock_user.email,
         "avatar_url": mock_user.avatar_url,

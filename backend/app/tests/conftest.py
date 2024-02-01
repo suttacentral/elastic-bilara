@@ -1,3 +1,4 @@
+import datetime
 import json
 from pathlib import Path
 from typing import Any, AsyncGenerator, Callable, Generator, Iterator
@@ -9,11 +10,13 @@ from _pytest.fixtures import FixtureRequest
 from app.core.config import settings
 from app.core.text_types import TextType
 from app.db.models.user import Role
-from app.db.schemas.user import UserBase
+from app.db.models.user import User as mUser
+from app.db.schemas.user import User, UserBase
 from app.main import app
 from app.services.auth import utils
 from app.services.auth.schema import TokenData
 from app.services.git.manager import GitManager
+from app.services.users import permissions
 from app.tests.services.users.factories import UserFactory
 from app.tests.utils.factories import ProjectFactory, PublicationFactory
 from app.tests.utils.git import create_repo_structure_with_content
@@ -250,4 +253,73 @@ def mock_session():
     with patch("app.db.database.SessionLocal") as mock_session_local:
         mock_session = create_autospec(Session, instance=True)
         mock_session_local.return_value = mock_session
+        mock_session.commit.return_value = None
         yield mock_session
+
+
+@pytest.fixture
+def mock_user(
+    id_: int = 1,
+    github_id: int = 123,
+    username: str = "test_user",
+    email: str = "test@email.com",
+    avatar_url: str = "example.com/url",
+    role: Role = Role.REVIEWER.value,
+    is_active: bool = True,
+    remarks: list = None,
+):
+    return mUser(
+        id=id_,
+        github_id=github_id,
+        username=username,
+        email=email,
+        avatar_url=avatar_url,
+        role=role,
+        created_on=datetime.datetime.utcnow(),
+        last_login=datetime.datetime.utcnow(),
+        is_active=is_active,
+        remarks=remarks if remarks else [],
+    )
+
+
+@pytest.fixture
+def mock_users():
+    # Create a list of mock user instances
+    return [
+        User(
+            id=1,
+            github_id=123,
+            username="test_user",
+            email="test@example.com",
+            avatar_url="some_url.com",
+            role="reviewer",
+            created_on=datetime.datetime.utcnow(),
+            last_login=datetime.datetime.utcnow(),
+            is_active=True,
+            remarks=[],
+        ),
+        User(
+            id=2,
+            github_id=12345,
+            username="test_user_2",
+            email="testtesttest@example.com",
+            avatar_url="some_url.com",
+            role="writer",
+            created_on=datetime.datetime.utcnow(),
+            last_login=datetime.datetime.utcnow(),
+            is_active=True,
+            remarks=[],
+        ),
+    ]
+
+
+@pytest.fixture
+def mock_is_admin_or_superuser_is_active(mock_user: User) -> Generator[None, Any, None]:
+    async def override_dependency():
+        return False
+
+    app.dependency_overrides[permissions.is_admin_or_superuser] = override_dependency
+    app.dependency_overrides[permissions.is_user_active] = override_dependency
+
+    yield
+    app.dependency_overrides = {}
