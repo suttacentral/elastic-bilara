@@ -3,7 +3,7 @@ from typing import Annotated, Any, Optional
 from app.db.database import get_sess
 from app.db.models.user import Role
 from app.db.models.user import User as mUser
-from app.db.schemas.user import User, UserBase
+from app.db.schemas.user import User, UserBase, UserUpdatePayload
 from app.services.auth import utils as auth_utils
 from app.services.users import utils
 from app.services.users.utils import is_user_active
@@ -128,8 +128,8 @@ async def set_user_role(github_id: int, role: Role) -> User:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {github_id} not found")
 
 
-@router.patch("/{github_id}/", response_model=User, description="Update user data")
-async def update_user_data(github_id: int, payload: dict[str, Any]) -> User:
+@router.patch("/{github_id}/", description="Update user data")
+async def update_user_data(github_id: int, payload: UserUpdatePayload) -> User:
     try:
         user = utils.get_user(github_id)
     except ValidationError:

@@ -1,6 +1,7 @@
 import pytest
 from app.main import app
 from app.services.users import permissions
+from sqlalchemy.exc import IntegrityError
 
 
 @pytest.mark.asyncio
@@ -450,3 +451,149 @@ async def test_get_current_user_data(async_client, mock_session, mock_user, mock
     mock_session.query.return_value.filter.return_value.first.return_value = None
     response = await async_client.get("/users/me")
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_user_update_auth_fail(
+    async_client,
+    mock_session,
+    mock_user,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = None
+    mock_session.add.return_value = None
+
+    response = await async_client.patch(
+        "/users/123/",
+        json={"role": "superuser"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_user_update_no_user(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_is_admin_or_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = None
+    mock_session.add.return_value = None
+
+    response = await async_client.patch("/users/123/", json={"role": "superuser"})
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_user_update_success(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_is_admin_or_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+    mock_session.add.return_value = None
+
+    payload = {
+        "role": "superuser",
+    }
+
+    assert mock_user.role == "reviewer"
+    response = await async_client.patch("/users/123/", json=payload)
+    assert response.json()["role"] == "superuser"
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_user_update_no_action_taken(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_is_admin_or_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+    mock_session.add.return_value = None
+
+    payload = {
+        "github_id": "666",
+    }
+
+    response = await async_client.patch("/users/123/", json=payload)
+    assert response.status_code == 200
+    assert response.json()["github_id"] == 123
+
+    response = response.json()
+    # remove unnecessary fields/format differences
+    del response["last_login"]
+    del response["created_on"]
+    del mock_user.last_login
+    del mock_user.created_on
+    del mock_user._sa_instance_state
+
+    assert response == mock_user.__dict__
+
+
+@pytest.mark.asyncio
+async def test_user_update_no_action_taken_2(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_is_admin_or_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+    mock_session.add.return_value = None
+
+    payload = {"github_id": "666", "asdasdasd": "asdasdasd", "id": 666}
+
+    response = await async_client.patch("/users/123/", json=payload)
+    assert response.status_code == 200
+    assert response.json()["github_id"] == 123
+    assert response.json()["id"] == 1
+    assert "asdasdasd" not in response.json().keys()
+
+
+@pytest.mark.asyncio
+async def test_user_update_error(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_is_admin_or_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+    mock_session.add.return_value = None
+
+    payload = {"role": "asdasdasd"}
+
+    response = await async_client.patch("/users/123/", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_user_update_integrity_error(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_is_admin_or_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+    mock_session.commit.side_effect = IntegrityError(None, None, None)
+
+    payload = {"role": "writer"}
+
+    response = await async_client.patch("/users/123/", json=payload)
+    assert response.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_user_update_value_error(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_is_admin_or_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+    mock_session.commit.side_effect = ValueError
+
+    payload = {"role": "writer"}
+
+    response = await async_client.patch("/users/123/", json=payload)
+    assert response.status_code == 417
