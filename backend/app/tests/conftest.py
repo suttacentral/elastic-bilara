@@ -284,7 +284,6 @@ def mock_user(
 
 @pytest.fixture
 def mock_users():
-    # Create a list of mock user instances
     return [
         User(
             id=1,
