@@ -138,10 +138,10 @@ async def update_user_data(github_id: int, payload: UserUpdatePayload) -> User:
         for key, value in payload.items():
             setattr(user, key, value)
         return utils.update_user(user)
-    except ValidationError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request data")
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Bad request data. Details {str(e)}")
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Invalid data")
+        raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Invalid data. Details {str(e)}")
 
 
 @router.get("/roles", response_model=list[str], description="Get all roles")

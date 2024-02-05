@@ -85,27 +85,19 @@ def test_get_roles():
     assert get_roles() == ["administrator", "superuser", "writer", "reviewer"]
 
 
-def test_update_user_role_update(mock_session, mock_user):
+def test_update_user_role_update(mock_session, mock_user: mUser):
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user
 
-    user_data = {
-        "id": mock_user.id,
-        "github_id": mock_user.github_id,
-        "username": mock_user.username,
-        "email": mock_user.email,
-        "avatar_url": mock_user.avatar_url,
-        "role": "administrator",
-        "is_active": mock_user.is_active,
-        "created_on": mock_user.created_on,
-        "last_login": mock_user.last_login,
-        "remarks": [],
-    }
+    user_data = {key: value for key, value in mock_user.__dict__.items()}
+    user_data["role"] = "administrator"
+
     assert mock_user.role == "reviewer"
     result_user = update_user(user_data)
 
     assert isinstance(result_user, User)
     assert result_user.role == "administrator"
     assert result_user.github_id == mock_user.github_id
+
     assert result_user.id == mock_user.id
     assert result_user.username == mock_user.username
     assert result_user.email == mock_user.email
@@ -116,18 +108,8 @@ def test_update_user_role_update(mock_session, mock_user):
 def test_update_user_github_id_not_found(mock_session, mock_user):
     mock_session.query.return_value.filter.return_value.first.return_value = None
 
-    user_data = {
-        "id": mock_user.id,
-        "github_id": 66666,
-        "username": mock_user.username,
-        "email": mock_user.email,
-        "avatar_url": mock_user.avatar_url,
-        "role": mock_user.role,
-        "is_active": mock_user.is_active,
-        "created_on": mock_user.created_on,
-        "last_login": mock_user.last_login,
-        "remarks": [],
-    }
+    user_data = {key: value for key, value in mock_user.__dict__.items()}
+    user_data["github_id"] = 66666
 
     with pytest.raises(HTTPException):
         update_user(user_data)
@@ -136,18 +118,8 @@ def test_update_user_github_id_not_found(mock_session, mock_user):
 def test_update_user_id_update_fail_integrity_error(mock_session, mock_user):
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user
     mock_session.commit.side_effect = IntegrityError(None, None, None)
-    user_data = {
-        "id": 1,
-        "github_id": 123456,  # unique identifier which update_user uses to find the user
-        "username": mock_user.username,
-        "email": mock_user.email,
-        "avatar_url": mock_user.avatar_url,
-        "role": mock_user.role,
-        "is_active": mock_user.is_active,
-        "created_on": mock_user.created_on,
-        "last_login": mock_user.last_login,
-        "remarks": [],
-    }
+    user_data = {key: value for key, value in mock_user.__dict__.items()}
+    user_data["github_id"] = 123456
 
     with pytest.raises(HTTPException):
         update_user(user_data)
@@ -156,19 +128,9 @@ def test_update_user_id_update_fail_integrity_error(mock_session, mock_user):
 def test_update_user_non_existing_attribute(mock_session, mock_user):
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user
     mock_session.commit.side_effect = ValueError
-    user_data = {
-        "id": mock_user.id,
-        "github_id": mock_user.github_id,
-        "username": mock_user.username,
-        "email": mock_user.email,
-        "avatar_url": mock_user.avatar_url,
-        "role": mock_user.role,
-        "is_active": mock_user.is_active,
-        "created_on": mock_user.created_on,
-        "last_login": mock_user.last_login,
-        "remarks": [],
-        "non_existing": "attribute",
-    }
+
+    user_data = {key: value for key, value in mock_user.__dict__.items()}
+    user_data["non_existing"] = "attribute"
 
     with pytest.raises(ValueError):
         update_user(user_data)
