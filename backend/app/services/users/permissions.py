@@ -73,6 +73,4 @@ def is_user_active(request: Request) -> bool:
 
 def can_create_projects(github_id: int) -> bool:
     user: UserBase = get_user(github_id)
-    if user.role == Role.ADMIN.value or user.role == Role.SUPERUSER.value:
-        return True
-    return False
+    return is_user_in_admin_group(user)
