@@ -27,8 +27,4 @@ down:
 	@$(COMPOSE) down
 
 test:
-	@$(COMPOSE) exec bilara-backend pytest /app/app/tests/api/api_v1/test_users.py /app/app/tests/services/users/test_utils.py  -vv
-
-#/home/marcin/Documents/Code/bilara-v2/backend/app/tests/services/users/test_utils.py
-#	@$(COMPOSE) exec bilara-backend pytest /app/app/tests/api/api_v1/test_users.py -vv
-#	@$(COMPOSE) exec bilara-backend pytest /app/app/tests -vv
+	@$(COMPOSE) exec bilara-backend pytest /app/app/tests -vv
