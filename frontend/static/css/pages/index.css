@@ -1,0 +1,16 @@
+.main-content--index {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.index-main__description {
+    font-size: var(--text-lg);
+    text-align: center;
+    color: var(--color-black);
+}
+
+.index-main__description--push-top {
+    margin-top: var(--space-lg);
+}

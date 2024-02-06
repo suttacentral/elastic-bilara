@@ -1,0 +1,35 @@
+:root {
+    --space-unit: 1em;
+    --space-xxs: calc(0.25 * var(--space-unit));
+    --space-xs: calc(0.5 * var(--space-unit));
+    --space-sm: calc(0.75 * var(--space-unit));
+    --space-md: calc(1.25 * var(--space-unit));
+    --space-lg: calc(2 * var(--space-unit));
+    --space-xl: calc(3.25 * var(--space-unit));
+    --space-xxl: calc(5.25 * var(--space-unit));
+
+    --radius-xxs: var(--space-xxs);
+    --radius-xs: var(--space-xs);
+    --radius-sm: var(--space-sm);
+    --radius-md: var(--space-md);
+    --radius-lg: var(--space-lg);
+    --radius-xl: var(--space-xl);
+    --radius-xxl: var(--space-xxl);
+
+    --space-unit-fixed: 1rem;
+    --space-xxs-fixed: calc(0.25 * var(--space-unit-fixed));
+    --space-xs-fixed: calc(0.5 * var(--space-unit-fixed));
+    --space-sm-fixed: calc(0.75 * var(--space-unit-fixed));
+    --space-md-fixed: calc(1.25 * var(--space-unit-fixed));
+    --space-lg-fixed: calc(2 * var(--space-unit-fixed));
+    --space-xl-fixed: calc(3.25 * var(--space-unit-fixed));
+    --space-xxl-fixed: calc(5.25 * var(--space-unit-fixed));
+
+    --radius-xxs-fixed: var(--space-xxs-fixed);
+    --radius-xs-fixed: var(--space-xs-fixed);
+    --radius-sm-fixed: var(--space-sm-fixed);
+    --radius-md-fixed: var(--space-md-fixed);
+    --radius-lg-fixed: var(--space-lg-fixed);
+    --radius-xl-fixed: var(--space-xl-fixed);
+    --radius-xxl-fixed: var(--space-xxl-fixed);
+}
