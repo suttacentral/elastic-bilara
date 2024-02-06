@@ -14,7 +14,6 @@ from app.services.projects.utils import (
     OverrideException,
     create_new_project_file_names,
     create_project_file,
-    get_root_file_names,
     sort_paths,
     update_file,
 )
@@ -115,25 +114,41 @@ async def update_json_data_for_prefix_in_project(
 async def create_new_project(
     current_user: Annotated[UserBase, Depends(utils.get_current_user)],
     user_github_id: int,
-    published_root_path: str,
+    root_path: Path,
     translation_language: str,
 ):
     current_user = get_user(current_user.github_id)
     source_user = get_user(user_github_id)
     if not source_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_github_id} not found")
+    if not root_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Root path '{root_path}' not found",
+        )
 
-    new_project_paths = create_new_project_file_names(source_user.username, translation_language, published_root_path)
-    source_root_files_names = get_root_file_names(published_root_path)
+    new_project_paths = create_new_project_file_names(source_user.username, translation_language, root_path)
+    source_root_files_names: list[Path] = list(
+        root_path.glob("*.json") if root_path.is_dir() else root_path.parent.glob("*.json")
+    )
+
+    all_paths_list: list[Path] = []
     try:
         for root_file, new_file_path in zip(source_root_files_names, new_project_paths):
-            create_project_file(Path(root_file), Path(new_file_path))
+            for directory_type in new_file_path:
+                create_project_file(Path(root_file), Path(directory_type))
+                all_paths_list.append(root_file.joinpath(directory_type))
     except OverrideException as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
-    search.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, [Path(path) for path in new_project_paths])
+        for path in all_paths_list:
+            path.unlink()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"rolling_back": f"{all_paths_list}", "error": str(e)},
+        )
+    search.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, all_paths_list)
     result = commit.delay(
         current_user.model_dump(),
-        new_project_paths,
+        [str(path) for path in all_paths_list],
         f"Creating new project for {source_user.username} in {translation_language.upper()} language",
     )
 
