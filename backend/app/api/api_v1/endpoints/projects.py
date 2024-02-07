@@ -126,8 +126,11 @@ async def create_new_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Root path '{root_path}' not found",
         )
+    directory_list = ["translation", "comment"]
 
-    new_project_paths = create_new_project_file_names(source_user.username, translation_language, root_path)
+    new_project_paths = create_new_project_file_names(
+        source_user.username, translation_language, root_path, directory_list
+    )
     source_root_files_names: list[Path] = list(
         root_path.glob("*.json") if root_path.is_dir() else root_path.parent.glob("*.json")
     )

@@ -96,26 +96,22 @@ def create_new_project_paths(
     ]
 
 
-def generate_file_name_suffixes(root_path: Path) -> list[str]:
+def generate_file_name_prefixes(root_path: Path) -> list[str]:
     root_path = root_path.parent if root_path.suffix == ".json" else root_path
     return [file_path.name.split("_")[0] for file_path in root_path.iterdir()]
 
 
 def create_new_project_file_names(
-    username: str, translation_language_code: str, root_path: Path
-) -> list[tuple[Path, Path]]:
-    directory_list = ["translation", "comment"]
-
-    new_translation_path, new_comment_path = create_new_project_paths(
-        username, translation_language_code, root_path, directory_list
-    )
-    file_name_prefixes = generate_file_name_suffixes(root_path)
+    username: str, translation_language_code: str, root_path: Path, directory_list: list[str]
+) -> list[tuple[Path, ...]]:
+    new_project_paths = create_new_project_paths(username, translation_language_code, root_path, directory_list)
+    file_name_prefixes = generate_file_name_prefixes(root_path)
     return [
-        (
-            new_translation_path.joinpath(
-                f"{file_name_prefix}_translation-{translation_language_code}-{username}.json"
-            ),
-            new_comment_path.joinpath(f"{file_name_prefix}_comment-{translation_language_code}-{username}.json"),
+        tuple(
+            new_project_paths[directory_list.index(directory)].joinpath(
+                f"{file_name_prefix}_{directory}-{translation_language_code}-{username}.json"
+            )
+            for directory in directory_list
         )
         for file_name_prefix in file_name_prefixes
     ]
