@@ -322,3 +322,16 @@ def mock_is_admin_or_superuser_is_active(mock_user: User) -> Generator[None, Any
 
     yield
     app.dependency_overrides = {}
+
+
+@pytest.fixture
+def mock_path_iterdir():
+    with patch("pathlib.Path.iterdir") as mock_iterdir:
+        mock_iterdir.return_value = [
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.1_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.2_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.3_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.4_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.5_root-pli-ms.json"),
+        ]
+        yield mock_iterdir
