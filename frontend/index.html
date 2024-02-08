@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Bilara</title>
     <link rel="stylesheet" href="./static/css/main.css">
-    <script src="https://cdn.tailwindcss.com"></script>
+<!--    <script src="https://cdn.tailwindcss.com"></script>-->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
     <script src="./static/js/auth.js"></script>
 <!--    <link rel="stylesheet" href="./static/css/style.css">-->
@@ -15,7 +15,7 @@
 <body class="page-layout">
 <header>
     <nav>
-        <ul class="main-nav">
+        <ul class="main-nav index-main-nav">
             <li class="main-nav__item"><a href="/" class="main-nav__item-link">Bilara</a></li>
             <li class="main-nav__item">
                 <details class="main-nav__item-detail">
@@ -23,8 +23,8 @@
                     <div></div> <!-- Add this later-->
                 </details>
             </li>
-            <li class="main-nav__item main-nav__item--right">
-                <a href="api/v1/login/" class="main-nav__item-link main-nav__item-auth">Login</a>
+            <li class="main-nav__item main-nav__item--right main-nav__item--up">
+                <a href="api/v1/login/" class="main-nav__item-link btn btn--main">Login</a>
             </li>
         </ul>
     </nav>

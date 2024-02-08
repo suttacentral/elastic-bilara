@@ -14,3 +14,10 @@
 .index-main__description--push-top {
     margin-top: var(--space-lg);
 }
+
+@media (max-width: 575px) {
+    .index-main-nav {
+        font-size: var(--text-lg);;
+        display: flex;
+    }
+}

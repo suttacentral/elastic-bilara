@@ -1,23 +1,18 @@
 @import "base/reset.css";
 
-@import "variables/breakpoints.css";
 @import "variables/colors.css";
 @import "variables/spacing.css";
 @import "variables/buttons.css";
 @import "variables/typography.css";
 
-@import "base/typography.css";
-
-@import "components/buttons.css";
-@import "components/navigation.css";
 
 @import "layout/body.css";
 @import "layout/header.css";
 @import "layout/main.css";
 @import "layout/footer.css";
 
+@import "components/user.css";
+@import "components/buttons.css";
+
 @import "pages/index.css";
 @import "pages/nav.css";
-@import "pages/translation.css";
-@import "pages/admin.css";
-@import "pages/404.css";
