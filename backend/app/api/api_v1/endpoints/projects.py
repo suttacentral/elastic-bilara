@@ -28,6 +28,7 @@ from app.services.users.utils import get_user
 from app.tasks import commit
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from search.search import Search
 from search.utils import get_json_data
 
@@ -117,10 +118,11 @@ async def create_new_project(
     root_path: Path,
     translation_language: str,
 ):
-    current_user = get_user(current_user.github_id)
-    source_user = get_user(user_github_id)
-    if not source_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_github_id} not found")
+    try:
+        current_user = get_user(current_user.github_id)
+        source_user = get_user(user_github_id)
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_github_id} not found. {e}")
     if not root_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -138,9 +140,9 @@ async def create_new_project(
     all_paths_list: list[Path] = []
     try:
         for root_file, new_file_path in zip(source_root_files_names, new_project_paths):
-            for directory_type in new_file_path:
-                create_project_file(Path(root_file), Path(directory_type))
-                all_paths_list.append(root_file.joinpath(directory_type))
+            for directory_type_path in new_file_path:
+                create_project_file(Path(root_file), Path(directory_type_path))
+                all_paths_list.append(directory_type_path)
     except OverrideException as e:
         for path in all_paths_list:
             path.unlink()
