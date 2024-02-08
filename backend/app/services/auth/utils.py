@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 
-from fastapi import Response as fastapi_Response
 from app.core.config import settings
 from app.services.auth.schema import TokenData
-from app.services.users.utils import add_user_to_db
-from fastapi import HTTPException, status, Request
+from fastapi import HTTPException, Request
+from fastapi import Response as fastapi_Response
+from fastapi import status
 from fastapi.security import OAuth2PasswordBearer
 from httpx import AsyncClient, HTTPStatusError, Response
 from jose import JWTError, jwt
@@ -90,7 +90,6 @@ async def get_github_data(code: str) -> dict[str, str | int]:
             }
         except HTTPStatusError as e:
             return {"error": str(e)}
-    add_user_to_db(data)
     return data
 
 

@@ -25,8 +25,9 @@ class TestAuth:
     @patch("app.api.api_v1.endpoints.auth.utils.create_jwt_token")
     @patch("app.api.api_v1.endpoints.auth.utils.get_github_data")
     async def test_token_endpoint_valid_code(
-        self, mock_get_github_data, mock_create_jwt_token, github_data, async_client
+        self, mock_get_github_data, mock_create_jwt_token, github_data, async_client, mock_session, mock_user
     ) -> None:
+        mock_session.query.return_value.filter.return_value.first.return_value = mock_user
         token = "valid_token"
         mock_get_github_data.return_value = github_data()
         mock_create_jwt_token.return_value = token
