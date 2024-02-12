@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Literal
 
 import app.services.git.utils as utils
+import pygit2
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from github import Github
@@ -34,6 +35,36 @@ class GitManager:
         self.committer: Signature = Signature(name=settings.GITHUB_USERNAME, email=settings.GITHUB_EMAIL)
         self.github: Github = Github(settings.GITHUB_TOKEN)
         self.repo_owner: str = settings.GITHUB_REPO.split("/")[0]
+
+    def pull(self, branch_name: str = "published", force: bool = False, remote_name: str = "origin"):
+        for remote in self.published.remotes:
+            if remote.name == remote_name:
+                remote.fetch()
+                remote_hash_id = self.published.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
+                if force:
+                    self.published.checkout_tree(self.published.get(remote_hash_id), strategy=GIT_CHECKOUT_FORCE)
+                    self.published.head.set_target(remote_hash_id)
+                    return
+                merge_result, _ = self.published.merge_analysis(remote_hash_id)
+                if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                    return
+                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                    try:
+                        self.published.checkout_tree(self.published.get(remote_hash_id))
+                        head_ref = self.published.lookup_reference(f"refs/head/{branch_name}")
+                        head_ref.set_target(remote_hash_id)
+                    except KeyError:
+                        self.published.create_branch(branch_name, self.published.get(remote_hash_id))
+                    self.published.head.set_target(remote_hash_id)
+                    return
+                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+                    raise pygit2.GitError(
+                        f"'origin/{branch_name}' has local conflict and should be resolved first."
+                        f" Use force=True to ignore this error and override all local changes with remote."
+                        f" Conflicts in {[conflict for conflict in self.published.index.conflicts]}"
+                    )
+                self.published.state_cleanup()
+                raise pygit2.GitError(f"Unknown merge analysis result: {merge_result}")
 
     def checkout(self, name: str = "published", force: bool = False) -> None:
         self.published.remotes["origin"].fetch(prune=True)
