@@ -1,3 +1,7 @@
+.index-main-nav {
+    padding: var(--space-sm) var(--space-md)
+}
+
 .main-content--index {
     display: flex;
     flex-direction: column;

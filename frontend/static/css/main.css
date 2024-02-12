@@ -13,6 +13,8 @@
 
 @import "components/user.css";
 @import "components/buttons.css";
+@import "components/modals.css";
+@import "components/pull-request.css";
 
 @import "pages/index.css";
 @import "pages/nav.css";

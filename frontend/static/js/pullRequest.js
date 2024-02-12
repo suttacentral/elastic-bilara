@@ -71,14 +71,14 @@ function getPullRequestModalHTML(dataString) {
                 x-data="pullRequestModal(${dataString})" 
                 x-show="showModal" 
                 x-on:click="destroyModal">
-                <div class="rounded border-neutral-500" x-on:click.stop>
-                    <div class="flex justify-between align-middle my-2 gap-2">
-                        <div class="relative">
+                <div class="pull-request-container" x-on:click.stop>
+                    <div class="pull-request-container__search">
+                        <div class="pull-request-container__search__search-box">
                             <span 
-                                class="absolute inset-y-0 left-0 pl-3 flex items-center cursor-pointer"
+                                class="pull-request-container__search__search-box__icon"
                                 x-on:click="$event.target.nextElementSibling.focus()">🔍</span>
                             <input 
-                                class="border rounded border-slate-600 pl-10 pr-10 w-full px-2 py-1" 
+                                class="pull-request-container__search__search-box__input" 
                                 type="text"
                                 placeholder="Search..."
                                 x-model="searchTerm"
@@ -86,36 +86,37 @@ function getPullRequestModalHTML(dataString) {
                             <span
                                 x-cloak
                                 x-show="searchTerm.length" 
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                class="pull-request-container__search__search-box__clear-icon"
                                 x-on:click="clearSearch">❌</span>
                         </div>
                         <button 
-                            class="border rounded px-2 py-1 hover:bg-red-200 bg-red-50 border-neutral-500 hover:cursor-pointer" 
+                            class="pull-request-container__search__close-button" 
                             x-on:click="destroyModal">Close</button>
                     </div>
-                    <ul class="flex-col flex-wrap max-h-[75vh] overflow-y-auto gap-2 text-lg">
+                    <ul class="pull-request-container__paths-list">
                         <template x-for="path in filteredPaths">
-                            <li class="hover:bg-green-50 px-1 py-0.5 flex gap-2 rounded text-white hover:text-black">
+                            <li class="pull-request-container__paths-list__item">
                                 <input 
+                                class="pull-request-container__paths-list__item__checkbox"
                                     type="checkbox" 
                                     x-model="selectedPaths[path]"
                                     x-bind:id="path" 
                                     x-bind:value="path" 
                                     x-bind:name="path"/>
                                 <label
-                                    class="flex-grow hover:cursor-pointer"
+                                    class="pull-request-container__paths-list__item__label"
                                     x-text="path.split('/').pop()" 
                                     x-bind:for="path" 
                                     ></label>
                             </li>
                         </template>
                     </ul>
-                    <div class="flex justify-center my-2 gap-2">
+                    <div class="pull-request-container__actions">
                         <button 
-                            class="rounded my-2 py-2 px-1 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer" 
+                            class="pull-request-container__actions__select-all-button" 
                             x-on:click="selectAll">Select All</button>
                         <button 
-                            class="rounded my-2 py-2 px-1 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer" 
+                            class="pull-request-container__actions__publish-button" 
                             x-on:click="submitPaths">Publish</button>
                     </div>
                 </div>

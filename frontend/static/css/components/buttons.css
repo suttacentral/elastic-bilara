@@ -61,8 +61,17 @@
 }
 
 .btn--publish {
-    padding: var(--space-xxs) var(--space-xs);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-primary-darker);
-    font-size: var(--btn-sm);
+    background-color: var(--color-cta);
+    color: var(--color-secondary-lighter);
+}
+
+.btn--publish:hover {
+    background-color: var(--color-secondary-lighter);
+    color: var(--color-accent-dark);
+}
+
+@media (max-width: 575px) {
+    .btn--publish {
+        font-size: var(--text-sm);
+    }
 }
