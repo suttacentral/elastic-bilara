@@ -123,6 +123,13 @@ async def create_new_project(
         source_user = get_user(user_github_id)
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_github_id} not found. {e}")
+    if root_path.parts[0] == "root":
+        root_path = settings.WORK_DIR.joinpath(root_path)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Path '{root_path}' not starting in 'root/' directory.",
+        )
     if not root_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
