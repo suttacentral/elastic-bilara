@@ -623,7 +623,7 @@ class TestProjects:
         assert response.json()["detail"]["rolling_back"] == str(
             [
                 Path(
-                    f"/app/checkouts/unpublished/translation/{translation_language}/{mock_user.username}/sutta/an/an1/an1.1-10_translation-{translation_language}-{mock_user.username}.json"
+                    f"translation/{translation_language}/{mock_user.username}/sutta/an/an1/an1.1-10_translation-{translation_language}-{mock_user.username}.json"
                 )
             ]
         )

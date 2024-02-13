@@ -162,7 +162,10 @@ async def create_new_project(
             path.unlink()
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"rolling_back": f"{all_paths_list}", "error": str(e)},
+            detail={
+                "rolling_back": f"{[path.relative_to(settings.WORK_DIR) for path in all_paths_list if path]}",
+                "error": str(e),
+            },
         )
     search.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, all_paths_list)
     result = commit.delay(
@@ -175,7 +178,7 @@ async def create_new_project(
         "user": source_user.username,
         "translation_language": translation_language,
         "new_project_paths": [
-            [path.relative_to(settings.WORK_DIR) for path in connected_files_list]
+            [path.relative_to(settings.WORK_DIR) for path in connected_files_list if path]
             for connected_files_list in new_project_paths
         ],
         "commit_task_id": result.id,
