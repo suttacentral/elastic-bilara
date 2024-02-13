@@ -135,6 +135,13 @@ async def create_new_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Root path '{root_path}' not found",
         )
+    if root_path.is_dir() and not list(root_path.glob("*.json")):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Root path directory '{root_path}' contains no json files."
+            f" Target directory must contain at least one json file.",
+        )
+
     directory_list = ["translation", "comment"]
 
     new_project_paths = create_new_project_file_names(

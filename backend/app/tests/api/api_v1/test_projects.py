@@ -521,6 +521,40 @@ class TestProjects:
         assert "Root path" in response.json()["detail"]
 
     @pytest.mark.asyncio
+    async def test_create_new_project_root_not_containing_jsons(
+        self,
+        mocker,
+        mock_create_new_project,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        current_user.role = "administrator"
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+        source_user_github_id = 123
+
+        root_path = Path("root/pli/ms/sutta/an/")
+        translation_language = "en"
+        mocker.patch("pathlib.Path.exists", return_value=True)
+        mocker.patch("pathlib.Path.is_dir", return_value=True)
+        mocker.patch("pathlib.Path.glob", return_value=[])
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Root path" in response.json()["detail"]
+
+    @pytest.mark.asyncio
     async def test_create_new_project_root_path_not_starting_in_root_dir(
         self,
         mocker,
