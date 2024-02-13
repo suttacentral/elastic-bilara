@@ -423,12 +423,12 @@ class TestProjects:
         assert "commit_task_id" in response.json()
         assert response.json()["new_project_paths"] == [
             [
-                "checkouts/published/translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json",
-                "checkouts/published/comment/en/test_user/sutta/an/an1/an1.1-10_comment-en-test_user.json",
+                "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json",
+                "comment/en/test_user/sutta/an/an1/an1.1-10_comment-en-test_user.json",
             ],
             [
-                "checkouts/published/translation/en/test_user/sutta/an/an1/an1.11-20_translation-en-test_user.json",
-                "checkouts/published/comment/en/test_user/sutta/an/an1/an1.11-20_comment-en-test_user.json",
+                "translation/en/test_user/sutta/an/an1/an1.11-20_translation-en-test_user.json",
+                "comment/en/test_user/sutta/an/an1/an1.11-20_comment-en-test_user.json",
             ],
         ]
 
@@ -623,7 +623,7 @@ class TestProjects:
         assert response.json()["detail"]["rolling_back"] == str(
             [
                 Path(
-                    f"checkouts/published/translation/{translation_language}/{mock_user.username}/sutta/an/an1/an1.1-10_translation-{translation_language}-{mock_user.username}.json"
+                    f"/app/checkouts/unpublished/translation/{translation_language}/{mock_user.username}/sutta/an/an1/an1.1-10_translation-{translation_language}-{mock_user.username}.json"
                 )
             ]
         )

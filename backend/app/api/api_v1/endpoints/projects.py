@@ -174,7 +174,10 @@ async def create_new_project(
     return {
         "user": source_user.username,
         "translation_language": translation_language,
-        "new_project_paths": new_project_paths,
+        "new_project_paths": [
+            [path.relative_to(settings.WORK_DIR) for path in connected_files_list]
+            for connected_files_list in new_project_paths
+        ],
         "commit_task_id": result.id,
     }
 

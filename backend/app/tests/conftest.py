@@ -354,18 +354,18 @@ def mock_new_project_create_data(mocker, mock_user):
         return_value=[
             (
                 Path(
-                    f"checkouts/published/translation/en/{mock_user.username}/sutta/an/an1/an1.1-10_translation-en-{mock_user.username}.json"
+                    f"/app/checkouts/unpublished/translation/en/{mock_user.username}/sutta/an/an1/an1.1-10_translation-en-{mock_user.username}.json"
                 ),
                 Path(
-                    f"checkouts/published/comment/en/{mock_user.username}/sutta/an/an1/an1.1-10_comment-en-{mock_user.username}.json"
+                    f"/app/checkouts/unpublished/comment/en/{mock_user.username}/sutta/an/an1/an1.1-10_comment-en-{mock_user.username}.json"
                 ),
             ),
             (
                 Path(
-                    f"checkouts/published/translation/en/{mock_user.username}/sutta/an/an1/an1.11-20_translation-en-{mock_user.username}.json"
+                    f"/app/checkouts/unpublished/translation/en/{mock_user.username}/sutta/an/an1/an1.11-20_translation-en-{mock_user.username}.json"
                 ),
                 Path(
-                    f"checkouts/published/comment/en/{mock_user.username}/sutta/an/an1/an1.11-20_comment-en-{mock_user.username}.json"
+                    f"/app/checkouts/unpublished/comment/en/{mock_user.username}/sutta/an/an1/an1.11-20_comment-en-{mock_user.username}.json"
                 ),
             ),
         ],
