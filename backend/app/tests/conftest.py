@@ -322,3 +322,67 @@ def mock_is_admin_or_superuser_is_active(mock_user: User) -> Generator[None, Any
 
     yield
     app.dependency_overrides = {}
+
+
+@pytest.fixture
+def mock_path_iterdir():
+    with patch("pathlib.Path.iterdir") as mock_iterdir:
+        mock_iterdir.return_value = [
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.1_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.2_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.3_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.4_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/abhidhamma/ds/ds1/ds1.5_root-pli-ms.json"),
+        ]
+        yield mock_iterdir
+
+
+@pytest.fixture
+def mock_create_new_project(mocker):
+    delay_return = MagicMock()
+    delay_return.id = "test_task_id"
+
+    mocker.patch("app.api.api_v1.endpoints.projects.create_project_file", return_value=None)
+    mocker.patch("search.search.Search.update_indexes", return_value=None)
+    mocker.patch("app.tasks.commit.delay", return_value=delay_return)
+
+
+@pytest.fixture
+def mock_new_project_create_data(mocker, mock_user):
+    mocker.patch(
+        "app.api.api_v1.endpoints.projects.create_new_project_file_names",
+        return_value=[
+            (
+                Path(
+                    f"/app/checkouts/unpublished/translation/en/{mock_user.username}/sutta/an/an1/an1.1-10_translation-en-{mock_user.username}.json"
+                ),
+                Path(
+                    f"/app/checkouts/unpublished/comment/en/{mock_user.username}/sutta/an/an1/an1.1-10_comment-en-{mock_user.username}.json"
+                ),
+            ),
+            (
+                Path(
+                    f"/app/checkouts/unpublished/translation/en/{mock_user.username}/sutta/an/an1/an1.11-20_translation-en-{mock_user.username}.json"
+                ),
+                Path(
+                    f"/app/checkouts/unpublished/comment/en/{mock_user.username}/sutta/an/an1/an1.11-20_comment-en-{mock_user.username}.json"
+                ),
+            ),
+        ],
+    )
+    mocker.patch(
+        "search.utils.get_json_data",
+        side_effect=[{"an1.1:0.1": "Test", "an1.1:0.2": "Test2"}, {"an1.11:0.1": "Test", "an1.11:0.2": "Test2"}],
+    )
+    mocker.patch(
+        "pathlib.Path.glob",
+        return_value=iter(
+            [
+                Path(
+                    "checkouts/published/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json",
+                    Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.11-20_root-pli-ms.json"),
+                )
+            ]
+        ),
+    )
+    mocker.patch("pathlib.Path.is_dir", return_value=False)

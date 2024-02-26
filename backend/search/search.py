@@ -54,43 +54,7 @@ class Search:
                 index=segments_index,
                 body={"index": {"refresh_interval": "180s", "number_of_replicas": 0}},
             )
-            for data in self._yield_data():
-                actions_main: list[dict[str, Any]] = []
-                actions_segments: list[dict[str, Any]] = []
-                for document in data:
-                    source: dict[str, Any] = document["_source"]
-                    main_doc = {
-                        "_index": index,
-                        "_id": document["_id"],
-                        "_source": {**source},
-                    }
-                    actions_main.append(main_doc)
-                    file_path = Path(source["file_path"])
-                    for item in source["segments"]:
-                        uid = item["uid"]
-                        segments_doc = {
-                            "_index": segments_index,
-                            "_id": utils.create_doc_id(file_path, uid),
-                            "_source": {
-                                "main_doc_id": document["_id"],
-                                "muid": source["muid"],
-                                "uid": uid,
-                                "segment": item["segment"],
-                            },
-                        }
-                        actions_segments.append(segments_doc)
-                helpers.bulk(
-                    self._search,
-                    actions_main,
-                    chunk_size=self._batch_size,
-                    raise_on_error=True,
-                )
-                helpers.bulk(
-                    self._search,
-                    actions_segments,
-                    chunk_size=self._batch_size,
-                    raise_on_error=True,
-                )
+            self._process_data(index, segments_index)
             self._search.indices.put_settings(
                 index=index,
                 body={"index": {"refresh_interval": "1s", "number_of_replicas": 1}},
@@ -152,11 +116,10 @@ class Search:
             }
         return mapping
 
-    def _yield_data(
-        self,
-    ) -> Generator[list, None, None]:
+    def _yield_data(self, custom_file_paths: list[Path] = None) -> Generator[list, None, None]:
         buffer: list = []
-        for file_path in utils.yield_file_path(settings.WORK_DIR):
+        iterator = custom_file_paths if custom_file_paths else utils.yield_file_path(settings.WORK_DIR)
+        for file_path in iterator:
             buffer.append(self._process_file(file_path))
             if len(buffer) >= self._batch_size:
                 yield buffer
@@ -476,6 +439,45 @@ class Search:
             },
         }
 
+    def _process_data(self, index: str, segments_index: str, paths: list[Path] | Generator = None):
+        for data in self._yield_data(paths):
+            actions_main: list[dict[str, Any]] = []
+            actions_segments: list[dict[str, Any]] = []
+            for document in data:
+                source: dict[str, Any] = document["_source"]
+                main_doc = {
+                    "_index": index,
+                    "_id": document["_id"],
+                    "_source": {**source},
+                }
+                actions_main.append(main_doc)
+                file_path = Path(source["file_path"])
+                for item in source["segments"]:
+                    uid = item["uid"]
+                    segments_doc = {
+                        "_index": segments_index,
+                        "_id": utils.create_doc_id(file_path, uid),
+                        "_source": {
+                            "main_doc_id": document["_id"],
+                            "muid": source["muid"],
+                            "uid": uid,
+                            "segment": item["segment"],
+                        },
+                    }
+                    actions_segments.append(segments_doc)
+            helpers.bulk(
+                self._search,
+                actions_main,
+                chunk_size=self._batch_size,
+                raise_on_error=True,
+            )
+            helpers.bulk(
+                self._search,
+                actions_segments,
+                chunk_size=self._batch_size,
+                raise_on_error=True,
+            )
+
     def get_distinct_data(self, field: str, prefix: str = None) -> list[str]:
         query: dict[str, Any] = self._build_unique_query(field=field)
         query["query"] = {"term": {"prefix": {"value": prefix}}}
@@ -541,3 +543,6 @@ class Search:
             for hit in self._scroll_search(query)
             if any(prefix == str(parent.name) for parent in Path(hit["_source"]["file_path"]).parents)
         }
+
+    def update_indexes(self, index, segments_index, paths: list[Path]):
+        self._process_data(index, segments_index, paths)

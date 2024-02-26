@@ -1,6 +1,9 @@
+from copy import copy
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from app.services.projects.utils import OverrideException
 from elasticsearch import RequestError
 from fastapi import status
 
@@ -381,3 +384,246 @@ class TestProjects:
         assert response.status_code == expected_status
         assert "detail" in response.json()
         assert response.json() == {"detail": expected_message}
+
+    @pytest.mark.asyncio
+    async def test_create_new_project_by_admin(
+        self,
+        mocker,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_create_new_project,
+        mock_new_project_create_data,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        current_user.role = "administrator"
+        current_user.id = 66
+        current_user.github_id = 66
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+
+        source_user_github_id = 123
+
+        root_path = Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
+        translation_language = "en"
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+        assert response.status_code == 201
+        assert "user" in response.json()
+        assert "translation_language" in response.json()
+        assert "new_project_paths" in response.json()
+        assert "commit_task_id" in response.json()
+        assert response.json()["new_project_paths"] == [
+            [
+                "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json",
+                "comment/en/test_user/sutta/an/an1/an1.1-10_comment-en-test_user.json",
+            ],
+            [
+                "translation/en/test_user/sutta/an/an1/an1.11-20_translation-en-test_user.json",
+                "comment/en/test_user/sutta/an/an1/an1.11-20_comment-en-test_user.json",
+            ],
+        ]
+
+    @pytest.mark.asyncio
+    async def test_create_new_project_unauthorized(
+        self,
+        mocker,
+        mock_create_new_project,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+        source_user_github_id = 123
+
+        root_path = Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
+        translation_language = "en"
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_create_new_project_no_target_user(
+        self,
+        mocker,
+        mock_create_new_project,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, None]
+        source_user_github_id = 123456879
+
+        root_path = Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
+        translation_language = "en"
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_create_new_project_root_not_existing(
+        self,
+        mocker,
+        mock_create_new_project,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        current_user.role = "administrator"
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+        source_user_github_id = 123
+
+        root_path = Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
+        translation_language = "en"
+        mocker.patch("pathlib.Path.exists", return_value=False)
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+
+        assert response.status_code == 404
+        assert "Root path" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_create_new_project_root_not_containing_jsons(
+        self,
+        mocker,
+        mock_create_new_project,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        current_user.role = "administrator"
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+        source_user_github_id = 123
+
+        root_path = Path("root/pli/ms/sutta/an/")
+        translation_language = "en"
+        mocker.patch("pathlib.Path.exists", return_value=True)
+        mocker.patch("pathlib.Path.is_dir", return_value=True)
+        mocker.patch("pathlib.Path.glob", return_value=[])
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Root path" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_create_new_project_root_path_not_starting_in_root_dir(
+        self,
+        mocker,
+        mock_create_new_project,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        current_user.role = "administrator"
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+        source_user_github_id = 123
+
+        root_path = Path("html/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
+        translation_language = "en"
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "not starting in 'root/' directory" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_create_new_project_target_already_exist(
+        self,
+        mocker,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_new_project_create_data,
+        mock_user,
+        mock_session,
+        async_client,
+    ) -> None:
+        current_user = copy(mock_user)
+        current_user.role = "administrator"
+        current_user.id = 66
+        current_user.github_id = 66
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+
+        source_user_github_id = 123
+
+        root_path = Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
+        translation_language = "en"
+
+        mocker.patch("app.api.api_v1.endpoints.projects.create_project_file", side_effect=[False, OverrideException])
+        mocker.patch("pathlib.Path.unlink", return_value=None)
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": source_user_github_id,
+                "root_path": root_path,
+                "translation_language": translation_language,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "rolling_back" in response.json()["detail"]
+        assert response.json()["detail"]["rolling_back"] == str(
+            [
+                Path(
+                    f"translation/{translation_language}/{mock_user.username}/sutta/an/an1/an1.1-10_translation-{translation_language}-{mock_user.username}.json"
+                )
+            ]
+        )

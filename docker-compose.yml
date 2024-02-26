@@ -18,7 +18,6 @@ services:
     container_name: bilara-backend
     volumes:
       - ./backend:/app
-      - ./backend/checkouts:/app/checkouts
       - certs:/app/certs
     env_file:
       - .env
