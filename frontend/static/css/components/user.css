@@ -9,6 +9,7 @@
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid var(--color-primary-dark);
+    box-shadow: var(--shadow-sm);
 }
 
 .user-welcome{

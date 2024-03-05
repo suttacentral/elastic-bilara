@@ -9,7 +9,6 @@
             rel="stylesheet"
     />
     <link rel="stylesheet" href="./static/css/main.css">
-<!--        <script src="https://cdn.tailwindcss.com"></script>-->
     <script
             defer
             src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"
@@ -80,6 +79,7 @@
 </header>
 
 <main class="main-content">
+    <p id="pull-request-message"></p>
     <div class="navigation-container navigation-container--pushdown" x-cloak x-show="isActive" x-data="fileTree()">
         <div x-cloak x-show="loading" class="modal">
             <div class="spinner"></div>

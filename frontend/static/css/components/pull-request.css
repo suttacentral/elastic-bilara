@@ -9,6 +9,7 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
+    gap: var(--space-sm);
     margin: var(--space-xxs) var(--space-xs);
 }
 
@@ -123,6 +124,16 @@
 
 .pull-request-container__actions__publish-button:hover {
     background-color: var(--color-cta-dark);
+    color: var(--color-white);
+}
+
+.pull-request-message {
+    text-align: center;
+    font-size: var(--text-lg);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-sm);
+    margin: 0 var(--space-md);
+    background-color: var(--color-success);
     color: var(--color-white);
 }
 

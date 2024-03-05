@@ -2,9 +2,13 @@
     padding: var(--space-xxs) var(--space-xs);
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-primary-darker);
+    box-shadow: var(--shadow-xxs);
     font-size: var(--btn-font-size);
     cursor: pointer;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+.bnt:hover {
+    box-shadow: var(--shadow-xs);
 }
 
 .btn--main, .btn--admin {
@@ -60,14 +64,69 @@
   bottom: 0;
 }
 
-.btn--publish {
+.btn--publish, .btn--project-publish {
     background-color: var(--color-cta);
     color: var(--color-secondary-lighter);
 }
 
-.btn--publish:hover {
+.btn--project-publish {
+    padding: var(--space-sm) var(--space-md);
+}
+
+.btn--publish:hover, .btn--project-publish:hover {
     background-color: var(--color-secondary-lighter);
     color: var(--color-accent-dark);
+}
+
+.btn--commit {
+    padding: var(--space-sm) var(--space-md);
+    background-color: var(--color-accent-dark);
+    color: var(--color-white);
+}
+.btn--commit:hover {
+    background-color: var(--color-accent-light);
+    color: var(--color-black);
+}
+
+.btn--related-projects {
+    padding: var(--space-xs) var(--space-md);
+    background-color: var(--color-cta-dark);
+    color: var(--color-white);
+}
+.btn--search{
+    padding: var(--space-xs) var(--space-md);
+    background-color: var(--color-accent);
+    color: var(--color-white);
+}
+
+.btn--related-projects:hover {
+    background-color: var(--color-cta);
+    color: var(--color-secondary-lighter);
+}
+
+.btn--search:hover {
+    background-color: var(--color-accent-light);
+    color: var(--color-black);
+}
+
+.btn--previous {
+    background-color: var(--color-primary-light);
+    color: var(--color-accent-dark);
+
+}
+.btn--previous:hover {
+    background-color: var(--color-primary);
+    color: var(--color-accent);
+}
+
+.btn--next {
+    background-color: var(--color-primary-light);
+    color: var(--color-accent-dark);
+}
+
+.btn--next:hover {
+    background-color: var(--color-primary);
+    color: var(--color-accent);
 }
 
 @media (max-width: 575px) {
