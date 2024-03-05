@@ -76,3 +76,13 @@ function startRefreshTimer() {
 }
 
 startRefreshTimer();
+
+async function redirectNonPrivilegedUserFromAdminToNav() {
+    if (window.location.pathname.includes("admin")) {
+        const userInfo = getUserInfo();
+        await userInfo.getRole();
+        if (!userInfo.isActive || !userInfo.isAdmin) {
+            window.location.href = "/nav";
+        }
+    }
+}

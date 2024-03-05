@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bilara Admin Area</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"
+    ></script>
+    <script src="./static/js/utils.js"></script>
+    <script src="./static/js/auth.js"></script>
+    <script src="./static/js/adminUsers.js"></script>
+    <script src="./static/js/adminProjects.js"></script>
+    <script src="./static/js/adminRoots.js"></script>
+    <script src="./static/js/admin.js"></script>
+    <link rel="stylesheet" href="./static/css/style.css"/>
+</head>
+<body class="flex flex-col min-h-screen" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
+<header class="bg-indigo h-12 border drop-shadow-sm" x-data="getUserInfo()" x-init="getRole()">
+    <nav class="h-full">
+        <ul class="flex items-center h-full">
+            <li class="mx-4 uppercase tracking-wide font-bold">
+                <a href="/nav">Bilara</a>
+            </li>
+            <li>
+                <details class="relative">
+                    <summary>How to</summary>
+                    <div class="absolute"></div>
+                    <!-- Add this later-->
+                </details>
+            </li>
+            <li class="ml-auto mr-2">
+                <div class="flex items-center h-10 space-x-2" x-cloak x-show="!!username">
+                    <img :src="avatarURL"
+                         :alt="`${username}'s github profile picture`"
+                         class="h-full w-auto object-cover rounded-full border-2 border-amber-300"/>
+                    <span>Welcome, <strong x-text="username"></strong>!</span>
+                </div>
+            </li>
+            <li :class="{'mr-2': isAdmin}" x-cloak x-show="isAdmin && isActive"><a
+                    class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+                    href="/admin">Admin Area</a></li>
+            <li class="mr-4">
+                <a
+                        class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+                        @click.prevent="await logout()"
+                >Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="flex-grow flex gap-2" x-data="admin()">
+    <nav class="w-1/6 ml-2">
+        <ul class="flex flex-col text-center">
+            <li class="border-b border-gray-400 py-1 px-2">
+                <a href="" @click.prevent="setActiveComponent('users')">Users</a>
+            </li>
+            <li class="border-b border-gray-400 py-1 px-2">
+                <a href="" @click.prevent="setActiveComponent('projects')">Projects</a>
+            </li>
+            <li class="border-b border-gray-400 py-1 px-2">
+                <a href="" @click.prevent="setActiveComponent('roots')">Roots</a>
+            </li>
+        </ul>
+    </nav>
+    <article class="w-5/6 mr-2">
+        <div x-cloak x-show="dataTypes.users.isVisible" x-data="dataTypes.users" x-init="await getUsers()">
+            <div class="my-2 flex justify-around items-center gap-2"
+                 x-data="{open: false, newUser: {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}}">
+                <div class="w-full border p-2 my-2 rounded" x-cloak x-show="open">
+                    <form @submit.prevent="await createUser(newUser);
+            await getUsers();
+            open=!open;
+            newUser = {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}">
+                        <div class="flex justify-between items-center gap-2">
+                            <div class="w-1/2">
+                                <label for="githubId">Github ID</label>
+                                <input type="text" id="githubId" x-model="newUser.githubId"
+                                       class="border p-1 rounded w-full">
+                            </div>
+                            <div class="w-1/2">
+                                <label for="role">Role</label>
+                                <select name="role" id="role" x-model="newUser.role" class="border p-1 rounded w-full">
+                                    <template x-for="role in ROLES">
+                                        <option x-text="role" :value="role" :selected="role === 'writer'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center gap-2 mt-2">
+                            <div class="w-1/2">
+                                <label for="username">Username</label>
+                                <input type="text" id="username" x-model="newUser.username"
+                                       class="border p-1 rounded w-full">
+                            </div>
+                            <div class="w-1/2">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" x-model="newUser.email"
+                                       class="border p-1 rounded w-full">
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center gap-2 mt-2">
+                            <div class="w-1/2">
+                                <label for="avatarUrl">Avatar URL</label>
+                                <input type="text" id="avatarUrl" x-model="newUser.avatarUrl"
+                                       class="border p-1 rounded w-full">
+                            </div>
+                            <div class="w-1/2 flex justify-end">
+                                <button type="submit"
+                                        class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer">
+                                    Submit
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <button class="ml-auto self-start rounded my-2 py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+                        @click="open = !open" x-text="open ? '-' : '+'">
+                </button>
+            </div>
+            <ul>
+                <template x-for="(user, key) in users" :key="user.id">
+                    <li class="border p-2 mb-2 rounded">
+                        <div @click="user.showDetails = !user.showDetails"
+                             class="flex items-center justify-between h-12 text-center cursor-pointer">
+                            <p class="w-1/5" x-text="user.username"></p>
+                            <p class="w-1/5" x-text="`Last seen on ${formatDate(user.last_login)}`"></p>
+                            <p class="w-1/5" x-text="user.is_active ? 'active' : 'inactive'"
+                            ></p>
+                            <p class="w-1/5" x-text="user.role"></p>
+                            <img :src="user.avatar_url" :alt="`${user.username}'s github profile picture`"
+                                 class="h-full object-contain rounded-full border-2 border-amber-300"/>
+                        </div>
+                        <div x-cloak x-show="user.showDetails" class="mt-2">
+                            <div class="flex justify-between items-center gap-2 my-4">
+                                <div class="w-1/3">
+                                    <label :for="`${key}-role`">Role</label>
+                                    <select :name="`${key}-role`" :id="`${key}-role`" x-model="user.role"
+                                            x-on:change="await setUsersRole(user.github_id, user.role); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
+                                            class="border p-1 rounded">
+                                        <template x-for="role in ROLES">
+                                            <option x-text="role" :value="role"
+                                                    :selected="role === user.role"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="w-1/3 md:flex md:justify-end md:items-center md:gap-1">
+                                    <label :for="`${key}-role`">Activate/Deactivate</label>
+                                    <select :name="`${key}-state`" :id="`${key}-state`"
+                                            x-model="user.is_active"
+                                            x-on:change="await activateUser(user.github_id, user.is_active); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
+                                            class="border p-1 rounded">
+                                        <template x-for="state in ['true', 'false']">
+                                            <option x-text="state === 'true' ? 'active' : 'inactive'" :value="state"
+                                                    :selected="user.is_active === (state === 'true')"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center gap-2 mt-2">
+                                <p><span class="italic">Github ID:</span>
+                                    <span x-text="user.github_id" class="font-bold"></span>
+                                </p>
+                                <p><span class="italic">Username:</span>
+                                    <span x-text="user.username" class="font-bold"></span>
+                                </p>
+                                <p><span class="italic">Email: </span>
+                                    <span x-text="user.email" class="font-bold"></span>
+                                </p>
+                            </div>
+                            <div class="flex justify-between items-center gap-2 mt-2">
+                                <p><span class="italic">Avatar URL: </span>
+                                    <span x-text="user.avatar_url" class="font-bold"></span>
+                                </p>
+                                <p><span class="italic">Number of Remarks: </span>
+                                    <span x-text="user.remarks.length" class="font-bold"></span>
+                                </p>
+                            </div>
+                            <div class="flex justify-between items-center gap-2 mt-2">
+                                <p><span class="italic">Joined on: </span><span
+                                        x-text="formatDate(user.created_on)" class="font-bold"></span>
+                                </p>
+                                <p><span class="italic">Last seen on: </span>
+                                    <span x-text="formatDate(user.last_login)" class="font-bold"></span>
+                                </p>
+                            </div>
+                            <div class="flex justify-end items-center gap-2 mt-4"
+                                 x-data="{ modalShown: false, selectedUser: null }">
+                                <button class="rounded py-2 px-4 bg-red-500 hover:bg-red-400 text-white hover:cursor-pointer"
+                                        @click.prevent="selectedUser = user; modalShown = true">Delete User
+                                </button>
+                                <div x-cloak
+                                     x-show="modalShown"
+                                     class="fixed z-10 inset-0 overflow-y-auto"
+                                     aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                                    <div class="flex items-center justify-center min-h-screen">
+                                        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all my-8 align-middle w-1/3">
+                                            <div class="bg-white py-4 px-4">
+                                                <h2 class="font-semibold"
+                                                    x-text="selectedUser ? `Remove ${selectedUser.username}?`: ''"></h2>
+                                                <p class="text-gray-500">Are you sure you want to delete this user?</p>
+                                                <div class="mt-5">
+                                                    <button
+                                                            @click="modalShown = false"
+                                                            class="rounded py-2 px-4 bg-gray-500 hover:bg-gray-400 text-white mr-2">
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                            @click.prevent="await deleteUser(selectedUser.github_id); await getUsers(); modalShown = false; selectedUser = null"
+                                                            class="rounded py-2 px-4 bg-red-500 hover:bg-red-400 text-white">
+                                                        Confirm
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+        </div>
+        <div x-cloak x-show="dataTypes.projects.isVisible" x-data="dataTypes.projects">
+            <h1>PROJECTS CONTENT</h1>
+        </div>
+        <div x-cloak x-show="dataTypes.roots.isVisible" x-data="dataTypes.roots" x-init="await getData(base)">
+            <p x-cloak id="rootCreateMessage" x-show="message"></p>
+            <div class="flex gap-2 justify-center mt-2">
+                <input id="baseInput" class="border w-1/2 p-2 rounded" type="text" x-model="base"
+                       @input="await handleInput()"
+                       @keyup="await handleKeyUp($event)"
+                       list="baseSuggestions">
+                <datalist id="baseSuggestions">
+                    <template x-for="dir in directories" :key="dir">
+                        <option x-bind:value="dir"></option>
+                    </template>
+                    <template x-for="file in files" :key="file">
+                        <option x-bind:value="file"></option>
+                    </template>
+                </datalist>
+                <button @click.prevent="await create()"
+                        class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer">
+                    Create
+                </button>
+                <div id="loadingContainer"></div>
+            </div>
+            <div x-cloak x-show="isFile" class="mt-2">
+                <template x-for="(data, index) in rootData" :key="index">
+                    <div class="flex gap-2 justify-center my-2">
+                        <input class="w-1/6 border rounded p-2"
+                               :class="{'cursor-pointer': index === (rootData.length - 1)}" type="text"
+                               x-model="data.id"
+                               @focus="addInputPair(index)" placeholder="Segment ID">
+                        <input class="w-1/2 border rounded p-2" type="text" x-model="data.value"
+                               placeholder="Segment Value">
+                    </div>
+                </template>
+            </div>
+        </div>
+    </article>
+</main>
+<footer class="flex justify-around items-center h-28 border drop-shadow-sm">
+    <p>Computer Assisted Translation for SuttaCentral</p>
+    <ul>
+        <li><a href="https://suttacentral.net/">SuttaCentral</a></li>
+        <li><a href="https://github.com/suttacentral/bilara">Github</a></li>
+        <li><a href="https://discourse.suttacentral.net/">Forum</a></li>
+    </ul>
+</footer>
+</body>
+</html>
