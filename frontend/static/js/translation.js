@@ -205,7 +205,7 @@ function dragHandler() {
 }
 
 function resizeHandler() {
-    const resizables = document.querySelectorAll(".project-container__content-header .resize");
+    const resizables = document.querySelectorAll(".resize");
     resizables.forEach(resize => {
         const container = resize.parentElement.parentElement;
         let x, w;
@@ -220,6 +220,10 @@ function resizeHandler() {
         function move(e) {
             const mx = e.clientX;
             const cx = mx - x;
+            const detailPanel = container.parentElement;
+            if (detailPanel.classList.contains("project-container__detail-panel")) {
+                detailPanel.setAttribute("style", "max-width: 100%");
+            }
             container.setAttribute("style", `width: ${w + cx}px`);
         }
 

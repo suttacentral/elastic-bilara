@@ -91,12 +91,6 @@
     background-color: var(--color-primary-lighter);
     margin-top: 0;
 
-    & .resize {
-        position: absolute;
-        right: 0;
-        cursor: ew-resize;
-    }
-
     & .draggable-container {
         margin: 0 auto;
         display: flex;
@@ -107,6 +101,12 @@
     }
 }
 
+.resize {
+    position: absolute;
+    right: 0;
+    top: 0;
+    cursor: ew-resize;
+}
 
 .project-container__content-body {
     display: grid;
@@ -153,7 +153,6 @@
 }
 
 .project-container__detail-panel {
-    flex-shrink: 0;
     min-width: 0;
     max-width: 25%;
     text-align: center;
