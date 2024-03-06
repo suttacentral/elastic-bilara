@@ -94,10 +94,6 @@ class TestManager:
         repo = getattr(git_manager, repo_attr)
         dir_map = {"published": git_manager.published.workdir, "unpublished": git_manager.unpublished.workdir}
 
-        # if raises_exception:
-        #     with pytest.raises(KeyError):
-        #         git_manager.get_latest_commit(repo, file_path, branch_name)
-        # else:
         result = git_manager.get_latest_commit(repo, file_path, branch_name)
         assert isinstance(result, expected_type) if expected_type else result is expected_result
 
@@ -231,6 +227,40 @@ class TestManager:
         if expected_result:
             for file_path in file_paths:
                 assert str(file_path) in repo.index
+
+    @pytest.mark.parametrize(
+        "file_paths, expected_result",
+        [
+            (None, False),
+            ([], False),
+            (
+                [
+                    Path("translations/en/test/sutta/an/an1/an1.1-10_translation-en-test.json"),
+                    Path("translations/en/test/sutta/an/an1/new_file.json"),
+                ],
+                True,
+            ),
+        ],
+    )
+    def test_remove(self, file_paths, expected_result, git_manager):
+        repo = git_manager.unpublished
+
+        if file_paths:
+            new_file_path = (
+                Path(repo.workdir) / "translations" / "en" / "test" / "sutta" / "an" / "an1" / "new_file.json"
+            )
+            with open(new_file_path, "w") as f:
+                json.dump({"data": "new data"}, f, indent=4)
+            git_manager.add(repo, file_paths)
+            new_file_path.unlink()
+
+        result = git_manager.remove(repo, file_paths)
+
+        assert result == expected_result
+
+        if expected_result:
+            for file_path in file_paths:
+                assert str(file_path) not in repo.index
 
     @pytest.mark.parametrize(
         "branch, expected_output",

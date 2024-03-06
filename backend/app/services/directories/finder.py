@@ -13,13 +13,26 @@ class Finder:
         }
         self.similar = (TextType.ROOT.value, TextType.HTML.value, TextType.VARIANT.value, TextType.REFERENCE.value)
 
-    def find(self, target_path: Path) -> set[Path]:
+    def find(self, target_path: Path, exact: bool = False) -> set[Path]:
+        if exact:
+            return self._find_exact(target_path)
         result = set()
         for text_type in TextType:
             matches = self._match_for_type(text_type, target_path)
             if not matches and text_type.value in self.similar:
                 path = Path(*target_path.parts[:-1]) if target_path.parts[-1].endswith(".json") else target_path
                 result.add(settings.WORK_DIR / str(path).replace(TextType.ROOT.value, text_type.value))
+            for match in matches:
+                result.add(match)
+        return result
+
+    def _find_exact(self, target_path: Path) -> set[Path]:
+        result = set()
+        pattern = (
+            f"**/{target_path.parts[-1]}/**" if target_path.is_dir() else f"**/{target_path.stem.split('_')[0]}*.json"
+        )
+        for text_type in TextType:
+            matches = [path for path in (settings.WORK_DIR / text_type.value).glob(pattern)]
             for match in matches:
                 result.add(match)
         return result

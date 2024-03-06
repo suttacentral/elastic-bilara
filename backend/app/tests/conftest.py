@@ -15,8 +15,11 @@ from app.db.schemas.user import User, UserBase
 from app.main import app
 from app.services.auth import utils
 from app.services.auth.schema import TokenData
+from app.services.directories.remover import Remover
+from app.services.directories.utils import validate_path
 from app.services.git.manager import GitManager
 from app.services.users import permissions
+from app.services.projects.uid_reducer import UIDReducer
 from app.tests.services.users.factories import UserFactory
 from app.tests.utils.factories import ProjectFactory, PublicationFactory
 from app.tests.utils.git import create_repo_structure_with_content
@@ -203,6 +206,7 @@ def mock_path_obj() -> Callable[[bool, str], MagicMock]:
         mock_path.exists = Mock(return_value=is_dir_value)
         mock_path.relative_to = Mock(return_value=return_value)
         mock_path.name = return_value
+        mock_path.__str__ = Mock(return_value=return_value)
         return mock_path
 
     return _mock_path_obj
@@ -386,3 +390,43 @@ def mock_new_project_create_data(mocker, mock_user):
         ),
     )
     mocker.patch("pathlib.Path.is_dir", return_value=False)
+
+
+@pytest.fixture
+def remover(mocker, user) -> Callable[[Path], tuple[Remover, MagicMock, MagicMock, MagicMock, MagicMock]]:
+    mock_remove_from_elastic = mocker.patch("app.services.directories.remover.Remover._remove_from_elastic")
+    mock_remove_commit = mocker.patch("app.services.directories.remover.Remover._remove_commit")
+    mock_delete_elements = mocker.patch("app.services.directories.remover.Remover._delete_elements")
+    mock_get_paths = mocker.patch("app.services.directories.remover.Remover._get_paths")
+    mock_get_matches = mocker.patch("app.services.directories.utils.get_matches")
+    mock_get_matches_method = mocker.patch("app.services.directories.remover.Remover._get_matches")
+
+    def _remover(path: Path):
+        remover = Remover(user, path)
+        return remover, mock_remove_from_elastic, mock_remove_commit, mock_delete_elements, mock_get_paths, mock_get_matches, mock_get_matches_method
+
+    return _remover
+
+
+@pytest.fixture
+def uid_reducer(mocker, user) -> Callable[[Path, list[str], bool], tuple[UIDReducer, MagicMock, MagicMock]]:
+    mock_reduce_commit = mocker.patch("app.services.projects.uid_reducer.UIDReducer._reduce_commit")
+    mock_get_matches = mocker.patch("app.services.directories.utils.get_matches")
+
+    def _uid_reducer(path: Path, uids: list[str], exact: bool = False, get_matches_value = set()):
+        mock_get_matches.return_value = get_matches_value
+        uid_reducer = UIDReducer(user, path, uids, exact)
+        uid_reducer.related_paths = get_matches_value
+        return uid_reducer, mock_reduce_commit, mock_get_matches
+
+    return _uid_reducer
+
+
+@pytest.fixture
+def mock_validate_path() -> Generator[None, Any, None]:
+    async def _mock_validate_path_function(path: str) -> Path:
+        return settings.WORK_DIR / path
+
+    app.dependency_overrides[validate_path] = _mock_validate_path_function
+    yield
+    app.dependency_overrides = {}

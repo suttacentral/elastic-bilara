@@ -422,3 +422,46 @@ class TestFinder:
         assert len(result) == expected_len
         for item in path_contains:
             assert any(item in str(match) for match in result)
+
+    @pytest.mark.parametrize(
+        "existing_paths, target_path, found_paths",
+        [
+            (
+                [
+                    "root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json",
+                    "root/misc/site/name/super-name_root-misc-site.json",
+                    "root/misc/site/name/sutta/an-name_root-misc-site.json",
+                    "html/pli/ms/sutta/an/an1/an1.1-10_html-pli-ms.json",
+                    "translation/en/user/sutta/an/an1/an1.1-10_translation-en-user.json",
+                    "translation/de/site/name/sutta/an-name_translation-de-site.json",
+                    "translation/de/user2/sutta/an/an1/an1.1-10_translation-de-user2.json",
+                    "comment/en/user/sutta/an/an1/an1.1-10_comment-en-user.json",
+                    "comment/de/user2/sutta/an/an1/an1.1-10_comment-de-user2.json",
+                ],
+                Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"),
+                [
+                    "root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json",
+                    "html/pli/ms/sutta/an/an1/an1.1-10_html-pli-ms.json",
+                    "translation/en/user/sutta/an/an1/an1.1-10_translation-en-user.json",
+                    "comment/en/user/sutta/an/an1/an1.1-10_comment-en-user.json",
+                    "translation/de/user2/sutta/an/an1/an1.1-10_translation-de-user2.json",
+                    "comment/de/user2/sutta/an/an1/an1.1-10_comment-de-user2.json",
+                ],
+            ),
+        ],
+    )
+    @patch("pathlib.Path.glob")
+    def test_find_exact(
+        self,
+        mock_glob,
+        mock_path_exists,
+        existing_paths,
+        target_path,
+        found_paths,
+    ):
+        mock_path_exists([settings.WORK_DIR / path for path in existing_paths])
+        mock_glob.return_value = [settings.WORK_DIR / path for path in found_paths]
+        finder = Finder()
+        results = finder.find(target_path, True)
+        for path in found_paths:
+            assert any(path in str(result) for result in results)
