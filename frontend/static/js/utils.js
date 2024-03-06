@@ -30,8 +30,7 @@ const pollUpdateStatus = async (taskID, element) => {
     }
 };
 
-
-function  getUserInfo() {
+function getUserInfo() {
     return {
         isAdmin: false,
         isActive: false,
@@ -50,8 +49,8 @@ function  getUserInfo() {
             } catch (error) {
                 throw new Error(error);
             }
-        }
-    }
+        },
+    };
 }
 
 const ROLES = {
@@ -59,10 +58,36 @@ const ROLES = {
     superuser: "superuser",
     writer: "writer",
     reviewer: "reviewer",
-}
-// TODO: there is an endpoint /users/roles -> that returns a list of roles
+};
+
 
 function formatDate(dateString) {
-  const options = { year: 'numeric', month: 'long', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString(undefined, options);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+}
+
+function displayMessage(element, message, type) {
+    element.textContent = message;
+    element.classList.add("project-header__message--show");
+    if (type === "failure") element.classList.add("project-header__message--failure");
+    if (!isInViewPort(element)) {
+        element.classList.add("project-header__message--fixed");
+    }
+
+    setTimeout(() => {
+        element.textContent = "";
+        element.classList.remove("project-header__message--show");
+        element.classList.remove("project-header__message--failure");
+        element.classList.remove("project-header__message--fixed");
+    }, 15000);
+}
+
+function isInViewPort(element) {
+    let rect = element.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
 }

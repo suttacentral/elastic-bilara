@@ -120,11 +120,11 @@ function fileTree() {
             let iconHtml;
 
             if (isJsonFile) {
-                iconHtml = `<i class='mdi mdi-file-document-outline text-neutral-600'></i>`;
+                iconHtml = `<i class='mdi mdi-file-document-outline'></i>`;
             } else if (obj.children) {
-                iconHtml = `<i class='mdi mdi-folder-outline text-sky-700'></i>`;
+                iconHtml = `<i class='mdi mdi-folder-outline'></i>`;
             } else {
-                iconHtml = `<i class='mdi mdi-file-outline text-neutral-600'></i>`;
+                iconHtml = `<i class='mdi mdi-file-outline'></i>`;
             }
 
             let buttonHtml = "";
@@ -134,19 +134,19 @@ function fileTree() {
                 if (!this.paths.hasOwnProperty(key)) {
                     this.paths[key] = obj.children.map(child => child.title);
                 }
-                buttonHtml = `<div class="flex align-middle"><button class="rounded my-2 py-2 px-1 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer" x-on:click="await triggerPullRequest('${key}', $event, '${children}')">Publish ${obj.title}</button><div></div></div>`;
+                buttonHtml = `<div class="publish-container"><button class="btn btn--publish" x-on:click="await triggerPullRequest('${key}', $event, '${children}')">Publish ${obj.title}</button><div></div></div>`;
             }
-            let html = buttonHtml;
-            html += `<a href="#" 
-                            class="flex gap-1 px-5 py-1 my-1 hover:bg-green-50 rounded text-2xl"
+            let html = `<a href="#" 
+                            class="navigation-list__item-link"
                             :class="{'has-children':level.children}" 
                             @click.prevent="${clickAction}">
                             ${iconHtml} ${obj.title}
                         </a>`;
+            if (buttonHtml) html = `<div class="container-flex">${html} ${buttonHtml} </div>`
             if (!isJsonFile && obj.children) {
-                html += `<ul style="display:none;" x-ref="${ref}" class="pl-5 transition-all duration-500 opacity-0">
+                html += `<ul style="display:none;" x-ref="${ref}" class="navigation-list">
                             <template x-for='(level,i) in level.children'>
-                                <li x-html="renderLevel(level,i)"></li>
+                                <li class='navigation-list__item' x-html="renderLevel(level,i)"></li>
                             </template>
                         </ul>`;
             }
@@ -183,14 +183,14 @@ function fileTree() {
             setTimeout(() => {
                 el.previousElementSibling.querySelector("i.mdi").classList.add("mdi-folder-open-outline");
                 el.previousElementSibling.querySelector("i.mdi").classList.remove("mdi-folder-outline");
-                el.classList.add("opacity-100");
+                el.previousElementSibling.querySelector("i.mdi").parentElement.classList.add("navigation-list--open");
             }, 10);
         },
         hideLevel(el) {
             el.style.display = "none";
-            el.classList.remove("opacity-100");
             el.previousElementSibling.querySelector("i.mdi").classList.remove("mdi-folder-open-outline");
             el.previousElementSibling.querySelector("i.mdi").classList.add("mdi-folder-outline");
+            el.previousElementSibling.querySelector("i.mdi").parentElement.classList.remove("navigation-list--open");
 
             const refs = el.querySelectorAll("ul[x-ref]");
             for (let i = 0; i < refs.length; ++i) {

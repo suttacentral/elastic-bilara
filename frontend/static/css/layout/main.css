@@ -1,0 +1,5 @@
+.main-content{
+    background-color: var(--color-primary-lighter);
+    flex-grow: 1;
+    overflow: hidden;
+}

@@ -1,0 +1,185 @@
+.search__container {
+    padding: var(--space-sm) var(--space-md);
+    position: relative;
+}
+
+.search__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search__bar__icon {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    padding-left: var(--space-xxs);
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.search__bar__input {
+    width: 100%;
+    border-radius: var(--radius-xxs);
+    border: 1px solid var(--color-primary-darker);
+    background-color: var(--color-primary-lighter);
+    padding: var(--space-xxs) var(--space-md);
+    color: var(--color-black);
+
+    &:hover, &:focus {
+        outline: none;
+        border: 1px solid var(--color-accent-dark);
+    }
+}
+
+.search__bar__clear {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    padding-right: var(--space-xxs);
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.search__suggestions {
+    text-align: center;
+    margin-bottom: var(--space-md);
+}
+
+.search__suggestion-item {
+    padding: var(--space-xs) var(--space-sm);
+    margin: var(--space-xs) auto;
+    max-width: 500px;
+
+    &:hover {
+        background-color: var(--color-cta);
+        color: var(--color-white);
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+    }
+}
+
+.search__suggestion-item--selected {
+    background-color: var(--color-primary-dark);
+    color: var(--color-white);
+    border-radius: var(--radius-sm);
+}
+
+.fields {
+    margin: var(--space-sm) 0;
+}
+
+.fields__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.fields, .fields__item {
+    gap: var(--space-sm);
+}
+
+.fields__label__container {
+    position: relative;
+    width: fit-content;
+}
+
+.fields__label {
+    cursor: pointer;
+    border-radius: var(--radius-xxs);
+    border: 1px solid var(--color-primary-darker);
+    box-shadow: var(--shadow-xxs);
+}
+
+.fields__label__cancel {
+    cursor: pointer;
+    position: absolute;
+    top: -1rem;
+    right: 0;
+}
+
+.fields__input {
+    width: 100%;
+    max-width: 300px;
+    border-radius: var(--radius-xxs);
+    border: 1px solid var(--color-primary-darker);
+    background-color: var(--color-primary-lighter);
+    color: var(--color-black);
+
+    &:hover, &:focus {
+        outline: none;
+        border: 1px solid var(--color-accent-dark);
+    }
+}
+
+.search__container, .search__bar__input, .search__suggestions, .fields, .page-size, .page-size__select, .search__navigation, .search__results-item, .fields__input, .fields__label__container {
+    font-size: var(--text-md);
+}
+
+.page-size, .search__navigation {
+    margin-bottom: var(--space-md);
+}
+
+.fields__label__container, .fields__label, .fields__input, .search__navigation__previous, .search__navigation__search, .search__navigation__next, .search__results-key {
+    padding: var(--space-xxs) var(--space-xs);
+}
+
+.fields, .search__results-container, .search__results-item, .search__results-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.search__results-container {
+    gap: var(--space-md);
+}
+
+.search__results-list, .search__results-item {
+    gap: var(--space-xs);
+}
+
+.search__results-title {
+    text-align: center;
+    font-weight: bold;
+}
+
+.search__results-title, .search__results-key {
+    font-size: var(--text-sm);
+}
+
+.search__results-item {
+    display: flex;
+    line-height: var(--body-line-height);
+}
+
+.search__results-key {
+    width: fit-content;
+    font-style: italic;
+    border: 1px solid var(--color-primary-darker);
+    border-radius: var(--radius-xxs);
+}
+
+@media (max-width: 1199px) {
+    .search__suggestion-item, .fields__label__container, .fields__label, .page-size {
+        font-size: var(--text-sm);
+    }
+
+    .fields__label__cancel {
+        top: -0.5rem;
+    }
+
+    .search__results-key {
+        font-size: var(--text-xs);
+    }
+
+    .search__navigation {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-xs);
+    }
+}

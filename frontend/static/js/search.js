@@ -111,13 +111,13 @@ const search = () => {
             let html = "";
             for (const [resultKey, resultValue] of Object.entries(this.results)) {
                 html += `
-					<div class="px-2 py-1 border rounded">
-						<h3 class="inline-block font-italic text-xs mb-2 border rounded-full py-1 px-2">${resultKey}</h3>
-						<ul>
+					<div class="search__results-item">
+						<h3 class="search__results-title">${resultKey}</h3>
+						<ul class="search__results-list">
 							${Object.entries(resultValue)
                                 .map(
                                     ([key, value]) => `
-								<li class="flex justify-around items-center flex-wrap text-lg"><span class="font-bold flex-shrink text-sm my-1 min-w-1/3">${key}:</span> ${value}</li>
+								<li class="search__results-item"><span class="search__results-key">${key}</span> ${value}</li>
 							`,
                                 )
                                 .join("")}

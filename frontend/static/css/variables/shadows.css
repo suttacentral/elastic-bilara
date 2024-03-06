@@ -1,0 +1,12 @@
+@import "spacing.css";
+@import "colors.css";
+
+:root {
+    --shadow-xxs: 0 0 var(--space-xxs) var(--color-shadow);
+    --shadow-xs: 0 0 var(--space-xs) var(--color-shadow);
+    --shadow-sm: 0 0 var(--space-sm) var(--color-shadow);
+    --shadow-md: 0 0 var(--space-md) var(--color-shadow);
+    --shadow-lg: 0 0 var(--space-lg) var(--color-shadow);
+    --shadow-xl: 0 0 var(--space-xl) var(--color-shadow);
+    --shadow-xxl: 0 0 var(--space-xxl) var(--color-shadow);
+}

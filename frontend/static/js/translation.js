@@ -15,6 +15,9 @@ function fetchTranslation() {
 
             const projects = await this.fetchRelatedProjects(this.prefix);
             this.relatedProjects = projects.filter(project => project !== muid && project !== source);
+            adjustTextareaHeight();
+            dragHandler();
+            resizeHandler();
         },
         getValue(translation, uid) {
             return translation.data[uid] || "";
@@ -63,14 +66,18 @@ function fetchTranslation() {
                 }
                 try {
                     const muid = translation.muid;
-                    await this.updateHandler(muid, { [uid]: segment }, event.target.nextElementSibling);
+                    await this.updateHandler(
+                        muid,
+                        { [uid]: segment },
+                        document.querySelector("p.project-header__message"),
+                    );
                 } catch (error) {
                     throw new Error(error);
                 }
             }
-            const nextLi = event.target.parentElement.nextElementSibling;
-            if (nextLi) {
-                const nextTextarea = nextLi.querySelector("textarea");
+            const nextSection = event.target.parentElement.nextElementSibling;
+            if (nextSection) {
+                const nextTextarea = nextSection.querySelector("textarea");
                 if (nextTextarea) {
                     nextTextarea.focus();
                 }
@@ -86,9 +93,16 @@ function fetchTranslation() {
                 });
                 const { task_id: taskID } = await response.json();
                 if (!taskID) {
-                    throw new Error("Invalid data format from the API");
+                    displayMessage(
+                        element,
+                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the admins.",
+                        "failure",
+                    );
                 }
-                await pollUpdateStatus(taskID, element);
+                displayMessage(
+                    element,
+                    "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
+                );
             } catch (error) {
                 throw new Error(error);
             }
@@ -118,4 +132,105 @@ function fetchTranslation() {
             }
         },
     };
+}
+
+function adjustTextareaHeight() {
+    const bodies = document.querySelectorAll(".project-container__content-body");
+    const numSections = bodies[0].querySelectorAll(".project-container__content-body__section").length;
+    for (let i = 0; i < numSections; i++) {
+        let maxHeight = 0;
+        bodies.forEach(body => {
+            let textarea = body
+                .querySelectorAll(".project-container__content-body__section")
+                [i].querySelector("textarea");
+            textarea.setAttribute("style", "height: 0px");
+            let height = textarea.scrollHeight;
+            maxHeight = height > maxHeight ? height : maxHeight;
+        });
+        bodies.forEach(body => {
+            let textarea = body
+                .querySelectorAll(".project-container__content-body__section")
+                [i].querySelector("textarea");
+            textarea.setAttribute("style", `height: ${maxHeight}px`);
+        });
+    }
+}
+
+window.onresize = adjustTextareaHeight;
+
+function dragHandler() {
+    const container = document.querySelector(".project-container__content");
+    const dragElems = document.querySelectorAll(".draggable-container");
+
+    dragElems.forEach(elem => {
+        elem.addEventListener("dragstart", event => {
+            const draggable = elem.closest(".project-container__content-details");
+            draggable.classList.add("dragging");
+            event.dataTransfer.setDragImage(draggable, event.clientX, event.clientY);
+        });
+
+        elem.addEventListener("dragend", () => {
+            const draggable = elem.closest(".project-container__content-details");
+            draggable.classList.remove("dragging");
+            adjustTextareaHeight();
+        });
+    });
+
+    container.addEventListener("dragover", e => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(container, e.clientX);
+        const dragging = document.querySelector(".dragging");
+        if (afterElement == null) {
+            container.appendChild(dragging);
+        } else {
+            container.insertBefore(dragging, afterElement);
+        }
+    });
+
+    function getDragAfterElement(container, x) {
+        const draggableElements = [...container.querySelectorAll(".project-container__content-details:not(.dragging)")];
+        return draggableElements.reduce(
+            (closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = x - box.left - box.width / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            },
+            { offset: Number.NEGATIVE_INFINITY },
+        ).element;
+    }
+}
+
+function resizeHandler() {
+    const resizables = document.querySelectorAll(".resize");
+    resizables.forEach(resize => {
+        const container = resize.parentElement.parentElement;
+        let x, w;
+
+        resize.addEventListener("mousedown", e => {
+            x = e.clientX;
+            w = container.clientWidth;
+            document.addEventListener("mousemove", move);
+            document.addEventListener("mouseup", up);
+        });
+
+        function move(e) {
+            const mx = e.clientX;
+            const cx = mx - x;
+            const detailPanel = container.parentElement;
+            if (detailPanel.classList.contains("project-container__detail-panel")) {
+                detailPanel.setAttribute("style", "max-width: 100%");
+            }
+            container.setAttribute("style", `width: ${w + cx}px`);
+        }
+
+        function up(e) {
+            document.removeEventListener("mousemove", move);
+            document.removeEventListener("mouseup", up);
+            adjustTextareaHeight();
+        }
+    });
 }
