@@ -12,16 +12,12 @@
 }
 
 
-.main-nav-mobile {
+.main-nav-mobile, .mobile-hide {
     display: none;
 }
 
 .main-nav__item {
     color: var(--color-black);
-}
-
-.mobile-hide {
-    display: none;
 }
 
 .mobile-show {
@@ -35,13 +31,11 @@
 .main-nav__item-link {
     color: var(--color-black);
     text-decoration: none;
-}
 
-.main-nav__item-link:hover {
-    text-decoration: none;
-    color: var(--color-accent);
+    &:hover {
+        color: var(--color-accent);
+    }
 }
-
 
 @media (max-width: 1199px) {
     .main-nav {
