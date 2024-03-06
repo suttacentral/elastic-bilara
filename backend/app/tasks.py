@@ -3,9 +3,9 @@ from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.git import utils
 from app.services.git.manager import GitManager
-from celery import Task
+from celery import Task, chain
 from github import GithubException
-from pygit2 import GitError
+from pygit2 import GitError, Repository
 
 
 class GitTask(Task):
@@ -31,6 +31,17 @@ class PrTask(GitTask):
         manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
         branch = utils.get_branch_name(manager, paths)
         manager._cleanup(branch)
+        super().on_failure(exc, task_id, args, kwargs, einfo)
+
+
+class SyncTask(GitTask):
+    auto_retry_for = (OSError, ConnectionError, TimeoutError, GithubException)
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        manager = kwargs.get("manager")
+        branch = kwargs.get("branch")
+        if manager and branch:
+            manager._cleanup(branch)
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
@@ -65,3 +76,19 @@ def pr(user, file_paths) -> str:
     return manager.process_files(
         message=commit_message, branch=branch, pr_title=pr_title, pr_body=pr_body, file_paths=paths
     )
+
+
+@app.task(name="pull", base=GitTask, queue="sync_queue")
+def pull(user_data: dict, branch_name: str, force: bool = False, remote_name: str = "origin") -> None:
+    manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, UserBase(**user_data))
+    branch = manager.get_branch(branch_name)
+
+    manager.pull(branch, force=force, remote_name=remote_name)
+
+
+@app.task(name="push", base=GitTask, queue="sync_queue")
+def push(user_data: dict, branch_name: str, remote_name: str = "origin") -> None:
+    manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, UserBase(**user_data))
+    branch = manager.get_branch(branch_name)
+
+    manager.push(branch, remote_name, branch_name)

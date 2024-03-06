@@ -36,35 +36,53 @@ class GitManager:
         self.github: Github = Github(settings.GITHUB_TOKEN)
         self.repo_owner: str = settings.GITHUB_REPO.split("/")[0]
 
-    def pull(self, branch_name: str = "published", force: bool = False, remote_name: str = "origin"):
-        for remote in self.published.remotes:
+    def pull(self, branch: Repository = "published", force: bool = False, remote_name: str = "origin"):
+        branch.state_cleanup()
+        if not branch:
+            raise pygit2.GitError(f"Branch {branch} not found")
+        branch_name = branch.head.shorthand
+        for remote in branch.remotes:
             if remote.name == remote_name:
                 remote.fetch()
-                remote_hash_id = self.published.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
+                remote_hash_id = branch.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
                 if force:
-                    self.published.checkout_tree(self.published.get(remote_hash_id), strategy=GIT_CHECKOUT_FORCE)
-                    self.published.head.set_target(remote_hash_id)
+                    branch.checkout_tree(branch.get(remote_hash_id), strategy=GIT_CHECKOUT_FORCE)
+                    branch.head.set_target(remote_hash_id)
+                    branch.state_cleanup()
                     return
-                merge_result, _ = self.published.merge_analysis(remote_hash_id)
+                merge_result, _ = branch.merge_analysis(remote_hash_id)
                 if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                    branch.state_cleanup()
                     return
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
                     try:
-                        self.published.checkout_tree(self.published.get(remote_hash_id))
-                        head_ref = self.published.lookup_reference(f"refs/head/{branch_name}")
+                        branch.checkout_tree(branch.get(remote_hash_id))
+                        head_ref = branch.lookup_reference(f"refs/heads/{branch_name}")
                         head_ref.set_target(remote_hash_id)
                     except KeyError:
-                        self.published.create_branch(branch_name, self.published.get(remote_hash_id))
-                    self.published.head.set_target(remote_hash_id)
+                        branch.create_branch(branch_name, branch.get(remote_hash_id))
+                    branch.head.set_target(remote_hash_id)
+                    branch.state_cleanup()
                     return
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-                    raise pygit2.GitError(
-                        f"'origin/{branch_name}' has local conflict and should be resolved first."
-                        f" Use force=True to ignore this error and override all local changes with remote."
-                        f" Conflicts in {[conflict for conflict in self.published.index.conflicts]}"
+                    branch.merge(remote_hash_id, favor="ours")
+                    if branch.index.conflicts:
+                        conflicts = [conflict for conflict in branch.index.conflicts]
+                        branch.state_cleanup()
+                        raise pygit2.GitError(
+                            f"'origin/{branch_name}' has local conflict and should be resolved first."
+                            f" Use force=True to ignore this error and override all local changes with remote."
+                            f" Conflicts in {conflicts}"
+                        )
+                    tree = branch.index.write_tree()
+                    commit_message = f"Merged origin/{branch_name} into {branch.head.shorthand}"
+                    branch.create_commit(
+                        "HEAD", self.author, self.committer, commit_message, tree, [branch.head.target, remote_hash_id]
                     )
-                self.published.state_cleanup()
-                raise pygit2.GitError(f"Unknown merge analysis result: {merge_result}")
+                    branch.state_cleanup()
+                else:
+                    branch.state_cleanup()
+                    raise pygit2.GitError(f"Unexpected merge behaviour")
 
     def checkout(self, name: str = "published", force: bool = False) -> None:
         self.published.remotes["origin"].fetch(prune=True)
@@ -187,6 +205,13 @@ class GitManager:
 
     def _is_branch_protected(self, name: str) -> bool:
         return name in self._protected_branches
+
+    def get_branch(self, name: str) -> Repository:
+        return getattr(self, name) if name in self._protected_branches else None
+
+    @staticmethod
+    def is_branch_protected(name: str) -> bool:
+        return name in GitManager._protected_branches
 
     @staticmethod
     def add(repo: Repository, file_paths: list[Path] | None = None) -> bool:

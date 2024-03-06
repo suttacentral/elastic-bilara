@@ -10,8 +10,12 @@ services:
         condition: service_started
       worker_commit:
         condition: service_started
-#      db:
-#        condition: service_healthy
+      worker_sync:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     build:
       context: ./backend
       dockerfile: backend.dockerfile
@@ -113,14 +117,18 @@ services:
       - postgres_data:/var/lib/postgresql/data/
     ports:
       - ${POSTGRESQL_PORT}:${POSTGRESQL_PORT}
-#    restart: always
+    restart: always
     environment:
       - POSTGRESQL_DATABASE
       - POSTGRESQL_USERNAME
       - POSTGRESQL_PASSWORD
       - POSTGRESQL_POSTGRES_PASSWORD
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d ${POSTGRESQL_DATABASE} -U ${POSTGRESQL_USERNAME} | grep -q 'accepting connections'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-#    entrypoint:  ["/bin/bash", "/scripts/postgres_setup.sh"]
 
   redis:
     image: "bitnami/redis:7.0.12"
@@ -159,12 +167,27 @@ services:
         - .env
     restart: always
 
+  worker_sync:
+    build:
+      context: ./backend
+      dockerfile: backend.dockerfile
+    container_name: worker_sync
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+    command: "celery -A app.celery:celery_app worker -Q sync_queue -c 1 --loglevel=info"
+    env_file:
+      - .env
+    restart: always
+
+
   nginx:
     image: bitnami/nginx
     container_name: nginx
     volumes:
       - ./bilara_server_block.conf:/opt/bitnami/nginx/conf/server_blocks/bilara_server_block.conf:ro
-      - ./logs/nginx:/var/logs/nginx
+      - ./logs/nginx/:/var/logs/nginx
       - ./frontend:/var/www/html
       - certs:/certs
       - ./scripts/generate_nginx_certs.sh:/scripts/generate_nginx_certs.sh
