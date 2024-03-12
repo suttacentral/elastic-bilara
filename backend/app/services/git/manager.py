@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Literal
 
 import app.services.git.utils as utils
-import pygit2
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from github import Github
@@ -10,11 +9,16 @@ from github.PaginatedList import PaginatedList
 from github.PullRequest import PullRequest
 from pygit2 import (
     GIT_CHECKOUT_FORCE,
+    GIT_DELTA_DELETED,
+    GIT_MERGE_ANALYSIS_FASTFORWARD,
+    GIT_MERGE_ANALYSIS_NORMAL,
+    GIT_MERGE_ANALYSIS_UP_TO_DATE,
     GIT_STATUS_INDEX_MODIFIED,
     GIT_STATUS_INDEX_NEW,
     GIT_STATUS_WT_MODIFIED,
     GIT_STATUS_WT_NEW,
     Commit,
+    GitError,
     Oid,
     RemoteCallbacks,
     Repository,
@@ -41,7 +45,7 @@ class GitManager:
     ) -> list[Path] | None:
         branch.state_cleanup()
         if not branch:
-            raise pygit2.GitError(f"Branch {branch} not found")
+            raise GitError(f"Branch {branch} not found")
         branch_name = branch.head.shorthand
         for remote in branch.remotes:
             if remote.name == remote_name:
@@ -56,10 +60,10 @@ class GitManager:
                     branch.state_cleanup()
                     return modified_files
                 merge_result, _ = branch.merge_analysis(remote_hash_id)
-                if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                if merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
                     branch.state_cleanup()
                     return modified_files
-                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                elif merge_result & GIT_MERGE_ANALYSIS_FASTFORWARD:
                     try:
                         branch.checkout_tree(branch.get(remote_hash_id))
                         head_ref = branch.lookup_reference(f"refs/heads/{branch_name}")
@@ -69,12 +73,12 @@ class GitManager:
                     branch.head.set_target(remote_hash_id)
                     branch.state_cleanup()
                     return modified_files
-                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+                elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
                     branch.merge(remote_hash_id, favor="ours")
                     if branch.index.conflicts:
                         conflicts = [conflict for conflict in branch.index.conflicts]
                         branch.state_cleanup()
-                        raise pygit2.GitError(
+                        raise GitError(
                             f"'origin/{branch_name}' has local conflict and should be resolved first."
                             f" Use force=True to ignore this error and override all local changes with remote."
                             f" Conflicts in {conflicts}"
@@ -88,7 +92,7 @@ class GitManager:
                     return modified_files
                 else:
                     branch.state_cleanup()
-                    raise pygit2.GitError(f"Unexpected merge behaviour")
+                    raise GitError(f"Unexpected merge behaviour")
 
     def checkout(self, name: str = "published", force: bool = False) -> None:
         self.published.remotes["origin"].fetch(prune=True)
@@ -236,7 +240,7 @@ class GitManager:
             return []
         return [
             Path(branch.path).parent / Path(patch.delta.new_file.path)
-            if patch.delta.status != pygit2.GIT_DELTA_DELETED
+            if patch.delta.status != GIT_DELTA_DELETED
             else patch.delta.old_file.path
             for patch in diff
         ]
