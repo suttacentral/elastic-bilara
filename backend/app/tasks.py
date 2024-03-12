@@ -6,6 +6,10 @@ from app.services.git.manager import GitManager
 from celery import Task, chain
 from github import GithubException
 from pygit2 import GitError, Repository
+from search.search import Search
+from search.utils import get_json_data
+
+es = Search()
 
 
 class GitTask(Task):
@@ -57,7 +61,10 @@ def commit(user: dict, file_paths: list[str], message: str) -> bool:
     if GitManager.add(manager.unpublished, paths) and GitManager.commit(
         manager.unpublished, manager.author, manager.committer, message, paths
     ):
+        changed_files = manager.pull(manager.unpublished)
         GitManager.push(manager.unpublished, "origin", "unpublished")
+        if manager.check_if_files_exists(changed_files):
+            es.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, changed_files)
         return True
     return False
 
@@ -83,7 +90,9 @@ def pull(user_data: dict, branch_name: str, force: bool = False, remote_name: st
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, UserBase(**user_data))
     branch = manager.get_branch(branch_name)
 
-    manager.pull(branch, force=force, remote_name=remote_name)
+    changed_files = manager.pull(branch, force=force, remote_name=remote_name)
+    if manager.check_if_files_exists(changed_files):
+        es.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, changed_files)
 
 
 @app.task(name="push", base=GitTask, queue="sync_queue")

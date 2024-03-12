@@ -36,7 +36,9 @@ class GitManager:
         self.github: Github = Github(settings.GITHUB_TOKEN)
         self.repo_owner: str = settings.GITHUB_REPO.split("/")[0]
 
-    def pull(self, branch: Repository = "published", force: bool = False, remote_name: str = "origin"):
+    def pull(
+        self, branch: Repository = "published", force: bool = False, remote_name: str = "origin"
+    ) -> list[Path] | None:
         branch.state_cleanup()
         if not branch:
             raise pygit2.GitError(f"Branch {branch} not found")
@@ -45,15 +47,18 @@ class GitManager:
             if remote.name == remote_name:
                 remote.fetch()
                 remote_hash_id = branch.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
+                modified_files = self.get_filenames_from_diff(
+                    str(branch.revparse_single("HEAD").id), remote_hash_id, branch
+                )
                 if force:
                     branch.checkout_tree(branch.get(remote_hash_id), strategy=GIT_CHECKOUT_FORCE)
                     branch.head.set_target(remote_hash_id)
                     branch.state_cleanup()
-                    return
+                    return modified_files
                 merge_result, _ = branch.merge_analysis(remote_hash_id)
                 if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
                     branch.state_cleanup()
-                    return
+                    return modified_files
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
                     try:
                         branch.checkout_tree(branch.get(remote_hash_id))
@@ -63,7 +68,7 @@ class GitManager:
                         branch.create_branch(branch_name, branch.get(remote_hash_id))
                     branch.head.set_target(remote_hash_id)
                     branch.state_cleanup()
-                    return
+                    return modified_files
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
                     branch.merge(remote_hash_id, favor="ours")
                     if branch.index.conflicts:
@@ -80,6 +85,7 @@ class GitManager:
                         "HEAD", self.author, self.committer, commit_message, tree, [branch.head.target, remote_hash_id]
                     )
                     branch.state_cleanup()
+                    return modified_files
                 else:
                     branch.state_cleanup()
                     raise pygit2.GitError(f"Unexpected merge behaviour")
@@ -222,6 +228,22 @@ class GitManager:
             repo.index.add(path)
         repo.index.write()
         return True
+
+    @staticmethod
+    def get_filenames_from_diff(commit_id_1: str, commit_id_2: str, branch: Repository) -> list[Path]:
+        diff = branch.diff(commit_id_1, commit_id_2)
+        if diff.stats.files_changed == 0:
+            return []
+        return [
+            Path(branch.path).parent / Path(patch.delta.new_file.path)
+            if patch.delta.status != pygit2.GIT_DELTA_DELETED
+            else patch.delta.old_file.path
+            for patch in diff
+        ]
+
+    @staticmethod
+    def check_if_files_exists(paths: list[Path]) -> bool:
+        return all([path.exists() for path in paths]) if paths else False
 
     @staticmethod
     def read_file(repo: Repository, file_path: Path, branch="unpublished") -> bytes | None:

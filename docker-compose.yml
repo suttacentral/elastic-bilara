@@ -140,12 +140,15 @@ services:
     restart: always
 
   worker_pr:
+    depends_on:
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     build:
       context: ./backend
       dockerfile: backend.dockerfile
     container_name: worker_pr
-    depends_on:
-      - redis
     volumes:
       - ./backend:/app
     command: "celery -A app.celery:celery_app worker -Q pr_queue -c 1 --loglevel=info"
@@ -154,12 +157,15 @@ services:
     restart: always
 
   worker_commit:
+    depends_on:
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     build:
       context: ./backend
       dockerfile: backend.dockerfile
     container_name: worker_commit
-    depends_on:
-      - redis
     volumes:
       - ./backend:/app
     command: "celery -A app.celery:celery_app worker -Q commit_queue -c 1 --loglevel=info"
@@ -168,12 +174,15 @@ services:
     restart: always
 
   worker_sync:
+    depends_on:
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     build:
       context: ./backend
       dockerfile: backend.dockerfile
     container_name: worker_sync
-    depends_on:
-      - redis
     volumes:
       - ./backend:/app
     command: "celery -A app.celery:celery_app worker -Q sync_queue -c 1 --loglevel=info"
