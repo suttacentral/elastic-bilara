@@ -35,7 +35,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from search.search import Search
-from search.utils import get_json_data, get_muid, get_filename, get_prefix
+from search.utils import get_json_data, get_muid, get_filename, get_prefix, find_root_path
 
 router = APIRouter(prefix="/projects")
 
@@ -110,6 +110,13 @@ async def update_json_data_for_prefix_in_project(
             code = status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=code, detail=str(error).strip("'"))
     return JSONDataOut(can_edit=True, data=data, task_id=task_id)
+
+
+@router.get("/{path:path}/source/")
+async def get_source_muid(user: Annotated[UserBase, Depends(utils.get_current_user)], path: Path):
+    target_path = validate_path(str(path))
+    source = find_root_path(target_path)
+    return {"muid": get_muid(source), "path": str(source).replace(str(settings.WORK_DIR), "")}
 
 
 @router.post(

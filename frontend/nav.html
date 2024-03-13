@@ -14,10 +14,10 @@
             src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"
     ></script>
     <script src="./static/js/auth.js"></script>
-    <script src="./static/js/nav.js"></script>
+    <script src="static/js/nav.js"></script>
     <script src="./static/js/utils.js"></script>
     <script src="./static/js/pullRequest.js"></script>
-        <link rel="stylesheet" href="./static/css/style.css"/>
+    <link rel="stylesheet" href="./static/css/style.css"/>
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
@@ -60,7 +60,8 @@
                     <span class="main-nav-mobile__burger--line"></span>
                 </div>
             </li>
-            <li class="main-nav-mobile__item" :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
+            <li class="main-nav-mobile__item"
+                :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
                 <div class="user-container" x-cloak x-show="!!username">
                     <img :src="avatarURL"
                          :alt="`${username}'s github profile picture`"
@@ -68,10 +69,13 @@
                     <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
                 </div>
             </li>
-            <li class="main-nav-mobile__item" :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'" x-cloak x-show="isAdmin && isActive">
+            <li class="main-nav-mobile__item"
+                :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'" x-cloak
+                x-show="isAdmin && isActive">
                 <a class="main-nav-mobile__item-link btn btn--admin" href="/admin">Admin Area</a>
             </li>
-            <li class="main-nav-mobile__item" :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
+            <li class="main-nav-mobile__item"
+                :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
                 <a class="main-nav-mobile__item-link btn btn--main" @click.prevent="await logout()">Logout</a>
             </li>
         </ul>
@@ -80,18 +84,13 @@
 
 <main class="main-content">
     <p id="pull-request-message"></p>
-    <div class="navigation-container navigation-container--pushdown" x-cloak x-show="isActive" x-data="fileTree()">
+    <div class="navigation-container navigation-container--pushdown" x-cloak x-show="isActive" x-data="tree()">
         <div x-cloak x-show="loading" class="modal">
             <div class="spinner"></div>
         </div>
-        <ul class="navigation-list">
-            <template x-for="(level, i) in levels">
-                <li class="navigation-list__item" x-html="renderLevel(level,i)"></li>
-            </template>
-        </ul>
+        <ul class="navigation-list" x-html="render()"></ul>
     </div>
 </main>
-
 <footer class="main-footer">
     <p class="main-footer__description">Computer Assisted Translation for SuttaCentral</p>
     <ul class="main-footer__list">

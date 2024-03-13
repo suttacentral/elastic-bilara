@@ -13,11 +13,17 @@ const publishChangesHandler = async (paths, element) => {
                 paths: data,
             }),
         });
+        if (!response.ok)
+            return displayMessage(
+                element,
+                `${await response.json().then(data => data.detail.error)}.`,
+                "failure",
+            );
         const { task_id: taskID, detail: detail } = await response.json();
         if (!taskID) {
             displayMessage(
                 element,
-                "There has been an error. Please retry in a few moments. If the issue persists, please contact the admins.",
+                "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
                 "failure",
             );
         }
@@ -26,7 +32,11 @@ const publishChangesHandler = async (paths, element) => {
         }
         return detail;
     } catch (error) {
-        throw new Error(error);
+        displayMessage(
+            element,
+            "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
+            "failure",
+        );
     }
 };
 
