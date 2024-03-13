@@ -11,8 +11,6 @@ function fetchTranslation() {
             await this.findOrCreateObject(source, this.prefix, true);
             if (muid) await this.findOrCreateObject(muid, this.prefix);
 
-            this.translations.sort((a, b) => (b.isSource ?? 0) - (a.isSource ?? 0));
-
             const projects = await this.fetchRelatedProjects(this.prefix);
             this.relatedProjects = projects.filter(project => project !== muid && project !== source);
             dragHandler();
@@ -158,7 +156,6 @@ function textareaAdjuster() {
             };
             this.observer = new IntersectionObserver(callback, options);
             this.observeSections();
-            window.addEventListener("adjust", this.observeSections);
         },
         observeSections() {
             const sections = document.querySelectorAll(".project-container__content-body__section");
