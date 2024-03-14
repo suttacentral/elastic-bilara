@@ -439,44 +439,49 @@ class Search:
             },
         }
 
-    def _process_data(self, index: str, segments_index: str, paths: list[Path] | Generator = None):
-        for data in self._yield_data(paths):
-            actions_main: list[dict[str, Any]] = []
-            actions_segments: list[dict[str, Any]] = []
-            for document in data:
-                source: dict[str, Any] = document["_source"]
-                main_doc = {
-                    "_index": index,
-                    "_id": document["_id"],
-                    "_source": {**source},
-                }
-                actions_main.append(main_doc)
-                file_path = Path(source["file_path"])
-                for item in source["segments"]:
-                    uid = item["uid"]
-                    segments_doc = {
-                        "_index": segments_index,
-                        "_id": utils.create_doc_id(file_path, uid),
-                        "_source": {
-                            "main_doc_id": document["_id"],
-                            "muid": source["muid"],
-                            "uid": uid,
-                            "segment": item["segment"],
-                        },
+    def _process_data(
+        self, index: str, segments_index: str, paths: list[Path] | Generator = None, delete: bool = False
+    ):
+        if delete:
+            self.delete_from_indexes(index, segments_index, paths)
+        else:
+            for data in self._yield_data(paths):
+                actions_main: list[dict[str, Any]] = []
+                actions_segments: list[dict[str, Any]] = []
+                for document in data:
+                    source: dict[str, Any] = document["_source"]
+                    main_doc = {
+                        "_index": index,
+                        "_id": document["_id"],
+                        "_source": {**source},
                     }
-                    actions_segments.append(segments_doc)
-            helpers.bulk(
-                self._search,
-                actions_main,
-                chunk_size=self._batch_size,
-                raise_on_error=True,
-            )
-            helpers.bulk(
-                self._search,
-                actions_segments,
-                chunk_size=self._batch_size,
-                raise_on_error=True,
-            )
+                    actions_main.append(main_doc)
+                    file_path = Path(source["file_path"])
+                    for item in source["segments"]:
+                        uid = item["uid"]
+                        segments_doc = {
+                            "_index": segments_index,
+                            "_id": utils.create_doc_id(file_path, uid),
+                            "_source": {
+                                "main_doc_id": document["_id"],
+                                "muid": source["muid"],
+                                "uid": uid,
+                                "segment": item["segment"],
+                            },
+                        }
+                        actions_segments.append(segments_doc)
+                helpers.bulk(
+                    self._search,
+                    actions_main,
+                    chunk_size=self._batch_size,
+                    raise_on_error=True,
+                )
+                helpers.bulk(
+                    self._search,
+                    actions_segments,
+                    chunk_size=self._batch_size,
+                    raise_on_error=True,
+                )
 
     def get_distinct_data(self, field: str, prefix: str = None) -> list[str]:
         query: dict[str, Any] = self._build_unique_query(field=field)
@@ -544,5 +549,16 @@ class Search:
             if any(prefix == str(parent.name) for parent in Path(hit["_source"]["file_path"]).parents)
         }
 
-    def update_indexes(self, index, segments_index, paths: list[Path]):
-        self._process_data(index, segments_index, paths)
+    def update_indexes(self, index, segments_index, paths: list[Path], delete: bool = False):
+        if not paths:
+            return
+        self._process_data(index, segments_index, paths, delete)
+
+    def delete_from_indexes(self, index, segments_index, paths: list[Path]):
+        if not paths:
+            return
+        for path in paths:
+            self._search.delete_by_query(index=index, body={"query": {"match": {"file_path": str(path)}}})
+            self._search.delete_by_query(
+                index=segments_index, body={"query": {"match": {"main_doc_id": utils.create_doc_id(path)}}}
+            )

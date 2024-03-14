@@ -25,6 +25,7 @@ services:
       - certs:/app/certs
     env_file:
       - .env
+    restart: always
 
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
@@ -81,6 +82,7 @@ services:
       retries: 10
     env_file:
       - .env
+    restart: always
 
   kibana:
     depends_on:
@@ -209,6 +211,7 @@ services:
       interval: 1s
       timeout: 5s
       retries: 60
+    restart: unless-stopped
 
 volumes:
   certs:

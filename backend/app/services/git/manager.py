@@ -241,13 +241,23 @@ class GitManager:
         return [
             Path(branch.path).parent / Path(patch.delta.new_file.path)
             if patch.delta.status != GIT_DELTA_DELETED
-            else patch.delta.old_file.path
+            else Path(branch.path).parent / patch.delta.old_file.path
             for patch in diff
         ]
 
     @staticmethod
-    def check_if_files_exists(paths: list[Path]) -> bool:
-        return all([path.exists() for path in paths]) if paths else False
+    def separate_existing_files(paths: list[Path]) -> tuple[list[Path], list[Path]]:
+        if not paths:
+            return [], []
+
+        existing_files = []
+        non_existing_files = []
+        for path in paths:
+            if path.exists():
+                existing_files.append(path)
+            else:
+                non_existing_files.append(path)
+        return existing_files, non_existing_files
 
     @staticmethod
     def read_file(repo: Repository, file_path: Path, branch="unpublished") -> bytes | None:
