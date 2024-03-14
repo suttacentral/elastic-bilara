@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from app.services.projects.utils import OverrideException
 from elasticsearch import RequestError
-from fastapi import status
+from fastapi import status, HTTPException
 
 from app.core.config import settings
 
@@ -458,7 +458,6 @@ class TestProjects:
         assert response.json()["results"][0]["filename"] == "test1.1-10_translation-en-test.json"
         assert response.json()["results"][0]["prefix"] == "test1.1-10"
 
-
     @pytest.mark.parametrize("exact", [True, False])
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.projects.can_delete_projects")
@@ -736,3 +735,33 @@ class TestProjects:
                 )
             ]
         )
+
+    @pytest.mark.asyncio
+    async def test_get_source_muid_unauthenticated(self, async_client) -> None:
+        response = await async_client.get("/projects/source-muid/")
+        assert response.status_code == 401
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Could not validate credentials"}
+
+    @pytest.mark.asyncio
+    async def test_get_source_muid_validate_path_fails(self, async_client, mock_get_current_user, mocker) -> None:
+        path = "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json"
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.validate_path",
+            side_effect=HTTPException(status_code=404, detail="Path not found"),
+        )
+
+        response = await async_client.get(f"/projects/{path}/source/")
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Path not found"}
+
+    @pytest.mark.asyncio
+    async def test_get_source_muid(self, async_client, mock_get_current_user, mocker) -> None:
+        path = "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json"
+        source_muid = "root-pli-ms"
+        source_path = "root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"
+        mocker.patch("app.api.api_v1.endpoints.projects.validate_path", return_value=settings.WORK_DIR / path)
+
+        response = await async_client.get(f"/projects/{path}/source/")
+        assert response.status_code == 200
+        assert response.json() == {"muid": source_muid, "path": f"/{source_path}"}

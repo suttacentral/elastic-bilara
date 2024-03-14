@@ -89,12 +89,12 @@
             <ul class="project-header__nav-list">
                 <li class="project-header__nav-item">
                     <button class="project-header__nav-button btn btn--related-projects"
-                            @click="$dispatch('toggle-detail-panel', {panel: 'related'})">Related
+                            @click="$dispatch('toggle-detail-panel', {panel: 'related'}); adjustVisibleTextareas()">Related
                     </button>
                 </li>
                 <li class="project-header__nav-item">
                     <button class="project-header__nav-button btn btn--search"
-                            @click="$dispatch('toggle-detail-panel', {panel: 'search'})">Search
+                            @click="$dispatch('toggle-detail-panel', {panel: 'search'}); adjustVisibleTextareas()">Search
                     </button>
                 </li>
             </ul>
@@ -120,10 +120,10 @@
                             <path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
                         </svg>
                     </div>
-                    <div class="project-container__content-body">
-                        <template x-for="uid in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
+                    <div class="project-container__content-body" x-data="textareaAdjuster()">
+                        <template x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
                                   :key="uid">
-                            <div class="project-container__content-body__section">
+                            <div class="project-container__content-body__section" :data-index="i">
                                 <p class="project-container__content-body__text"
                                    :class="{'project-container__content-body__text--hide': translation.muid !== new URLSearchParams(window.location.search).get('source')}"
                                    x-text="uid">
@@ -131,7 +131,7 @@
                                 <textarea class="project-container__content-body__textarea"
                                           x-bind:value="getValue(translation, uid)"
                                           x-bind:readonly="!translation.canEdit"
-                                          x-on:input="setValue(translation, uid, $event.target.value); adjustTextareaHeight()"
+                                          x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
                                           x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)"></textarea>
                             </div>
                         </template>
@@ -158,7 +158,7 @@
                  :class="{'active': active === 'related'}" x-data="{selectedProjects: {}}">
                 <template x-for="project in relatedProjects" :key="project">
                     <div x-text="project" class="project-container__detail-panel__related-item"
-                         @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); adjustTextareaHeight(); dragHandler(); resizeHandler()"
+                         @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); dragHandler(); resizeHandler()"
                          :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }"></div>
                 </template>
             </div>
@@ -186,7 +186,7 @@
                     <ul class="search__suggestions">
                         <template x-for="suggestion in suggestions">
                             <li x-text="suggestion"
-                                x-on:click="toggleSelectedProjects(suggestion)"
+                                x-on:click="toggleSelectedProjects(suggestion); adjustVisibleTextareas()"
                                 :class="{ 'search__suggestion-item--selected': selectedProjects[suggestion] }"
                                 class="search__suggestion-item">
                             </li>
@@ -233,7 +233,7 @@
                     </div>
                     <div class="search__navigation">
                         <button
-                                x-on:click="await previousHandler(); scrollTop('#resultsContainer')"
+                                x-on:click="await previousHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
                                 x-cloak
                                 x-show="currentPage > 0"
                                 id="previousPage"
@@ -241,11 +241,11 @@
                         </button>
                         <button
                                 id="search"
-                                x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); adjustTextareaHeight()"
+                                x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
                                 class="search__navigation__search btn btn--search">Search
                         </button>
                         <button
-                                x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
+                                x-on:click="await nextHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
                                 x-bind:disabled="!isNextPage"
                                 x-cloak
                                 x-show="isNextPage"

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Annotated
 
@@ -24,6 +25,7 @@ async def get_root_content(user: Annotated[UserBase, Depends(get_current_user)])
     for p in settings.WORK_DIR.iterdir():
         if p.is_dir() and p.name in {item.value for item in TextType}:
             directories.append(str(p.relative_to(settings.WORK_DIR)) + "/")
+    directories.sort()
     return FilesAndDirsOut(directories=directories)
 
 
@@ -42,7 +44,8 @@ async def get_dir_content(
         elif p.is_file() and str(target_path) != str(settings.WORK_DIR):
             file_path = str(p.relative_to(settings.WORK_DIR))
             files.append(file_path.replace(base, "", 1))
-
+    directories.sort(key=lambda s: [int(c) if c.isdigit() else c for c in re.split('(\d+)', s)])
+    files.sort(key=lambda s: [int(c) if c.isdigit() else c for c in re.split('(\d+)', s)])
     return FilesAndDirsOut(base=base, directories=directories, files=files)
 
 
