@@ -1,3 +1,4 @@
+import string
 from pathlib import Path
 from typing import Any, Generator, List
 
@@ -605,4 +606,62 @@ class Search:
             return True, None
         except RequestError as e:
             return False, e
-          
+
+    def get_phrase_similar_segments(self, phrase_value: str, source_muid: str, size: int = 250) -> list[dict[str, str]]:
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "multi_match": {
+                                "query": phrase_value,
+                                "fields": ["segment"],
+                                "type": "best_fields",
+                                "fuzziness": "AUTO",
+                                "prefix_length": 0,
+                                "max_expansions": 100,
+                                "operator": "or",
+                            }
+                        },
+                        {"match": {"muid": source_muid}},
+                    ]
+                }
+            },
+            "_source": ["segment", "muid", "uid"],
+        }
+        response = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=query, size=size)
+        return [hit["_source"] for hit in response["hits"]["hits"]]
+
+    def get_segment_value_for_uids_and_muid(self, uids: list[str], muid: str, size: int = 250) -> list[dict]:
+        query = {
+            "query": {
+                "bool": {
+                    "should": [{"bool": {"must": [{"match": {"uid": uid}}, {"match": {"muid": muid}}]}} for uid in uids]
+                }
+            },
+            "_source": ["segment", "uid", "muid"],
+        }
+        response = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=query, size=size)
+        return [hit["_source"] for hit in response["hits"]["hits"]]
+
+    @staticmethod
+    def aggregate_similar_segments(hits: list[dict]) -> list[dict]:
+        unique_segments_dict = {}
+        for hit in hits:
+            segment = hit["translation_hints"].lower()
+            segment = segment.translate(str.maketrans("", "", string.punctuation))
+            if segment not in unique_segments_dict:
+                unique_segments_dict[segment] = hit
+                unique_segments_dict[segment]["strength"] = 1
+            else:
+                unique_segments_dict[segment]["strength"] += 1
+        return list(unique_segments_dict.values())
+
+    @staticmethod
+    def merge_segments_with_translation_hints(similar_phrases: list[dict], translation_hints: list[dict]) -> list[dict]:
+        return [
+            {**phrase, **{"translation_hints": hint["segment"]}}
+            for phrase in similar_phrases
+            for hint in translation_hints
+            if phrase["uid"] == hint["uid"]
+        ]
