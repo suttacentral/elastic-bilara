@@ -7,5 +7,6 @@ celery_app = Celery(
 
 celery_app.conf.task_queues = {
     "pr_queue": {"exchange": "pr_queue", "routing_key": "pr_queue"},
-    "commit_queue": {"exchange": "commit_queue", "routing_key": "commit_queue"}
+    "commit_queue": {"exchange": "commit_queue", "routing_key": "commit_queue"},
+    "sync_queue": {"exchange": "sync_queue", "routing_key": "sync_queue"},
 }

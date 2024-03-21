@@ -9,13 +9,18 @@ from github.PaginatedList import PaginatedList
 from github.PullRequest import PullRequest
 from pygit2 import (
     GIT_CHECKOUT_FORCE,
+    GIT_DELTA_DELETED,
+    GIT_MERGE_ANALYSIS_FASTFORWARD,
+    GIT_MERGE_ANALYSIS_NORMAL,
+    GIT_MERGE_ANALYSIS_UP_TO_DATE,
+    GIT_STATUS_INDEX_DELETED,
     GIT_STATUS_INDEX_MODIFIED,
     GIT_STATUS_INDEX_NEW,
-    GIT_STATUS_INDEX_DELETED,
+    GIT_STATUS_WT_DELETED,
     GIT_STATUS_WT_MODIFIED,
     GIT_STATUS_WT_NEW,
-    GIT_STATUS_WT_DELETED,
     Commit,
+    GitError,
     Oid,
     RemoteCallbacks,
     Repository,
@@ -43,6 +48,60 @@ class GitManager:
         self.committer: Signature = Signature(name=settings.GITHUB_USERNAME, email=settings.GITHUB_EMAIL)
         self.github: Github = Github(settings.GITHUB_TOKEN)
         self.repo_owner: str = settings.GITHUB_REPO.split("/")[0]
+
+    def pull(
+        self, branch: Repository = "published", force: bool = False, remote_name: str = "origin"
+    ) -> list[Path] | None:
+        branch.state_cleanup()
+        if not branch:
+            raise GitError(f"Branch {branch} not found")
+        branch_name = branch.head.shorthand
+        for remote in branch.remotes:
+            if remote.name == remote_name:
+                remote.fetch()
+                remote_hash_id = branch.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
+                modified_files = self.get_filenames_from_diff(
+                    str(branch.revparse_single("HEAD").id), remote_hash_id, branch
+                )
+                if force:
+                    branch.checkout_tree(branch.get(remote_hash_id), strategy=GIT_CHECKOUT_FORCE)
+                    branch.head.set_target(remote_hash_id)
+                    branch.state_cleanup()
+                    return modified_files
+                merge_result, _ = branch.merge_analysis(remote_hash_id)
+                if merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                    branch.state_cleanup()
+                    return modified_files
+                elif merge_result & GIT_MERGE_ANALYSIS_FASTFORWARD:
+                    try:
+                        branch.checkout_tree(branch.get(remote_hash_id))
+                        head_ref = branch.lookup_reference(f"refs/heads/{branch_name}")
+                        head_ref.set_target(remote_hash_id)
+                    except KeyError:
+                        branch.create_branch(branch_name, branch.get(remote_hash_id))
+                    branch.head.set_target(remote_hash_id)
+                    branch.state_cleanup()
+                    return modified_files
+                elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
+                    branch.merge(remote_hash_id, favor="ours")
+                    if branch.index.conflicts:
+                        conflicts = [conflict for conflict in branch.index.conflicts]
+                        branch.state_cleanup()
+                        raise GitError(
+                            f"'origin/{branch_name}' has local conflict and should be resolved first."
+                            f" Use force=True to ignore this error and override all local changes with remote."
+                            f" Conflicts in {conflicts}"
+                        )
+                    tree = branch.index.write_tree()
+                    commit_message = f"Merged origin/{branch_name} into {branch.head.shorthand}"
+                    branch.create_commit(
+                        "HEAD", self.author, self.committer, commit_message, tree, [branch.head.target, remote_hash_id]
+                    )
+                    branch.state_cleanup()
+                    return modified_files
+                else:
+                    branch.state_cleanup()
+                    raise GitError(f"Unexpected merge behaviour")
 
     def checkout(self, name: str = "published", force: bool = False) -> None:
         self.published.remotes["origin"].fetch(prune=True)
@@ -166,6 +225,13 @@ class GitManager:
     def _is_branch_protected(self, name: str) -> bool:
         return name in self._protected_branches
 
+    def get_branch(self, name: str) -> Repository:
+        return getattr(self, name) if name in self._protected_branches else None
+
+    @staticmethod
+    def is_branch_protected(name: str) -> bool:
+        return name in GitManager._protected_branches
+
     @staticmethod
     def add(repo: Repository, file_paths: list[Path] | None = None) -> bool:
         paths: list[Path] = file_paths or []
@@ -175,6 +241,32 @@ class GitManager:
             repo.index.add(path)
         repo.index.write()
         return True
+
+    @staticmethod
+    def get_filenames_from_diff(commit_id_1: str, commit_id_2: str, branch: Repository) -> list[Path]:
+        diff = branch.diff(commit_id_1, commit_id_2)
+        if diff.stats.files_changed == 0:
+            return []
+        return [
+            Path(branch.path).parent / Path(patch.delta.new_file.path)
+            if patch.delta.status != GIT_DELTA_DELETED
+            else Path(branch.path).parent / patch.delta.old_file.path
+            for patch in diff
+        ]
+
+    @staticmethod
+    def separate_existing_files(paths: list[Path]) -> tuple[list[Path], list[Path]]:
+        if not paths:
+            return [], []
+
+        existing_files = []
+        non_existing_files = []
+        for path in paths:
+            if path.exists():
+                existing_files.append(path)
+            else:
+                non_existing_files.append(path)
+        return existing_files, non_existing_files
 
     @staticmethod
     def remove(repo: Repository, file_paths: list[Path] | None = None) -> bool:

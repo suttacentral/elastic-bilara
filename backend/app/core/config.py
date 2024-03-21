@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     GITHUB_USER_URL: str = "https://api.github.com/user"
     GITHUB_AUTHORIZE_URL: str = "https://github.com/login/oauth/authorize"
     GITHUB_ACCESS_SCOPES: str = "user:email"
+    GITHUB_WEBHOOK_SECRET: str
     POSTGRESQL_DATABASE: str
     POSTGRESQL_USERNAME: str
     POSTGRESQL_PASSWORD: str
