@@ -5,7 +5,9 @@ from unittest.mock import patch
 import pytest
 from app.services.projects.utils import OverrideException
 from elasticsearch import RequestError
-from fastapi import status
+from fastapi import status, HTTPException
+
+from app.core.config import settings
 
 
 class TestProjects:
@@ -94,7 +96,6 @@ class TestProjects:
         assert "paths" in response.json()
         assert len(response.json()["paths"]) == 2
         assert response.json() == {"paths": ["root/path1", "root/path2"]}
-        print(mock_get_file_paths.call_args_list)
         mock_get_file_paths.assert_called_once_with(muid=muid, _type=_type, prefix=prefix)
 
     @pytest.mark.asyncio
@@ -386,6 +387,113 @@ class TestProjects:
         assert response.json() == {"detail": expected_message}
 
     @pytest.mark.asyncio
+    async def test_delete_segment_ids_unauthenticated(self, async_client) -> None:
+        response = await async_client.patch(
+            "/projects/translation/en/test/sutta/test/test1/test1.1-10_translation-en-test.json/",
+            params={"dry_run": True, "exact": False},
+            json=["an1.1:0.1"],
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Could not validate credentials"}
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_delete_projects")
+    async def test_delete_segment_ids_invalid_permissions(
+        self, mock_can_delete_projects, async_client, mock_validate_path, mock_get_current_user
+    ) -> None:
+        mock_can_delete_projects.return_value = False
+        response = await async_client.patch(
+            "/projects/translation/en/test/sutta/test/test1/test1.1-10_translation-en-test.json/",
+            params={"dry_run": True, "exact": False},
+            json=["an1.1:0.1"],
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "You are not allowed to change projects"}
+
+    @pytest.mark.parametrize("exact", [True, False])
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_delete_projects")
+    @patch("app.api.api_v1.endpoints.projects.UIDReducer")
+    @patch("app.api.api_v1.endpoints.projects.get_json_data")
+    async def test_delete_segment_ids_dry_run(
+        self,
+        mock_get_json_data,
+        mock_uid_reducer,
+        mock_can_delete_projects,
+        exact,
+        async_client,
+        mock_validate_path,
+        mock_get_current_user_admin,
+    ):
+        path_str = "translation/en/test/sutta/test/test1/test1.1-10_translation-en-test.json"
+        return_value = {"an1.1:0.1": "new_value"} if exact else {}
+        mock_can_delete_projects.return_value = True
+        uid_reducer_instance = mock_uid_reducer.return_value
+        uid_reducer_instance.decrement_dry.return_value = {settings.WORK_DIR / path_str: return_value}
+        current_value = {"an1.1:0.1": "Test"}
+        mock_get_json_data.return_value = current_value
+        response = await async_client.patch(
+            f"/projects/{path_str}/",
+            params={"dry_run": True, "exact": exact},
+            json=["an1.1:0.1"],
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert "message" in response.json()
+        assert "results" in response.json()
+        assert "muid" in response.json()["results"][0]
+        assert "language" in response.json()["results"][0]
+        assert "filename" in response.json()["results"][0]
+        assert "prefix" in response.json()["results"][0]
+        assert "path" in response.json()["results"][0]
+        assert "data_after" in response.json()["results"][0]
+        assert "data_before" in response.json()["results"][0]
+        assert response.json()["message"] == "Dry run successful"
+        assert response.json()["results"][0]["path"] == f"/{path_str}"
+        assert response.json()["results"][0]["data_after"] == return_value
+        assert response.json()["results"][0]["data_before"] == current_value
+        assert response.json()["results"][0]["muid"] == "translation-en-test"
+        assert response.json()["results"][0]["language"] == "en"
+        assert response.json()["results"][0]["filename"] == "test1.1-10_translation-en-test.json"
+        assert response.json()["results"][0]["prefix"] == "test1.1-10"
+
+    @pytest.mark.parametrize("exact", [True, False])
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_delete_projects")
+    @patch("app.api.api_v1.endpoints.projects.UIDReducer")
+    @patch("app.api.api_v1.endpoints.projects.get_json_data")
+    async def test_delete_segment_ids(
+        self,
+        mock_get_json_data,
+        mock_uid_reducer,
+        mock_can_delete_projects,
+        exact,
+        async_client,
+        mock_validate_path,
+        mock_get_current_user_admin,
+    ):
+        path_str = "translation/en/test/sutta/test/test1/test1.1-10_translation-en-test.json"
+        mock_can_delete_projects.return_value = True
+        uid_reducer_instance = mock_uid_reducer.return_value
+        main_task_id = "main_task_id"
+        related_task_id = "related_task_id"
+        uid_reducer_instance.decrement.return_value = (main_task_id, related_task_id)
+        mock_get_json_data.return_value = {"an1.1:0.1": "Test"}
+        response = await async_client.patch(
+            f"/projects/{path_str}/",
+            params={"dry_run": False, "exact": exact},
+            json=["an1.1:0.1"],
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert "message" in response.json()
+        assert "main_task_id" in response.json()
+        assert "related_task_id" in response.json()
+        assert response.json()["message"] == "Segment IDs deleted successfully"
+        assert response.json()["main_task_id"] == main_task_id
+        assert response.json()["related_task_id"] == related_task_id
+
+    @pytest.mark.asyncio
     async def test_create_new_project_by_admin(
         self,
         mocker,
@@ -627,3 +735,33 @@ class TestProjects:
                 )
             ]
         )
+
+    @pytest.mark.asyncio
+    async def test_get_source_muid_unauthenticated(self, async_client) -> None:
+        response = await async_client.get("/projects/source-muid/")
+        assert response.status_code == 401
+        assert "detail" in response.json()
+        assert response.json() == {"detail": "Could not validate credentials"}
+
+    @pytest.mark.asyncio
+    async def test_get_source_muid_validate_path_fails(self, async_client, mock_get_current_user, mocker) -> None:
+        path = "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json"
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.validate_path",
+            side_effect=HTTPException(status_code=404, detail="Path not found"),
+        )
+
+        response = await async_client.get(f"/projects/{path}/source/")
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Path not found"}
+
+    @pytest.mark.asyncio
+    async def test_get_source_muid(self, async_client, mock_get_current_user, mocker) -> None:
+        path = "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json"
+        source_muid = "root-pli-ms"
+        source_path = "root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"
+        mocker.patch("app.api.api_v1.endpoints.projects.validate_path", return_value=settings.WORK_DIR / path)
+
+        response = await async_client.get(f"/projects/{path}/source/")
+        assert response.status_code == 200
+        assert response.json() == {"muid": source_muid, "path": f"/{source_path}"}

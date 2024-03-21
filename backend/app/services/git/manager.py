@@ -15,8 +15,10 @@ from pygit2 import (
     GIT_MERGE_ANALYSIS_UP_TO_DATE,
     GIT_STATUS_INDEX_MODIFIED,
     GIT_STATUS_INDEX_NEW,
+    GIT_STATUS_INDEX_DELETED,
     GIT_STATUS_WT_MODIFIED,
     GIT_STATUS_WT_NEW,
+    GIT_STATUS_WT_DELETED,
     Commit,
     GitError,
     Oid,
@@ -29,7 +31,14 @@ from pygit2 import (
 
 class GitManager:
     _protected_branches = ("published", "unpublished")
-    _git_status = (GIT_STATUS_INDEX_NEW, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW)
+    _git_status = (
+        GIT_STATUS_INDEX_NEW,
+        GIT_STATUS_INDEX_MODIFIED,
+        GIT_STATUS_INDEX_DELETED,
+        GIT_STATUS_WT_MODIFIED,
+        GIT_STATUS_WT_NEW,
+        GIT_STATUS_WT_DELETED,
+    )
 
     def __init__(self, published: Path, unpublished: Path, user: UserBase) -> None:
         self.user = user
@@ -258,6 +267,15 @@ class GitManager:
             else:
                 non_existing_files.append(path)
         return existing_files, non_existing_files
+
+    def remove(repo: Repository, file_paths: list[Path] | None = None) -> bool:
+        paths: list[Path] = file_paths or []
+        if not paths:
+            return False
+        for path in paths:
+            repo.index.remove(path)
+        repo.index.write()
+        return True
 
     @staticmethod
     def read_file(repo: Repository, file_path: Path, branch="unpublished") -> bytes | None:

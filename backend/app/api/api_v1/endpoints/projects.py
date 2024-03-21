@@ -4,12 +4,6 @@ from typing import Annotated
 from app.core.config import settings
 from app.db.schemas.user import User, UserBase
 from app.services.auth import utils
-from app.services.directories.utils import (
-    create_directory,
-    create_file,
-    validate_root_data,
-)
-from app.services.projects.models import JSONDataOut, PathsOut, ProjectsOut
 from app.services.projects.utils import (
     OverrideException,
     create_new_project_file_names,
@@ -26,11 +20,22 @@ from app.services.users.permissions import (
 )
 from app.services.users.utils import get_user
 from app.tasks import commit
+from app.services.directories.utils import (
+    create_directory,
+    validate_root_data,
+    create_file,
+    get_language,
+    validate_path,
+)
+from app.services.projects.models import JSONDataOut, ProjectsOut, PathsOut
+from app.services.projects.uid_reducer import UIDReducer
+from app.services.projects.utils import sort_paths, update_file
+from app.services.users.permissions import can_edit_translation, can_create_projects, can_delete_projects
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from search.search import Search
-from search.utils import get_json_data
+from search.utils import get_json_data, get_muid, get_filename, get_prefix, find_root_path
 
 router = APIRouter(prefix="/projects")
 
@@ -105,6 +110,13 @@ async def update_json_data_for_prefix_in_project(
             code = status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=code, detail=str(error).strip("'"))
     return JSONDataOut(can_edit=True, data=data, task_id=task_id)
+
+
+@router.get("/{path:path}/source/")
+async def get_source_muid(user: Annotated[UserBase, Depends(utils.get_current_user)], path: Path):
+    target_path = validate_path(str(path))
+    source = find_root_path(target_path)
+    return {"muid": get_muid(source), "path": str(source).replace(str(settings.WORK_DIR), "")}
 
 
 @router.post(
@@ -201,3 +213,50 @@ async def create_project(
             raise HTTPException(status_code=400, detail=f"File {path} and related were not created")
         return JSONResponse(status_code=201, content={"detail": f"File {path} and related have been created"})
     raise HTTPException(status_code=400, detail=f"Path {path} and related were not created")
+
+
+@router.patch("/{path:path}/")
+async def delete_segment_ids(
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    data: list[str],
+    path: Path = Depends(validate_path),
+    exact: bool = False,
+    dry_run: bool = False,
+):
+    if not can_delete_projects(int(user.github_id)):
+        raise HTTPException(status_code=403, detail="You are not allowed to change projects")
+    uid_reducer = UIDReducer(user, Path(path), uids=data, exact=exact)
+    if dry_run:
+        data = uid_reducer.decrement_dry()
+        results = []
+        for path in data:
+            results.append(
+                {
+                    "muid": get_muid(Path(path)),
+                    "language": get_language(Path(path)),
+                    "filename": get_filename(Path(path)),
+                    "prefix": get_prefix(Path(path)),
+                    "path": str(path).replace(str(settings.WORK_DIR), ""),
+                    "data_after": data[path],
+                    "data_before": get_json_data(path),
+                }
+            )
+        paths = {str(res["path"]) for res in results}
+        results.sort(
+            key=lambda x: (
+                not x["muid"].startswith("root"),
+                x["muid"],
+                x["prefix"],
+                sort_paths(paths).index(x["path"]),
+            )
+        )
+        return JSONResponse(status_code=200, content={"message": "Dry run successful", "results": results})
+    main_path_task_id, related_paths_task_id = uid_reducer.decrement()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Segment IDs deleted successfully",
+            "main_task_id": main_path_task_id,
+            "related_task_id": related_paths_task_id,
+        },
+    )

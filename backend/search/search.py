@@ -562,3 +562,47 @@ class Search:
             self._search.delete_by_query(
                 index=segments_index, body={"query": {"match": {"main_doc_id": utils.create_doc_id(path)}}}
             )
+
+    def remove_segments(self, path: Path) -> tuple[bool, Exception | None]:
+        doc_id: str = utils.create_doc_id(path)
+        try:
+            if not path.exists():
+                try:
+                    self._search.delete(index=settings.ES_INDEX, id=doc_id)
+                    self._search.delete_by_query(
+                        index=settings.ES_SEGMENTS_INDEX, body={"query": {"term": {"main_doc_id": doc_id}}}
+                    )
+                except NotFoundError:
+                    pass
+                return True, None
+            data = self._process_file(path)
+            self._search.index(index=settings.ES_INDEX, id=doc_id, body=data["_source"])
+            try:
+                self._search.delete_by_query(
+                    index=settings.ES_SEGMENTS_INDEX, body={"query": {"term": {"main_doc_id": doc_id}}}
+                )
+            except NotFoundError:
+                pass
+            segment_actions: list[dict[str, Any]] = []
+            for item in data["_source"]["segments"]:
+                segments_doc = {
+                    "_index": settings.ES_SEGMENTS_INDEX,
+                    "_id": utils.create_doc_id(path, item["uid"]),
+                    "_source": {
+                        "main_doc_id": doc_id,
+                        "muid": data["_source"]["muid"],
+                        "uid": item["uid"],
+                        "segment": item["segment"],
+                    },
+                }
+                segment_actions.append(segments_doc)
+            helpers.bulk(
+                self._search,
+                segment_actions,
+                chunk_size=self._batch_size,
+                raise_on_error=True,
+            )
+            return True, None
+        except RequestError as e:
+            return False, e
+          

@@ -8,14 +8,11 @@ function fetchTranslation() {
             const muid = params.get("muid");
             const source = params.get("source");
 
-            await this.findOrCreateObject(muid, this.prefix);
             await this.findOrCreateObject(source, this.prefix, true);
-
-            this.translations.sort((a, b) => (b.isSource ?? 0) - (a.isSource ?? 0));
+            if (muid) await this.findOrCreateObject(muid, this.prefix);
 
             const projects = await this.fetchRelatedProjects(this.prefix);
             this.relatedProjects = projects.filter(project => project !== muid && project !== source);
-            adjustTextareaHeight();
             dragHandler();
             resizeHandler();
         },
@@ -95,7 +92,7 @@ function fetchTranslation() {
                 if (!taskID) {
                     displayMessage(
                         element,
-                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the admins.",
+                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
                         "failure",
                     );
                 }
@@ -134,29 +131,77 @@ function fetchTranslation() {
     };
 }
 
-function adjustTextareaHeight() {
-    const bodies = document.querySelectorAll(".project-container__content-body");
-    const numSections = bodies[0].querySelectorAll(".project-container__content-body__section").length;
-    for (let i = 0; i < numSections; i++) {
-        let maxHeight = 0;
-        bodies.forEach(body => {
-            let textarea = body
-                .querySelectorAll(".project-container__content-body__section")
-                [i].querySelector("textarea");
-            textarea.setAttribute("style", "height: 0px");
-            let height = textarea.scrollHeight;
-            maxHeight = height > maxHeight ? height : maxHeight;
-        });
-        bodies.forEach(body => {
-            let textarea = body
-                .querySelectorAll(".project-container__content-body__section")
-                [i].querySelector("textarea");
-            textarea.setAttribute("style", `height: ${maxHeight}px`);
-        });
+function setMaxHeight(textareas) {
+    const maxHeight = Math.max(...textareas.map(textarea => textarea.scrollHeight));
+    textareas.forEach(textarea => (textarea.style.height = `${maxHeight}px`));
+}
+
+function textareaAdjuster() {
+    return {
+        observer: null,
+        init() {
+            const options = { threshold: [0.1] };
+            const callback = entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const index = entry.target.getAttribute("data-index");
+                        const sections = Array.from(
+                            document.querySelectorAll(
+                                `.project-container__content-body__section[data-index="${index}"]`,
+                            ),
+                        );
+                        setMaxHeight(sections.map(section => section.querySelector("textarea")));
+                    }
+                });
+            };
+            this.observer = new IntersectionObserver(callback, options);
+            this.observeSections();
+        },
+        observeSections() {
+            const sections = document.querySelectorAll(".project-container__content-body__section");
+
+            sections.forEach(section => {
+                if (!this.observer) return;
+                this.observer.unobserve(section);
+                this.observer.observe(section);
+            });
+        },
+    };
+}
+
+function adjustTextareas(element) {
+    const parent = element.parentElement;
+    const index = parent.getAttribute("data-index");
+    const sections = Array.from(
+        document.querySelectorAll(`.project-container__content-body__section[data-index="${index}"]`),
+    );
+    setMaxHeight(sections.map(section => section.querySelector("textarea")));
+}
+
+function* generateUniqueVisibleElements() {
+    const body = document.querySelector(".project-container__content-body");
+    const elements = body.querySelectorAll(".project-container__content-body__section");
+    for (const el of elements) {
+        const rect = el.getBoundingClientRect();
+        const isVisible =
+            rect.bottom >= 0 &&
+            rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right >= 0 &&
+            rect.left <= (window.innerWidth || document.documentElement.clientWidth);
+        if (isVisible) {
+            yield el;
+        } else {
+            break;
+        }
     }
 }
 
-window.onresize = adjustTextareaHeight;
+function adjustVisibleTextareas() {
+    const uniqueVisibleElements = generateUniqueVisibleElements();
+    for (const el of uniqueVisibleElements) {
+        adjustTextareas(el.querySelector("textarea"));
+    }
+}
 
 function dragHandler() {
     const container = document.querySelector(".project-container__content");
@@ -172,7 +217,6 @@ function dragHandler() {
         elem.addEventListener("dragend", () => {
             const draggable = elem.closest(".project-container__content-details");
             draggable.classList.remove("dragging");
-            adjustTextareaHeight();
         });
     });
 
@@ -230,7 +274,7 @@ function resizeHandler() {
         function up(e) {
             document.removeEventListener("mousemove", move);
             document.removeEventListener("mouseup", up);
-            adjustTextareaHeight();
+            adjustVisibleTextareas();
         }
     });
 }

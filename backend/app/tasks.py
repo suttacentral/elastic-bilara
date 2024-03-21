@@ -63,7 +63,7 @@ class SyncTask(GitTask):
 
 
 @app.task(name="commit", base=GitTask, queue="commit_queue")
-def commit(user: dict, file_paths: list[str], message: str) -> bool:
+def commit(user: dict, file_paths: list[str], message: str, add: bool = True) -> bool:
     file_paths = [file_paths] if isinstance(file_paths, str) else file_paths
     paths = [utils.clean_path(path) for path in file_paths if path]
     if not paths:
@@ -71,8 +71,10 @@ def commit(user: dict, file_paths: list[str], message: str) -> bool:
 
     user_data = UserBase(**user)
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
+    git_operation = GitManager.add if add else GitManager.remove
+    
     if not (
-        GitManager.add(manager.unpublished, paths)
+        git_operation(manager.unpublished, paths)
         and GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
     ):
         return False
