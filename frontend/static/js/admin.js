@@ -2,6 +2,7 @@ let dataTypes = {
     users: users(),
     projects: projects(),
     roots: roots(),
+    shift: shift(),
 }
 
 function admin() {

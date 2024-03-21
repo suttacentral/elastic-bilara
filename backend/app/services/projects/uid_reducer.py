@@ -15,7 +15,7 @@ class UIDReducer:
     def __init__(self, user: UserBase, path: Path, uids: list[str], exact: bool = False):
         self.user = user
         self.path = path
-        self.uids = uids
+        self.uids = sorted(uids, reverse=True)
         self.exact = exact
         self.character_pattern = r"[a-zA-Z]+"
         self.starts_with_digit_pattern = r"^\d+"

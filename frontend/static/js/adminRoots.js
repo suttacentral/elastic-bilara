@@ -15,8 +15,8 @@ function roots() {
                 if (response.status === 404) {
                     throw new Error(data.detail);
                 }
-                this.directories = data.directories.map(dir => data.base + dir);
-                this.files = data.files.map(file => data.base + file);
+                this.directories = data.directories?.map(dir => data.base + dir);
+                this.files = data.files?.map(file => data.base + file);
             } catch (error) {
                 this.directories = [];
                 this.files = [];

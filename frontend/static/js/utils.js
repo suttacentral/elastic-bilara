@@ -60,7 +60,6 @@ const ROLES = {
     reviewer: "reviewer",
 };
 
-
 function formatDate(dateString) {
     const options = { year: "numeric", month: "long", day: "numeric" };
     return new Date(dateString).toLocaleDateString(undefined, options);
@@ -91,3 +90,29 @@ function isInViewPort(element) {
         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
     );
 }
+
+function tooltip() {
+    return {
+        show: false,
+        tooltipData: [],
+        requested: false,
+        async fetchData(path) {
+            if (path.endsWith(".json")) return;
+            if (path.startsWith("/")) {
+                path = path.slice(1);
+            }
+            if (this.requested) return this.show = true;
+            const response = await requestWithTokenRetry(`directories/${path}/`);
+            if (response.ok) this.requested = true;
+            const {directories, files} = await response.json();
+            this.tooltipData = [...directories, ...files];
+            if (this.requested) this.show = true;
+        },
+        hide() {
+            this.show = false;
+        },
+    };
+}
+
+const getMuid = string => string.split("/").slice(0, 3).join("-");
+const getPrefix = string => string.split("/").pop().split("_")[0];

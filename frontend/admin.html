@@ -13,8 +13,12 @@
     <script src="./static/js/adminUsers.js"></script>
     <script src="./static/js/adminProjects.js"></script>
     <script src="./static/js/adminRoots.js"></script>
+    <script src="./static/js/adminShiftSegments.js"></script>
     <script src="./static/js/admin.js"></script>
+    <link rel="stylesheet" href="./static/css/components/tooltip.css"/>
+    <link rel="stylesheet" href="./static/css/components/modals.css"/>
     <link rel="stylesheet" href="./static/css/style.css"/>
+
 </head>
 <body class="flex flex-col min-h-screen" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
 <header class="bg-indigo h-12 border drop-shadow-sm" x-data="getUserInfo()" x-init="getRole()">
@@ -62,6 +66,9 @@
             </li>
             <li class="border-b border-gray-400 py-1 px-2">
                 <a href="" @click.prevent="setActiveComponent('roots')">Roots</a>
+            </li>
+            <li class="border-b border-gray-400 py-1 px-2">
+                <a href="" @click.prevent="setActiveComponent('shift')">Shift Segments</a>
             </li>
         </ul>
     </nav>
@@ -224,7 +231,136 @@
             </ul>
         </div>
         <div x-cloak x-show="dataTypes.projects.isVisible" x-data="dataTypes.projects">
-            <h1>PROJECTS CONTENT</h1>
+            <div class="flex justify-center align-middle gap-4 my-2">
+                <button x-on:click="toggleAdd()" class="px-2 py-1 border border-red-950 rounded">Add</button>
+                <button x-on:click="toggleRemove()" class="px-2 py-1 border border-red-950 rounded">Remove</button>
+            </div>
+            <div x-cloak x-show="showAdd" x-data="addNewProject()" class="mt-4">
+                <div x-cloak x-show="loading" class="modal">
+                    <div class="spinner"></div>
+                </div>
+                <p x-cloak x-show="invalidData" class="text-center my-1 text-red-500">The form contains invalid
+                    data.</p>
+                <form class="w-1/2 mx-auto flex flex-col flex-wrap gap-4">
+                    <div class="flex justify-between items-center">
+                        <label class="w-1/4" for="baseInputAddProjects">Root path:</label>
+                        <input id="baseInputAddProjects" class="border w-full p-2 rounded" type="text" x-model="base"
+                               @input="await handleInput()"
+                               @keyup="await handleKeyUp($event)"
+                               list="baseSuggestionsAddProjects">
+                        <datalist id="baseSuggestionsAddProjects">
+                            <template x-for="dir in directories" :key="dir">
+                                <option x-bind:value="dir"></option>
+                            </template>
+                            <template x-for="file in files" :key="file">
+                                <option x-bind:value="file"></option>
+                            </template>
+                        </datalist>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <label class="w-1/4" for="userProjects">User:</label>
+                        <select id="userProjects" x-model="user" class="w-full p-2 border rounded">
+                            <option value="">Select a user...</option>
+                            <template x-for="user in users">
+                                <option x-text="user.username" :value="user.github_id"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="flex-col justify-between items-center">
+                        <p x-cloak x-show="!validLanguageCode" class="my-1 text-red-500">Language code must be 2 or 3
+                            characters long.</p>
+                        <div class="flex justify-between items-center">
+                            <label class="w-1/4" for="languageProjects">Language code:</label>
+                            <input id="languageProjects" :class="{ 'border-red-500': !validLanguageCode }"
+                                   class="border w-full p-2 rounded" type="text" x-model="languageCode"
+                                   placeholder="en" x-on:input.debounce.500ms="checkLanguageCode">
+                        </div>
+                    </div>
+                    <button @click.prevent="await handleSubmit()"
+                            class="w-fit ml-auto border rounded border-red-950 px-2 py-1">Create
+                    </button>
+                </form>
+                <div x-cloak x-show="created.status" class="text-center my-2">
+                    <p>You have created <span x-text="created.paths.length"></span> files, for the user <span
+                            x-text="created.username"></span></p>
+                    <ul>
+                        <template x-for="path in created.paths" :key="path">
+                            <li x-text="path"></li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+            <div x-cloak x-show="showRemove" x-data="removeProject()">
+                <div x-cloak x-show="loading" class="modal">
+                    <div class="spinner"></div>
+                </div>
+                <form class="w-1/2 mx-auto flex flex-col flex-wrap gap-4">
+                    <p x-cloak x-show="!validPath" class="text-red-600">Invalid file path</p>
+                    <div class="flex justify-between items-center">
+                        <label class="w-1/4" for="baseInputRemoveProjects">File path:</label>
+                        <input id="baseInputRemoveProjects" class="border w-full p-2 rounded" type="text" x-model="base"
+                               @input="await handleInput()"
+                               @keyup="await handleKeyUp($event)"
+                               list="baseSuggestionsRemoveProjects">
+                        <datalist id="baseSuggestionsRemoveProjects">
+                            <template x-for="dir in directories" :key="dir">
+                                <option x-bind:value="dir"></option>
+                            </template>
+                            <template x-for="file in files" :key="file">
+                                <option x-bind:value="file"></option>
+                            </template>
+                        </datalist>
+                    </div>
+                    <div class="flex justify-end align-middle">
+                        <button @click.prevent="await handleSubmit(true)"
+                                class="border rounded border-red-950 px-2 py-1" x-bind:disabled="!validPath">Delete
+                        </button>
+                    </div>
+                </form>
+                <p x-cloak x-show="message"
+                   class="border border-neutral-500 bg-green-400 rounded text-center w-fit mx-auto p-4">Deletion has
+                    been scheduled.</p>
+                <div x-cloak x-show="data && data.length > 0" x-data="{modal: false}"
+                     class="flex flex-col gap-8 align-middle justify-center text-center mt-4">
+                    <p>Please review the data below.</p>
+                    <p>You are going to delete the following, including all the files within directories:</p>
+                    <ul class="flex flex-col gap-5 justify-center align-middle">
+                        <template x-for="item in data" :key="item.path">
+                            <li x-data="tooltip()" class="flex justify-center gap-5">
+                                <span x-text="item.path" class="border border-red-950 rounded py-1 px-2 cursor-pointer"
+                                      @mouseover="await fetchData(item.path)"
+                                      @mouseleave="hide()"></span>
+                                <span x-text="item.muid" class="border border-red-950 rounded py-1 px-2"></span>
+                                <span x-text="item.language" class="border border-red-950 rounded py-1 px-2"></span>
+                                <div x-cloak x-show="show" class="tooltip" @mouseover="await fetchData(item.path)"
+                                     @mouseleave="hide()">
+                                    <ul>
+                                        <template x-for="file in tooltipData" :key="file">
+                                            <li x-text="file"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                    <button @click.prevent="modal = !modal"
+                            class="mx-auto w-fit border-red-950 border rounded py-1 px-2 bg-red-600 text-white">Delete
+                    </button>
+                    <div x-cloak x-show="modal" class="modal" @click="modal = !modal">
+                        <div class="border border-red-950 rounded p-4" @click.stop>
+                            <p>Are you sure you want to delete the files?</p>
+                            <div class="flex justify-center gap-8 align-middle mt-4">
+                                <button @click.prevent="await handleSubmit(false); modal = !modal"
+                                        class="border border-red-950 rounded py-1 px-2 bg-red-600 text-white">Yes
+                                </button>
+                                <button @click.prevent="modal = !modal"
+                                        class="border border-red-950 rounded py-1 px-2 bg-amber-200">No
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div x-cloak x-show="dataTypes.roots.isVisible" x-data="dataTypes.roots" x-init="await getData(base)">
             <p x-cloak id="rootCreateMessage" x-show="message"></p>
@@ -258,6 +394,117 @@
                                placeholder="Segment Value">
                     </div>
                 </template>
+            </div>
+        </div>
+        <div x-cloak x-show="dataTypes.shift.isVisible" x-data="dataTypes.shift">
+            <div x-cloak x-show="loading" class="modal">
+                <div class="spinner"></div>
+            </div>
+            <div class="w-1/2 mx-auto flex flex-col flex-wrap gap-4 mt-4">
+                <p x-cloak x-show="!validPath" class="text-red-600">Invalid file path</p>
+                <div class="flex justify-between items-center gap-2">
+                    <label for="baseInputShift" class="w-1/4">File path:</label>
+                    <input id="baseInputShift" class="border w-full p-2 rounded" type="text" x-model="base"
+                           @input="await handleInput()"
+                           @keyup="await handleKeyUp($event)"
+                           list="baseSuggestionsShift">
+                    <datalist id="baseSuggestionsShift">
+                        <template x-for="dir in directories" :key="dir">
+                            <option x-bind:value="dir"></option>
+                        </template>
+                        <template x-for="file in files" :key="file">
+                            <option x-bind:value="file"></option>
+                        </template>
+                    </datalist>
+                </div>
+                <div x-cloak x-show="base.endsWith('.json')" class="flex items-center gap-2 my-2">
+                    <div class="w-1/4">
+                        <label for="exact">Exact: </label>
+                        <input type="checkbox" id="exact" x-model="exact">
+                    </div>
+                    <div class="flex justify-between items-center gap-4 w-full">
+                        <label for="shiftInput" class="w-1/4">Segment ID:</label>
+                        <input id="shiftInput" class="border w-full p-2 rounded" x-model="segment"
+                               list="shiftSuggestions"
+                               @keyup.enter="addSegment(segment)">
+                        <datalist id="shiftSuggestions">
+                            <template x-for="id in segmentIDs" :key="id">
+                                <option x-bind:value="id" x-show="!selectedIDs.includes(id)"></option>
+                            </template>
+                        </datalist>
+                    </div>
+                </div>
+                <div x-cloak x-show="segmentIDs && segmentIDs.length > 0"
+                     class="flex justify-between gap-12 items-start">
+                    <ul class="flex flex-wrap gap-2">
+                        <template x-for="id in selectedIDs" :key="id">
+                            <li x-text="id" class="border rounded px-1 py-0.5 cursor-pointer"
+                                @click="removeSegment(id)"></li>
+                        </template>
+                    </ul>
+                    <!--                    disable the button if anything is invalid-->
+                    <button @click="await handleSubmit(true)"
+                            class="border rounded border-red-950 px-2 py-1">Shift
+                    </button>
+                </div>
+            </div>
+            <div>
+                <div x-cloak x-show="data && data.length > 0" class="mt-4">
+                    <p class="text-center">Please review the data below.</p>
+                    <p class="text-center">You are going to change the following files:</p>
+                    <ul class="flex gap-12 flex-wrap justify-center">
+                        <template x-for="(item, index) in data" :key="item.path">
+                            <li>
+                                <div class="flex gap-2 align-middle sticky top-0 left-0 bg-white my-2"
+                                     @click="console.log(item)">
+                                    <span x-text="item.filename" class="border rounded py-0.5 px-1 font-bold"></span>
+                                    <span x-text="item.muid" class="border rounded py-0.5 px-1 font-bold"></span>
+                                    <span x-text="item.prefix" class="border rounded py-0.5 px-1 font-bold"></span>
+                                    <span x-text="item.language" class="border rounded py-0.5 px-1 font-bold"></span>
+                                </div>
+                                <div class="flex gap-2 justify-between">
+                                    <div class="flex flex-col gap-2">
+                                        <p class="text-center sticky top-8 left-0 bg-white underline">Data before the
+                                            shift</p>
+                                        <template x-for="(segment, segmentID) in item.data_before"
+                                                  :key="item.path+segmentID">
+                                            <template x-if="shouldDisplay(index, segmentID)">
+                                                <div>
+                                                    <label x-bind:for="item.path+segmentID+'before'"
+                                                           x-text="segmentID"></label>
+                                                    <textarea x-bind:id="item.path+segmentID+'before'"
+                                                              x-bind:value="segment" class="w-full" disabled></textarea>
+                                                </div>
+                                            </template>
+                                        </template>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <p class="text-center sticky top-8 left-0 bg-white underline">Data after the
+                                            shift</p>
+                                        <template x-for="(segment, segmentID) in item.data_before"
+                                                  :key="item.path+segmentID+'after'">
+                                            <template x-if="shouldDisplay(index, segmentID)">
+                                                <div class="flex-1" :class="{'bg-red-500': !(segmentID in item.data_after),
+                                            'bg-amber-200': item.data_before[segmentID] !== item.data_after[segmentID]}">
+                                                    <label x-bind:for="item.path+segmentID+'after'"
+                                                           x-text="segmentID"></label>
+                                                    <textarea x-bind:id="item.path+segmentID+'after'"
+                                                              x-bind:value="item.data_after[segmentID]"
+                                                              x-show="segmentID in item.data_after" class="w-full"
+                                                              disabled></textarea>
+                                                    <p class="text-center" x-show="!(segmentID in item.data_after)">Data no longer available</p>
+                                                </div>
+                                            </template>
+                                        </template>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                    <!--                    <button @click="await handleSubmit(false)"-->
+                    <!--                            class="mx-auto w-fit border-red-950 border rounded py-1 px-2 bg-red-600 text-white">Shift-->
+                    <!--                    </button>-->
+                </div>
             </div>
         </div>
     </article>
