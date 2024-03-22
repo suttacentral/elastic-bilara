@@ -4,6 +4,15 @@ from typing import Annotated
 from app.core.config import settings
 from app.db.schemas.user import User, UserBase
 from app.services.auth import utils
+from app.services.directories.utils import (
+    create_directory,
+    create_file,
+    get_language,
+    validate_path,
+    validate_root_data,
+)
+from app.services.projects.models import JSONDataOut, PathsOut, ProjectsOut
+from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
     OverrideException,
     create_new_project_file_names,
@@ -13,6 +22,7 @@ from app.services.projects.utils import (
 )
 from app.services.users.permissions import (
     can_create_projects,
+    can_delete_projects,
     can_edit_translation,
     is_admin_or_superuser,
     is_user_active,
@@ -20,22 +30,17 @@ from app.services.users.permissions import (
 )
 from app.services.users.utils import get_user
 from app.tasks import commit
-from app.services.directories.utils import (
-    create_directory,
-    validate_root_data,
-    create_file,
-    get_language,
-    validate_path,
-)
-from app.services.projects.models import JSONDataOut, ProjectsOut, PathsOut
-from app.services.projects.uid_reducer import UIDReducer
-from app.services.projects.utils import sort_paths, update_file
-from app.services.users.permissions import can_edit_translation, can_create_projects, can_delete_projects
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from search.search import Search
-from search.utils import get_json_data, get_muid, get_filename, get_prefix, find_root_path
+from search.utils import (
+    find_root_path,
+    get_filename,
+    get_json_data,
+    get_muid,
+    get_prefix,
+)
 
 router = APIRouter(prefix="/projects")
 
@@ -164,20 +169,14 @@ async def create_new_project(
     )
 
     all_paths_list: list[Path] = []
-    try:
-        for root_file, new_file_path in zip(source_root_files_names, new_project_paths):
-            for directory_type_path in new_file_path:
-                create_project_file(Path(root_file), Path(directory_type_path))
+    for root_file, new_file_path in zip(source_root_files_names, new_project_paths):
+        for directory_type_path in new_file_path:
+            if create_project_file(Path(root_file), Path(directory_type_path)):
                 all_paths_list.append(directory_type_path)
-    except OverrideException as e:
-        for path in all_paths_list:
-            path.unlink()
+    if not all_paths_list:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
-                "rolling_back": f"{[path.relative_to(settings.WORK_DIR) for path in all_paths_list if path]}",
-                "error": str(e),
-            },
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No new project files were created",
         )
     search.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, all_paths_list)
     result = commit.delay(
@@ -189,10 +188,7 @@ async def create_new_project(
     return {
         "user": source_user.username,
         "translation_language": translation_language,
-        "new_project_paths": [
-            [path.relative_to(settings.WORK_DIR) for path in connected_files_list if path]
-            for connected_files_list in new_project_paths
-        ],
+        "new_project_paths": [path.relative_to(settings.WORK_DIR) for path in all_paths_list],
         "commit_task_id": result.id,
     }
 

@@ -3,11 +3,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from app.core.config import settings
 from app.services.projects.utils import OverrideException
 from elasticsearch import RequestError
-from fastapi import status, HTTPException
-
-from app.core.config import settings
+from fastapi import HTTPException, status
 
 
 class TestProjects:
@@ -530,14 +529,10 @@ class TestProjects:
         assert "new_project_paths" in response.json()
         assert "commit_task_id" in response.json()
         assert response.json()["new_project_paths"] == [
-            [
-                "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json",
-                "comment/en/test_user/sutta/an/an1/an1.1-10_comment-en-test_user.json",
-            ],
-            [
-                "translation/en/test_user/sutta/an/an1/an1.11-20_translation-en-test_user.json",
-                "comment/en/test_user/sutta/an/an1/an1.11-20_comment-en-test_user.json",
-            ],
+            "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json",
+            "comment/en/test_user/sutta/an/an1/an1.1-10_comment-en-test_user.json",
+            "translation/en/test_user/sutta/an/an1/an1.11-20_translation-en-test_user.json",
+            "comment/en/test_user/sutta/an/an1/an1.11-20_comment-en-test_user.json",
         ]
 
     @pytest.mark.asyncio
@@ -714,7 +709,7 @@ class TestProjects:
         root_path = Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
         translation_language = "en"
 
-        mocker.patch("app.api.api_v1.endpoints.projects.create_project_file", side_effect=[False, OverrideException])
+        mocker.patch("app.api.api_v1.endpoints.projects.create_project_file", side_effect=[False, False, False, False])
         mocker.patch("pathlib.Path.unlink", return_value=None)
 
         response = await async_client.post(
@@ -726,15 +721,8 @@ class TestProjects:
             },
         )
 
-        assert response.status_code == 422
-        assert "rolling_back" in response.json()["detail"]
-        assert response.json()["detail"]["rolling_back"] == str(
-            [
-                Path(
-                    f"translation/{translation_language}/{mock_user.username}/sutta/an/an1/an1.1-10_translation-{translation_language}-{mock_user.username}.json"
-                )
-            ]
-        )
+        assert response.status_code == 409
+        assert "No new project files were created" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_source_muid_unauthenticated(self, async_client) -> None:

@@ -18,8 +18,8 @@ from app.services.auth.schema import TokenData
 from app.services.directories.remover import Remover
 from app.services.directories.utils import validate_path
 from app.services.git.manager import GitManager
-from app.services.users import permissions
 from app.services.projects.uid_reducer import UIDReducer
+from app.services.users import permissions
 from app.tests.services.users.factories import UserFactory
 from app.tests.utils.factories import ProjectFactory, PublicationFactory
 from app.tests.utils.git import create_repo_structure_with_content
@@ -346,7 +346,7 @@ def mock_create_new_project(mocker):
     delay_return = MagicMock()
     delay_return.id = "test_task_id"
 
-    mocker.patch("app.api.api_v1.endpoints.projects.create_project_file", return_value=None)
+    mocker.patch("app.api.api_v1.endpoints.projects.create_project_file", return_value=True)
     mocker.patch("search.search.Search.update_indexes", return_value=None)
     mocker.patch("app.tasks.commit.delay", return_value=delay_return)
 
@@ -378,16 +378,23 @@ def mock_new_project_create_data(mocker, mock_user):
         "search.utils.get_json_data",
         side_effect=[{"an1.1:0.1": "Test", "an1.1:0.2": "Test2"}, {"an1.11:0.1": "Test", "an1.11:0.2": "Test2"}],
     )
+
+    def glb():
+        paths = [
+            Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"),
+            Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.11-20_root-pli-ms.json"),
+        ]
+        yield from paths
+
     mocker.patch(
         "pathlib.Path.glob",
-        return_value=iter(
-            [
-                Path(
-                    "checkouts/published/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json",
-                    Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.11-20_root-pli-ms.json"),
-                )
-            ]
-        ),
+        return_value=glb(),
+        # iter(
+        #     [
+        #         Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"),
+        #         Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.11-20_root-pli-ms.json"),
+        #     ]
+        # ),
     )
     mocker.patch("pathlib.Path.is_dir", return_value=False)
 
@@ -403,7 +410,15 @@ def remover(mocker, user) -> Callable[[Path], tuple[Remover, MagicMock, MagicMoc
 
     def _remover(path: Path):
         remover = Remover(user, path)
-        return remover, mock_remove_from_elastic, mock_remove_commit, mock_delete_elements, mock_get_paths, mock_get_matches, mock_get_matches_method
+        return (
+            remover,
+            mock_remove_from_elastic,
+            mock_remove_commit,
+            mock_delete_elements,
+            mock_get_paths,
+            mock_get_matches,
+            mock_get_matches_method,
+        )
 
     return _remover
 
@@ -413,7 +428,7 @@ def uid_reducer(mocker, user) -> Callable[[Path, list[str], bool], tuple[UIDRedu
     mock_reduce_commit = mocker.patch("app.services.projects.uid_reducer.UIDReducer._reduce_commit")
     mock_get_matches = mocker.patch("app.services.directories.utils.get_matches")
 
-    def _uid_reducer(path: Path, uids: list[str], exact: bool = False, get_matches_value = set()):
+    def _uid_reducer(path: Path, uids: list[str], exact: bool = False, get_matches_value=set()):
         mock_get_matches.return_value = get_matches_value
         uid_reducer = UIDReducer(user, path, uids, exact)
         uid_reducer.related_paths = get_matches_value
