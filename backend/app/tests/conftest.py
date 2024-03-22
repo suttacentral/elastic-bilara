@@ -389,12 +389,6 @@ def mock_new_project_create_data(mocker, mock_user):
     mocker.patch(
         "pathlib.Path.glob",
         return_value=glb(),
-        # iter(
-        #     [
-        #         Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"),
-        #         Path("checkouts/published/root/pli/ms/sutta/an/an1/an1.11-20_root-pli-ms.json"),
-        #     ]
-        # ),
     )
     mocker.patch("pathlib.Path.is_dir", return_value=False)
 
