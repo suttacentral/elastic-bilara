@@ -8,24 +8,24 @@ function shift() {
         files: [],
         exact: false,
         isRoot: false,
-        muid: null,
-        prefix: null,
         segment: "",
         segmentIDs: [],
         selectedIDs: [],
         data: [],
+        message: false,
 
         async init() {
             await this.getProjects(this.base);
             this.$watch("base", async () => {
                 if (this.validateBase() && this.base.endsWith(".json")) {
                     this.loading = true;
-                    if (!this.muid) this.muid = getMuid(this.base);
-                    if (!this.prefix) this.prefix = getPrefix(this.base);
-                    const response = await requestWithTokenRetry(`projects/${this.muid}/${this.prefix}/`);
+                    const response = await requestWithTokenRetry(
+                        `projects/${getMuid(this.base)}/${getPrefix(this.base)}/`,
+                    );
                     const data = await response.json();
                     this.loading = false;
                     this.segmentIDs = Object.keys(data.data);
+                    this.selectedIDs = [];
                 }
             });
         },
@@ -41,6 +41,9 @@ function shift() {
                 }
                 this.directories = data.directories?.map(dir => (data.base || "") + dir);
                 this.files = data.files?.map(file => (data.base || "") + file);
+                this.segmentIDs = [];
+                this.selectedIDs = [];
+                this.data = [];
             } catch (error) {
                 this.directories = [];
                 this.files = [];
@@ -69,12 +72,14 @@ function shift() {
         },
         addSegment(segment) {
             if (this.segmentIDs.includes(segment) && !this.selectedIDs.includes(segment)) {
+                this.data = [];
                 this.selectedIDs.push(segment);
                 this.segmentIDs = this.segmentIDs.filter(id => id !== segment);
                 this.segment = "";
             }
         },
         removeSegment(segment) {
+            this.data = [];
             this.segmentIDs.push(segment);
             this.segmentIDs.sort();
             this.selectedIDs = this.selectedIDs.filter(id => id !== segment);
@@ -82,7 +87,6 @@ function shift() {
         async handleSubmit(dry) {
             this.loading = true;
             const params = new URLSearchParams({ exact: this.exact, dry_run: dry });
-            console.log(params.toString());
             const response = await requestWithTokenRetry(`projects/${this.base}/?${params.toString()}`, {
                 method: "PATCH",
                 headers: {
@@ -92,13 +96,63 @@ function shift() {
             });
             const data = await response.json();
             this.loading = false;
+            if (!dry && data.message) {
+                await this.clearData();
+                this.showMessage();
+                return;
+            }
             this.data = data.results;
         },
-        // getValue() {
-        //     return translation.data[uid] || ""
-        // }
         shouldDisplay(index, segmentID) {
+            if (!this.data.length) return false;
             return this.data[index].data_after[segmentID] !== this.data[index].data_before[segmentID];
+        },
+        async clearData() {
+            this.base = "";
+            await this.getProjects(this.base);
+        },
+        showMessage() {
+            this.message = true;
+            setTimeout(() => {
+                this.message = false;
+            }, 5000);
+        },
+    };
+}
+
+function adjust() {
+    return {
+        textareas: [],
+        idGroups: [],
+        init() {
+            this.textareas = Array.from(document.querySelectorAll("textarea"));
+            const idSet = new Set(this.textareas.map(textarea => textarea.id.split("before")[0].split("after")[0]));
+            this.idGroups = Array.from(idSet);
+
+            this.createObservers();
+        },
+        createObserver(idPrefix) {
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        setMaxHeight([
+                            document.querySelector(`textarea[id^='${idPrefix}before']`),
+                            document.querySelector(`textarea[id^='${idPrefix}after']`),
+                        ]);
+                    }
+                });
+            });
+            return observer;
+        },
+        createObservers() {
+            for (let idGroup of this.idGroups) {
+                const observer = this.createObserver(idGroup);
+                const groupTextareas = this.textareas.filter(textarea => textarea.id.startsWith(idGroup));
+                groupTextareas.forEach(textarea => {
+                    textarea.style.overflow = "hidden";
+                    observer.observe(textarea);
+                });
+            }
         },
     };
 }

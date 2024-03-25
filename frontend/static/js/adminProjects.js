@@ -164,6 +164,7 @@ function removeProject() {
             );
         },
         async handleSubmit(dry) {
+            if (this.base === "") return;
             this.loading = true;
             this.message = false;
             if (!dry) {
