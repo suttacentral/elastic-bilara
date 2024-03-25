@@ -1,13 +1,12 @@
 .tooltip {
     position: absolute;
     z-index: 1;
-    background-color: #ffffff; /* Background color */
-    color: #313131; /* Text color */
+    background-color: #ffffff;
+    color: #313131;
     padding: 10px;
     border-radius: 5px;
-    box-shadow: 0px 0px 10px rgba(0,0,0,0.2); /* Shadow effect */
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
 
-    /* Optional: Arrow */
     max-width: 500px;
     min-width: 125px;
     max-height: 500px;
@@ -18,11 +17,10 @@
     overflow: scroll;
 }
 
-/* Arrow */
 .tooltip:after {
     content: '';
     position: absolute;
-    top: 100%; /* At the bottom of the tooltip */
+    top: 100%;
     left: 50%;
     margin-left: -5px;
     border-width: 5px;
