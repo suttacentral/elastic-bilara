@@ -104,7 +104,7 @@ function addNewProject() {
             this.loading = false;
             this.created.status = true;
             this.created.username = user;
-            this.created.paths = createdPaths.flat();
+            this.created.paths = createdPaths;
             setTimeout(() => {
                 this.clearCreatedData();
             }, 10000);
