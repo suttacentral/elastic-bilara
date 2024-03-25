@@ -118,14 +118,15 @@ def create_new_project_file_names(
 
 
 def create_project_file(segments_root_path: Path, new_file_path: Path):
-    if Path(new_file_path).exists():
-        raise OverrideException(f"Cannot overwrite existing file {new_file_path}")
+    if not segments_root_path or not new_file_path or Path(new_file_path).exists():
+        return False
     segment_ids = get_json_data(segments_root_path).keys()
     data = {key: "" for key in segment_ids}
     if not new_file_path.parent.exists():
         new_file_path.parent.mkdir(parents=True, exist_ok=True)
     with open(new_file_path, "w+") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    return True
 
 
 class OverrideException(Exception):

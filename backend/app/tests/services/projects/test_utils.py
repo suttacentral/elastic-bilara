@@ -284,7 +284,7 @@ def test_create_project_file_success(mocker):
     mock_open_instance = MockOpen()
     mocker.patch("builtins.open", return_value=mock_open_instance)
 
-    create_project_file(segments_root_path, new_file_path)
+    assert create_project_file(segments_root_path, new_file_path)
 
     assert json.dump.call_args[0][0] == {"segment1": "", "segment2": ""}
     Path.mkdir.assert_called_once()
@@ -301,7 +301,4 @@ def test_create_project_file_exists_exception(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
 
-    with pytest.raises(OverrideException) as e:
-        create_project_file(segments_root_path, existing_file_path)
-
-    assert str(existing_file_path) in str(e.value)
+    assert not create_project_file(segments_root_path, existing_file_path)
