@@ -147,7 +147,7 @@
                                      x-show="hints.length > 0 && showHints">
                                     <ul class="project-container__content-body__hints-list">
                                         <template x-for="hint in hints.slice(0, 5)">
-                                            <li @click="setValue(translation, uid, hint.translation_hints); hintClicked = true"
+                                            <li @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; observeSections()"
                                             class="project-container__content-body__hints-list-item">
                                                 <p x-text="hint.uid" class="project-container__content-body__hints-list-item__uid"></p>
                                                 <div class="project-container__content-body__hints-list-item__info">
