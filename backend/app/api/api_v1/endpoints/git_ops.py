@@ -1,5 +1,7 @@
 import hashlib
 import hmac
+import json
+import urllib.parse
 from typing import Annotated
 
 from app.core.config import settings
@@ -27,7 +29,7 @@ async def github_webhook(
     if not hmac.compare_digest(f"sha256={expected_signature}", x_hub_signature_256):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
 
-    payload = await request.json()
+    payload = parse_payload(payload_bytes.decode())
     branch_name = (
         payload.get("pull_request").get("base").get("ref").removeprefix("refs/heads/")
         if payload.get("pull_request").get("base").get("ref")
@@ -64,3 +66,10 @@ async def sync_repository_data(
     result_2 = push.delay(user.model_dump(), branch_name, "origin")
 
     return {"detail": "Sync action has been triggered", "task_id": [result.id, result_2.id]}
+
+
+def parse_payload(payload: str) -> dict:
+    payload_query_str = urllib.parse.unquote(payload)
+    payload_json_str = payload_query_str.split("=", 1)[1]
+    payload_dict = json.loads(payload_json_str)
+    return payload_dict
