@@ -84,10 +84,10 @@ function displayMessage(element, message, type) {
 function isInViewPort(element) {
     let rect = element.getBoundingClientRect();
     return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        rect.bottom >= 0 &&
+        rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right >= 0 &&
+        rect.left <= (window.innerWidth || document.documentElement.clientWidth)
     );
 }
 
@@ -101,10 +101,10 @@ function tooltip() {
             if (path.startsWith("/")) {
                 path = path.slice(1);
             }
-            if (this.requested) return this.show = true;
+            if (this.requested) return (this.show = true);
             const response = await requestWithTokenRetry(`directories/${path}/`);
             if (response.ok) this.requested = true;
-            const {directories, files} = await response.json();
+            const { directories, files } = await response.json();
             this.tooltipData = [...directories, ...files];
             if (this.requested) this.show = true;
         },
@@ -116,3 +116,8 @@ function tooltip() {
 
 const getMuid = string => string.split("/").slice(0, 3).join("-");
 const getPrefix = string => string.split("/").pop().split("_")[0];
+
+function setMaxHeight(textareas) {
+    const maxHeight = Math.max(...textareas.map(textarea => textarea.scrollHeight));
+    textareas.forEach(textarea => (textarea.style.height = `${maxHeight}px`));
+}
