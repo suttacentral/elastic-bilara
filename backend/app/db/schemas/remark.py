@@ -1,25 +1,36 @@
-import datetime
+import re
+from pathlib import Path
+from typing import Optional
 
-from app.db.models.segment_uid import SegmentUID
-from app.db.models.user import User
-from pydantic import BaseModel, ConfigDict
+from app.core.config import settings
+from pydantic import BaseModel, ConfigDict, FilePath, field_validator
 
 
 class RemarkBase(BaseModel):
-    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(from_attributes=True)
 
-    value: str
-    segment_uid_id: int
-    author_id: int
+    remark_value: Optional[str]
+    source_file_path: Path
+    segment_id: str
 
+    @field_validator("segment_id")
+    @classmethod
+    def segment_id_validator(cls, value: str):
+        if re.search(r"^(([\w]+[\w\d.-]*\d)+\:(\d+\.)+\d)$", value) is None:
+            raise ValueError('segment_id does not meet required format e.g. "dn1.1:0.1.1"')
+        return value
 
-class RemarkCreate(RemarkBase):
-    pass
+    @field_validator("source_file_path")
+    @classmethod
+    def source_file_path_validator(cls, value: Path | str):
+        if isinstance(value, str):
+            value = Path(value)
+        if not value.is_relative_to(settings.WORK_DIR):
+            value = settings.WORK_DIR.joinpath(value)
+        if not value.is_file():
+            raise ValueError(f"File {value} does not exist")
+        return str(value)
 
 
 class Remark(RemarkBase):
     id: int
-    created_at: datetime.datetime
-
-    author: User
-    segment_uid: SegmentUID
