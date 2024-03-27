@@ -28,8 +28,6 @@ class User(UserBase):
     last_login: datetime.datetime
     is_active: bool
 
-    remarks: list[Remark]
-
 
 class UserUpdatePayload(TypedDict, total=False):
     is_active: bool
