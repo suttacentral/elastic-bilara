@@ -66,3 +66,11 @@ table {
 *, *::before, *::after {
     box-sizing: border-box;
 }
+
+textarea {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

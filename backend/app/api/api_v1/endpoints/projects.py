@@ -229,6 +229,7 @@ async def delete_segment_ids(
             results.append(
                 {
                     "muid": get_muid(Path(path)),
+                    "source_muid": get_muid(find_root_path(Path(path))),
                     "language": get_language(Path(path)),
                     "filename": get_filename(Path(path)),
                     "prefix": get_prefix(Path(path)),

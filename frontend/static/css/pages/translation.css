@@ -127,7 +127,7 @@
 
 .project-container__content-body__textarea {
     width: 100%;
-    padding: var(--space-xs) var(--space-sm);
+    padding: var(--space-xs) var(--space-xxs);
     resize: none;
     font-size: var(--text-lg);
     line-height: var(--body-line-height);
@@ -197,6 +197,11 @@
 
 .dragging {
     opacity: .5;
+}
+
+.border-effect {
+    border: 1px solid var(--color-primary-darker);
+    box-shadow: var(--shadow-md);
 }
 
 @media (max-width: 1199px) {

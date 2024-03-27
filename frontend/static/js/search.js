@@ -5,7 +5,7 @@ const search = () => {
         suggestions: [],
         projectQuery: "",
         selectedProjects: {},
-        size: 10,
+        size: 100,
         page: 0,
         currentPage: 0,
         isNextPage: false,
@@ -21,6 +21,11 @@ const search = () => {
                     throw new Error("Invalid data format from the API");
                 }
                 this.projects = projects;
+                const params = new URLSearchParams(window.location.search);
+                const muid = params.get("muid");
+                const source = params.get("source");
+                if (muid) this.toggleSelectedProjects(muid);
+                if (source) this.toggleSelectedProjects(source);
             } catch (error) {
                 throw new Error(error);
             }

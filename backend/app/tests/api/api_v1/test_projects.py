@@ -416,8 +416,10 @@ class TestProjects:
     @patch("app.api.api_v1.endpoints.projects.can_delete_projects")
     @patch("app.api.api_v1.endpoints.projects.UIDReducer")
     @patch("app.api.api_v1.endpoints.projects.get_json_data")
+    @patch("app.api.api_v1.endpoints.projects.get_muid")
     async def test_delete_segment_ids_dry_run(
         self,
+        mock_get_muid,
         mock_get_json_data,
         mock_uid_reducer,
         mock_can_delete_projects,
@@ -428,6 +430,9 @@ class TestProjects:
     ):
         path_str = "translation/en/test/sutta/test/test1/test1.1-10_translation-en-test.json"
         return_value = {"an1.1:0.1": "new_value"} if exact else {}
+        muid = "translation-en-test"
+        source_muid = "root-pli-test"
+        mock_get_muid.side_effect = [muid, source_muid]
         mock_can_delete_projects.return_value = True
         uid_reducer_instance = mock_uid_reducer.return_value
         uid_reducer_instance.decrement_dry.return_value = {settings.WORK_DIR / path_str: return_value}
@@ -442,6 +447,7 @@ class TestProjects:
         assert "message" in response.json()
         assert "results" in response.json()
         assert "muid" in response.json()["results"][0]
+        assert "source_muid" in response.json()["results"][0]
         assert "language" in response.json()["results"][0]
         assert "filename" in response.json()["results"][0]
         assert "prefix" in response.json()["results"][0]
@@ -452,7 +458,8 @@ class TestProjects:
         assert response.json()["results"][0]["path"] == f"/{path_str}"
         assert response.json()["results"][0]["data_after"] == return_value
         assert response.json()["results"][0]["data_before"] == current_value
-        assert response.json()["results"][0]["muid"] == "translation-en-test"
+        assert response.json()["results"][0]["muid"] == muid
+        assert response.json()["results"][0]["source_muid"] == source_muid
         assert response.json()["results"][0]["language"] == "en"
         assert response.json()["results"][0]["filename"] == "test1.1-10_translation-en-test.json"
         assert response.json()["results"][0]["prefix"] == "test1.1-10"

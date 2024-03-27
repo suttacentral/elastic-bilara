@@ -61,6 +61,13 @@ function fetchTranslation() {
                     event.target.value += "\n";
                     return;
                 }
+                const nextSection = event.target.parentElement.nextElementSibling;
+                if (nextSection) {
+                    const nextTextarea = nextSection.querySelector("textarea");
+                    if (nextTextarea) {
+                        nextTextarea.focus();
+                    }
+                }
                 try {
                     const muid = translation.muid;
                     await this.updateHandler(
@@ -70,13 +77,6 @@ function fetchTranslation() {
                     );
                 } catch (error) {
                     throw new Error(error);
-                }
-            }
-            const nextSection = event.target.parentElement.nextElementSibling;
-            if (nextSection) {
-                const nextTextarea = nextSection.querySelector("textarea");
-                if (nextTextarea) {
-                    nextTextarea.focus();
                 }
             }
         },
@@ -131,11 +131,6 @@ function fetchTranslation() {
     };
 }
 
-function setMaxHeight(textareas) {
-    const maxHeight = Math.max(...textareas.map(textarea => textarea.scrollHeight));
-    textareas.forEach(textarea => (textarea.style.height = `${maxHeight}px`));
-}
-
 function textareaAdjuster() {
     return {
         observer: null,
@@ -182,13 +177,7 @@ function* generateUniqueVisibleElements() {
     const body = document.querySelector(".project-container__content-body");
     const elements = body.querySelectorAll(".project-container__content-body__section");
     for (const el of elements) {
-        const rect = el.getBoundingClientRect();
-        const isVisible =
-            rect.bottom >= 0 &&
-            rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.right >= 0 &&
-            rect.left <= (window.innerWidth || document.documentElement.clientWidth);
-        if (isVisible) {
+        if (isInViewPort(el)) {
             yield el;
         } else {
             break;
@@ -214,38 +203,22 @@ function dragHandler() {
             event.dataTransfer.setDragImage(draggable, event.clientX, event.clientY);
         });
 
-        elem.addEventListener("dragend", () => {
-            const draggable = elem.closest(".project-container__content-details");
-            draggable.classList.remove("dragging");
+        elem.addEventListener("dragend", e => {
+            const afterElement = document
+                .elementFromPoint(e.clientX, e.clientY)
+                .closest(".project-container__content-details");
+            if (!afterElement) return;
+            const dragging = document.querySelector(".dragging");
+            const orderTarget = afterElement.style.order;
+            afterElement.style.order = dragging.style.order;
+            dragging.style.order = orderTarget;
+            dragging.classList.remove("dragging");
         });
     });
 
     container.addEventListener("dragover", e => {
         e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientX);
-        const dragging = document.querySelector(".dragging");
-        if (afterElement == null) {
-            container.appendChild(dragging);
-        } else {
-            container.insertBefore(dragging, afterElement);
-        }
     });
-
-    function getDragAfterElement(container, x) {
-        const draggableElements = [...container.querySelectorAll(".project-container__content-details:not(.dragging)")];
-        return draggableElements.reduce(
-            (closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = x - box.left - box.width / 2;
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            },
-            { offset: Number.NEGATIVE_INFINITY },
-        ).element;
-    }
 }
 
 function resizeHandler() {
@@ -266,9 +239,9 @@ function resizeHandler() {
             const cx = mx - x;
             const detailPanel = container.parentElement;
             if (detailPanel.classList.contains("project-container__detail-panel")) {
-                detailPanel.setAttribute("style", "max-width: 100%");
+                detailPanel.style.maxWidth = "100%";
             }
-            container.setAttribute("style", `width: ${w + cx}px`);
+            container.style.width = `${w + cx}px`;
         }
 
         function up(e) {

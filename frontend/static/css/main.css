@@ -17,6 +17,7 @@
 @import "components/modals.css";
 @import "components/pull-request.css";
 @import "components/search.css";
+@import "components/tooltip.css";
 
 @import "pages/index.css";
 @import "pages/nav.css";

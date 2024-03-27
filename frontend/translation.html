@@ -10,10 +10,10 @@
             src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"
     ></script>
     <script src="./static/js/auth.js"></script>
+    <script src="./static/js/utils.js"></script>
     <script src="./static/js/translation.js"></script>
     <script src="./static/js/search.js"></script>
     <script src="./static/js/pullRequest.js"></script>
-    <script src="./static/js/utils.js"></script>
     <link rel="stylesheet" href="./static/css/style.css"/>
 </head>
 
@@ -89,12 +89,14 @@
             <ul class="project-header__nav-list">
                 <li class="project-header__nav-item">
                     <button class="project-header__nav-button btn btn--related-projects"
-                            @click="$dispatch('toggle-detail-panel', {panel: 'related'}); adjustVisibleTextareas()">Related
+                            @click="$dispatch('toggle-detail-panel', {panel: 'related'}); adjustVisibleTextareas()">
+                        Related
                     </button>
                 </li>
                 <li class="project-header__nav-item">
                     <button class="project-header__nav-button btn btn--search"
-                            @click="$dispatch('toggle-detail-panel', {panel: 'search'}); adjustVisibleTextareas()">Search
+                            @click="$dispatch('toggle-detail-panel', {panel: 'search'}); adjustVisibleTextareas()">
+                        Search
                     </button>
                 </li>
             </ul>
@@ -104,9 +106,9 @@
     <div class="project-container">
         <div class="project-container__content">
             <template x-for="(translation, index) in translations" :key="index">
-                <div class="project-container__content-details">
+                <div class="project-container__content-details" :style="`order: ${index}`" x-data="{ clicked: false }" :class="{ 'border-effect': clicked }">
                     <div class="project-container__content-header">
-                        <div class="draggable-container" draggable="true">
+                        <div class="draggable-container" draggable="true" @mousedown="clicked = true" @mouseup="clicked = false" @mouseleave="clicked = false">
                             <svg class="draggable" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24"
                                  width="24">
                                 <path d="M0 0h24v24H0V0z" fill="none"/>
@@ -114,11 +116,13 @@
                             </svg>
                             <h2 class="project-container__content-header__title" x-text="translation.muid"></h2>
                         </div>
-                        <svg class="resize" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24"
+                        <span class="resize">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24"
                              width="24">
                             <path d="M0 0h24v24H0z" fill="none"/>
                             <path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
                         </svg>
+                            </span>
                     </div>
                     <div class="project-container__content-body" x-data="textareaAdjuster()">
                         <template x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
@@ -225,7 +229,7 @@
                                 <option
                                         x-text="pageSize"
                                         x-bind:value="pageSize"
-                                        x-bind:selected="pageSize === 10"
+                                        x-bind:selected="pageSize === 100"
                                         class="page-size__select__option">
                                 </option>
                             </template>

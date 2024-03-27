@@ -1,6 +1,3 @@
-const getMuid = string => string.split("/").slice(0, 3).join("-");
-const getPrefix = string => string.split("/").pop().split("_")[0];
-
 function tree() {
     return {
         loading: false,
