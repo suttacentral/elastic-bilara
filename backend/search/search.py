@@ -665,3 +665,14 @@ class Search:
             for hint in translation_hints
             if phrase["uid"] == hint["uid"]
         ]
+
+    def get_uids(self, muid: str, prefix: str) -> list[str]:
+        query = {
+            "query": {"bool": {"must": [{"match": {"muid": muid}}, {"match": {"prefix": prefix}}]}},
+            "_source": ["segments.uid"],
+        }
+        uids = []
+        for hit in self._scroll_search(query):
+            for seg in hit["_source"]["segments"]:
+                uids.append(seg["uid"])
+        return uids

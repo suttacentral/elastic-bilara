@@ -10,8 +10,19 @@ from app.services.directories.utils import (
     get_language,
     validate_path,
     validate_root_data,
+    get_matches,
 )
-from app.services.projects.models import JSONDataOut, PathsOut, ProjectsOut
+from app.services.projects.models import (
+    JSONDataOut,
+    PathsOut,
+    ProjectsOut,
+    MergeIn,
+    SplitIn,
+    MergeOut,
+    SplitOut,
+    CalleeMerge,
+    Affected,
+)
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
     OverrideException,
@@ -19,6 +30,7 @@ from app.services.projects.utils import (
     create_project_file,
     sort_paths,
     update_file,
+    write_json_data,
 )
 from app.services.users.permissions import (
     can_create_projects,
@@ -56,6 +68,81 @@ async def get_projects(
     if not projects:
         projects = search.get_distinct_data(field="muid", prefix=prefix)
     return ProjectsOut(projects=projects)
+
+
+@router.patch(
+    "/merge/",
+    response_model=MergeOut,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
+)
+async def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: MergeIn):
+    file_path = Path(
+        list(search.get_file_paths(muid=payload.muid, prefix=payload.prefix, exact=True, _type="file_path"))[0]
+    )
+    affected_paths_data_before = {}
+    related = get_matches(file_path, True)
+    for path in related:
+        data = get_json_data(path)
+        if path == file_path:
+            callee_data_before = data
+        else:
+            affected_paths_data_before[path] = data
+        data[payload.merger_uid] = data[payload.merger_uid] + " " + data[payload.mergee_uid]
+        write_json_data(path, data)
+
+    reducer = UIDReducer(user, file_path, [payload.mergee_uid])
+    main_task_id, related_task_id = reducer.decrement()
+
+    affected_paths_data_after = {}
+    for path in related:
+        if path == file_path:
+            callee_data_after = get_json_data(path)
+        else:
+            affected_paths_data_after[path] = get_json_data(path)
+
+    callee = CalleeMerge(
+        prefix=payload.prefix,
+        muid=payload.muid,
+        data_before=callee_data_before,
+        data_after=callee_data_after,
+        merger={"uid": payload.merger_uid, "value": callee_data_before[payload.merger_uid]},
+        mergee={"uid": payload.mergee_uid, "value": callee_data_before[payload.mergee_uid]},
+    )
+
+    affected = [
+        Affected(
+            muid=get_muid(path),
+            source_muid=get_muid(find_root_path(path)),
+            language=get_language(path),
+            filename=get_filename(path),
+            prefix=get_prefix(path),
+            path=str(path).replace(str(settings.WORK_DIR), ""),
+            data_after=affected_paths_data_after[path],
+            data_before=affected_paths_data_before[path],
+        )
+        for path in related
+        if path != file_path
+    ]
+
+    return MergeOut(
+        main_task_id=main_task_id,
+        related_task_id=related_task_id,
+        message="Segments merged successfully!",
+        path=str(file_path).replace(str(settings.WORK_DIR), ""),
+        callee=callee,
+        affected=affected,
+    )
+
+
+@router.patch(
+    "/split/",
+    response_model=SplitOut,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
+)
+async def split_segments(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: SplitIn):
+    pass
 
 
 @router.get("/{muid}/", response_model=PathsOut)
