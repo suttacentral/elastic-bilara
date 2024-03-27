@@ -127,7 +127,10 @@
                     <div class="project-container__content-body" x-data="textareaAdjuster()">
                         <template x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
                                   :key="uid">
-                            <div class="project-container__content-body__section" :data-index="i">
+                            <div class="project-container__content-body__section" :data-index="i"
+                                 x-data="{hints: [], showHints: false, uid: uid, muid: translation.muid, hintClicked: false,
+                                 sourceMuid: new URLSearchParams(window.location.search).get('source'),
+                                 sourceValue: translations.find(item => item.muid === new URLSearchParams(window.location.search).get('source')).data[uid]}">
                                 <p class="project-container__content-body__text"
                                    :class="{'project-container__content-body__text--hide': translation.muid !== new URLSearchParams(window.location.search).get('source')}"
                                    x-text="uid">
@@ -135,8 +138,33 @@
                                 <textarea class="project-container__content-body__textarea"
                                           x-bind:value="getValue(translation, uid)"
                                           x-bind:readonly="!translation.canEdit"
+                                          x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
+                                          x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
+                                          x-on:click="hintClicked = false"
                                           x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
                                           x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)"></textarea>
+                                <div class="project-container__content-body__hints" x-cloak
+                                     x-show="hints.length > 0 && showHints">
+                                    <ul class="project-container__content-body__hints-list">
+                                        <template x-for="hint in hints.slice(0, 5)">
+                                            <li @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; observeSections()"
+                                            class="project-container__content-body__hints-list-item">
+                                                <p x-text="hint.uid" class="project-container__content-body__hints-list-item__uid"></p>
+                                                <div class="project-container__content-body__hints-list-item__info">
+                                                    <p x-text="hint.segment"
+                                                    class="project-container__content-body__hints-list-item__info-source"></p>
+                                                    <div
+                                                    class="project-container__content-body__hints-list-item__info-translation">
+                                                        <p x-text="hint.translation_hints"
+                                                        class="project-container__content-body__hints-list-item__info-translation__text"></p>
+                                                        <span x-text="'('+ hint.strength + ')'"
+                                                        class="project-container__content-body__hints-list-item__info-translation__strength"></span>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
                             </div>
                         </template>
                     </div>

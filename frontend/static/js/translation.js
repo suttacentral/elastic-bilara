@@ -251,3 +251,14 @@ function resizeHandler() {
         }
     });
 }
+
+async function getHints(uid, muid, sourceMuid, sourceValue) {
+    const params = new URLSearchParams({
+        segment_id: uid,
+        target_muid: muid,
+        source_muid: sourceMuid,
+        text_value: sourceValue,
+    });
+    const response = await requestWithTokenRetry(`search/hints/?${params.toString()}`);
+    return await response.json();
+}
