@@ -47,13 +47,13 @@ def update_or_create_remark(remark_data: RemarkBase | dict[str, Any]) -> Remark:
                 .filter(mRemark.segment_id == str(remark_data.segment_id))
                 .one()
             )
-            for key, value in remark_data.model_dump().items():
+            for key, value in remark_data.model_dump(exclude={"muid", "prefix"}).items():
                 setattr(remark, key, value)
             sess.commit()
             return Remark.model_validate(remark)
     except NoResultFound:
         with get_sess() as sess:
-            sess.add(mRemark(**remark_data.model_dump()))
+            sess.add(mRemark(**remark_data.model_dump(exclude={"muid", "prefix"})))
             sess.commit()
             return Remark.model_validate(
                 sess.query(mRemark)
