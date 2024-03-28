@@ -4,6 +4,7 @@ from app.api.api_v1.endpoints import (
     git_ops,
     projects,
     pull_request,
+    remarks,
     search,
     tasks,
     users,
@@ -26,3 +27,4 @@ api_router.include_router(
     dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
 )
 api_router.include_router(users.router_exposed, tags=["users"])
+api_router.include_router(remarks.router, tags=["remarks"])

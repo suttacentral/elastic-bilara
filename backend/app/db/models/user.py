@@ -30,5 +30,3 @@ class User(Base):
     created_on: Mapped[datetime.datetime] = mapped_column(nullable=False, default=datetime.datetime.utcnow())
     last_login: Mapped[datetime.datetime] = mapped_column(nullable=False, default=datetime.datetime.utcnow())
     is_active: Mapped[bool] = mapped_column(nullable=False, default=False)
-
-    remarks: Mapped[list["Remark"]] = relationship(back_populates="author")

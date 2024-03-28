@@ -1,19 +1,13 @@
-import datetime
-
 from app.db.database import Base
-from app.db.models.segment_uid import SegmentUID
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class Remark(Base):
     __tablename__ = "remarks"
+    __table_args__ = (UniqueConstraint("source_file_path", "segment_id", name="source_file_path_segment_id_constrain"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    value: Mapped[str] = mapped_column(nullable=False)
-    segment_uid_id: Mapped[int] = mapped_column(ForeignKey("segment_uids.id"), index=True)
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, default=datetime.datetime.utcnow())
-
-    author: Mapped["User"] = relationship(back_populates="remarks")
-    segment_uid: Mapped["SegmentUID"] = relationship(back_populates="remarks")
+    remark_value: Mapped[str] = mapped_column(nullable=True)
+    source_file_path: Mapped[str] = mapped_column(nullable=False)
+    segment_id: Mapped[str] = mapped_column(nullable=False)
