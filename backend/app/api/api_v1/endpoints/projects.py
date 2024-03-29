@@ -22,7 +22,9 @@ from app.services.projects.models import (
     SplitOut,
     CalleeMerge,
     Affected,
+    CalleeSplit,
 )
+from app.services.projects.uid_expander import UIDExpander
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
     OverrideException,
@@ -142,7 +144,40 @@ async def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_use
     dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
 )
 async def split_segments(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: SplitIn):
-    pass
+    file_path = Path(
+        list(search.get_file_paths(muid=payload.muid, prefix=payload.prefix, exact=True, _type="file_path"))[0]
+    )
+    uid_expander = UIDExpander(user, file_path, payload.splitter_uid)
+    data, main_task_id, related_task_id = uid_expander.expand()
+    callee = CalleeSplit(
+        prefix=payload.prefix,
+        muid=payload.muid,
+        data_before=data[file_path]["data_before"],
+        data_after=data[file_path]["data_after"],
+        splitter={"uid": payload.splitter_uid, "value": data[file_path]["data_before"][payload.splitter_uid]},
+    )
+    affected = [
+        Affected(
+            muid=get_muid(path),
+            source_muid=get_muid(find_root_path(path)),
+            language=get_language(path),
+            filename=get_filename(path),
+            prefix=get_prefix(path),
+            path=str(path).replace(str(settings.WORK_DIR), ""),
+            data_after=data["data_after"],
+            data_before=data["data_before"],
+        )
+        for path, data in data.items()
+        if path != file_path
+    ]
+    return SplitOut(
+        main_task_id=main_task_id,
+        related_task_id=related_task_id,
+        message="Segments split successfully!",
+        path=str(file_path).replace(str(settings.WORK_DIR), ""),
+        callee=callee,
+        affected=affected,
+    )
 
 
 @router.get("/{muid}/", response_model=PathsOut)
