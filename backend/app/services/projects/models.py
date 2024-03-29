@@ -62,6 +62,12 @@ class MergeSplitInBase(BaseModel):
                 raise ValueError(f"{uid_name} '{uid}' has a wrong format")
         return self
 
+
+class MergeIn(MergeSplitInBase):
+    merger_uid: str
+    mergee_uid: str
+    _uids_to_validate: list[str] = ["merger_uid", "mergee_uid"]
+
     @model_validator(mode="after")
     def validate_uids_order(self) -> "MergeSplitInBase":
         file_path = Path(
@@ -72,12 +78,6 @@ class MergeSplitInBase(BaseModel):
         if uids.index(uids_to_check[1]) - uids.index(uids_to_check[0]) != 1:
             raise ValueError(f"UIDs '{uids_to_check[0]}' and '{uids_to_check[1]}' are not right after each other")
         return self
-
-
-class MergeIn(MergeSplitInBase):
-    merger_uid: str
-    mergee_uid: str
-    _uids_to_validate: list[str] = ["merger_uid", "mergee_uid"]
 
 
 class SplitIn(MergeSplitInBase):
@@ -110,7 +110,6 @@ class CalleeMerge(CalleeBase):
 
 class CalleeSplit(CalleeBase):
     splitter: dict[str, str]
-    splitee: dict[str, str]
 
 
 class MergeSplitOutBase(BaseModel):
