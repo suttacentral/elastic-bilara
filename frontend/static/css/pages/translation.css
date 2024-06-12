@@ -144,6 +144,11 @@
     box-shadow: var(--shadow-sm);
 }
 
+.project-container__content-body__action {
+    display: flex;
+    flex-direction: row;
+}
+
 .project-container__content-body__hints-list {
     display: flex;
     flex-direction: column;

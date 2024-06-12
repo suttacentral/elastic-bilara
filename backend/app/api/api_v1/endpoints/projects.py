@@ -90,7 +90,11 @@ async def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_use
             callee_data_before = data
         else:
             affected_paths_data_before[path] = data
-        data[payload.merger_uid] = data[payload.merger_uid] + " " + data[payload.mergee_uid]
+
+        if payload.merger_uid in data and payload.mergee_uid in data:
+            data[payload.merger_uid] = (
+                f"{data[payload.merger_uid]} {data[payload.mergee_uid]}"
+        )
         write_json_data(path, data)
 
     reducer = UIDReducer(user, file_path, [payload.mergee_uid])

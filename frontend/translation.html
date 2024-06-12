@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="./static/css/main.css">
     <script
             defer
-            src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"
+            src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js"
     ></script>
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/utils.js"></script>
@@ -33,9 +33,11 @@
             </li>
             <li class="main-nav__item main-nav__item--right hide-mobile">
                 <div class="user-container" x-cloak x-show="!!username">
-                    <img :src="avatarURL"
-                         :alt="`${username}'s github profile picture`"
-                         class="user-avatar"/>
+                    <img
+                        :src="avatarURL"
+                        :alt="`${username}'s github profile picture`"
+                        class="user-avatar"
+                        title="profile picture"/>
                     <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
                 </div>
             </li>
@@ -52,7 +54,7 @@
             <li class="main-nav-mobile__item main-nav-mobile__item--full main-nav-mobile__item--show main-nav-mobile__item--space-between">
                 <a href="/nav" class="main-nav-mobile__item-link">Bilara</a>
                 <div class="main-nav-mobile__burger" @click="isOpen = !isOpen"
-                     :class="{ 'open': isOpen }">
+                    :class="{ 'open': isOpen }">
                     <span class="main-nav-mobile__burger--line"></span>
                     <span class="main-nav-mobile__burger--line"></span>
                 </div>
@@ -60,9 +62,11 @@
             <li class="main-nav-mobile__item"
                 :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
                 <div class="user-container" x-cloak x-show="!!username">
-                    <img :src="avatarURL"
-                         :alt="`${username}'s github profile picture`"
-                         class="user-avatar"/>
+                    <img
+                        :src="avatarURL"
+                        :alt="`${username}'s github profile picture`"
+                        class="user-avatar"
+                        title="profile picture"/>
                     <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
                 </div>
             </li>
@@ -80,9 +84,8 @@
 </header>
 
 <main class="main-content"
-      x-data="{...fetchTranslation(), active: null}" x-cloak x-show="isActive"
-      @toggle-detail-panel.window="active === $event.detail.panel ? active = null : active = $event.detail.panel"
->
+    x-data="{...fetchTranslation(), active: null}" x-cloak x-show="isActive"
+    @toggle-detail-panel.window="active === $event.detail.panel ? active = null : active = $event.detail.panel">
     <div class="project-header">
         <p class="project-header__message"></p>
         <nav class="project-header__nav">
@@ -105,46 +108,132 @@
 
     <div class="project-container">
         <div class="project-container__content">
-            <template x-for="(translation, index) in translations" :key="index">
-                <div class="project-container__content-details" :style="`order: ${index}`" x-data="{ clicked: false }" :class="{ 'border-effect': clicked }">
+            <template
+                x-data="{splitting: false, merging: false, mergingUid: '', splittingUid: ''}"
+                x-for="(translation, index) in translations"
+                :key="index">
+                <div
+                    class="project-container__content-details"
+                    :style="`order: ${index}`"
+                    x-data="{ clicked: false, isRoot: translation.isSource }"
+                    :class="{ 'border-effect': clicked }">
                     <div class="project-container__content-header">
-                        <div class="draggable-container" draggable="true" @mousedown="clicked = true" @mouseup="clicked = false" @mouseleave="clicked = false">
+                        <div
+                            class="draggable-container"
+                            draggable="true"
+                            @mousedown="clicked = true"
+                            @mouseup="clicked = false"
+                            @mouseleave="clicked = false">
                             <svg class="draggable" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24"
-                                 width="24">
+                                width="24">
                                 <path d="M0 0h24v24H0V0z" fill="none"/>
                                 <path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                             </svg>
                             <h2 class="project-container__content-header__title" x-text="translation.muid"></h2>
                         </div>
                         <span class="resize">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24"
-                             width="24">
-                            <path d="M0 0h24v24H0z" fill="none"/>
-                            <path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
-                        </svg>
-                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24"
+                                width="24">
+                                <path d="M0 0h24v24H0z" fill="none"/>
+                                <path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
+                            </svg>
+                        </span>
                     </div>
-                    <div class="project-container__content-body" x-data="textareaAdjuster()">
-                        <template x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
-                                  :key="uid">
-                            <div class="project-container__content-body__section" :data-index="i"
-                                 x-data="{hints: [], showHints: false, uid: uid, muid: translation.muid, hintClicked: false,
-                                 sourceMuid: new URLSearchParams(window.location.search).get('source'),
-                                 sourceValue: translations.find(item => item.muid === new URLSearchParams(window.location.search).get('source')).data[uid]}">
-                                <p class="project-container__content-body__text"
-                                   :class="{'project-container__content-body__text--hide': translation.muid !== new URLSearchParams(window.location.search).get('source')}"
-                                   x-text="uid">
-                                </p>
+                    <div class="project-container__content-body" x-data="textareaAdjuster();">
+                        <template
+                            x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
+                            :key="uid">
+                            <div class="project-container__content-body__section"
+                                :data-index="i"
+                                x-data="{
+                                    hints: [],
+                                    showHints: false,
+                                    uid: uid,
+                                    muid: translation.muid,
+                                    hintClicked: false,
+                                    isSource: translation.isSource,
+                                    sourceMuid: new URLSearchParams(window.location.search).get('source'),
+                                    sourceValue: translations.find(item => item.muid === new URLSearchParams(window.location.search).get('source')).data[uid]}">
+                                <div class="project-container__content-body__action">
+                                    <p class="project-container__content-body__text"
+                                        :class="{'project-container__content-body__text--hide': translation.muid !== new URLSearchParams(window.location.search).get('source')}"
+                                        x-text="uid">
+                                    </p>
+                                    <button class="project-header__nav-button btn btn--split"
+                                        x-data="{ caption: 'Split' }"
+                                        x-text="caption"
+                                        @click="
+                                            if (splitBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
+                                                splitting = true;
+                                                merging = false;
+                                                splittingUid = uid;
+                                            }"
+                                        x-show="isSource && isAdmin && isActive && (!splitting && !merging)"
+                                        x-bind:disabled="splitting || merging"
+                                        x-bind:class="{'btn--disabled': splitting || merging}">
+                                    </button>
+                                    <button class="project-header__nav-button btn btn--merge"
+                                        x-data="{ caption: 'Merge' }"
+                                        x-text="caption"
+                                        @click="
+                                            if (mergeBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
+                                                splitting = false;
+                                                merging=true;
+                                                mergingUid = uid;
+                                            }"
+                                        x-show="isSource && isAdmin && isActive && i !== Object.keys(translation.data).length - 1 && (!splitting && !merging)"
+                                        x-bind:disabled="merging || splitting"
+                                        x-bind:class="{'btn--disabled': merging || splitting}">
+                                    </button>
+
+                                    <button class="project-header__nav-button btn btn--cancel"
+                                        @click="cancelSplit(translations); splitting=false;"
+                                        x-show="splitting && translation.isSource && uid === splittingUid"
+                                    >
+                                        Cancel Split
+                                    </button>
+                                    <button class="project-header__nav-button btn btn--cancel"
+                                        @click="cancelMerge(translations); merging=false;"
+                                        x-show="merging && translation.isSource && uid === mergingUid"
+                                    >
+                                        Cancel Merge
+                                    </button>
+
+                                    <button
+                                        x-data="{params: new URLSearchParams(window.location.search)}"
+                                        class="project-header__nav-button btn btn--split"
+                                        x-show="translation.canEdit && isAdmin && splitting && isRoot && uid === splittingUid"
+                                        @click="
+                                            await updateHandlerForSplit(translation.muid, params.get('prefix'), document.querySelector('p.project-header__message'));
+                                            splitting = false
+                                        "
+                                    >
+                                        Check Split, Then Confirm
+                                    </button>
+
+                                    <button
+                                        x-data="{params: new URLSearchParams(window.location.search)}"
+                                        class="project-header__nav-button btn btn--merge"
+                                        x-show="translation.canEdit && isAdmin && merging && isRoot && uid === mergingUid"
+                                        @click="
+                                            await updateHandlerForMerge(translation.muid, params.get('prefix'), document.querySelector('p.project-header__message'));
+                                            merging = false
+                                        "
+                                    >
+                                        Check Merge, Then Confirm
+                                    </button>
+                                </div>
                                 <textarea class="project-container__content-body__textarea"
-                                          x-bind:value="getValue(translation, uid)"
-                                          x-bind:readonly="!translation.canEdit"
-                                          x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
-                                          x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
-                                          x-on:click="hintClicked = false"
-                                          x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
-                                          x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)"></textarea>
+                                    x-bind:value="getValue(translation, uid)"
+                                    x-bind:readonly="!translation.canEdit"
+                                    x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
+                                    x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
+                                    x-on:click="hintClicked = false"
+                                    x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
+                                    x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)">
+                                </textarea>
                                 <div class="project-container__content-body__hints" x-cloak
-                                     x-show="hints.length > 0 && showHints">
+                                    x-show="hints.length > 0 && showHints">
                                     <ul class="project-container__content-body__hints-list">
                                         <template x-for="hint in hints.slice(0, 5)">
                                             <li @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; observeSections()"
@@ -153,12 +242,12 @@
                                                 <div class="project-container__content-body__hints-list-item__info">
                                                     <p x-text="hint.segment"
                                                     class="project-container__content-body__hints-list-item__info-source"></p>
-                                                    <div
-                                                    class="project-container__content-body__hints-list-item__info-translation">
+                                                    <div class="project-container__content-body__hints-list-item__info-translation">
                                                         <p x-text="hint.translation_hints"
-                                                        class="project-container__content-body__hints-list-item__info-translation__text"></p>
+                                                            class="project-container__content-body__hints-list-item__info-translation__text"></p>
                                                         <span x-text="'('+ hint.strength + ')'"
-                                                        class="project-container__content-body__hints-list-item__info-translation__strength"></span>
+                                                            class="project-container__content-body__hints-list-item__info-translation__strength">
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </li>
@@ -169,14 +258,17 @@
                         </template>
                     </div>
                     <div class="project-container__content-footer">
-                        <button class="btn btn--commit" x-show="translation.canEdit"
-                                @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'))">
+                        <button
+                            class="btn btn--commit"
+                            x-show="translation.canEdit && !merging && !splitting"
+                            @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'))">
                             Commit Changes
                         </button>
                         <div x-data="{params: new URLSearchParams(window.location.search)}">
-                            <button class="btn btn--project-publish"
-                                    x-show="translation.canEdit && translation.muid === params.get('muid')"
-                                    @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
+                            <button
+                                class="btn btn--project-publish"
+                                x-show="translation.canEdit && translation.muid === params.get('muid')"
+                                @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                 Publish Changes
                             </button>
                         </div>
@@ -185,17 +277,17 @@
             </template>
         </div>
         <div class="project-container__detail-panel" x-data="{ active: null }"
-             @toggle-detail-panel.window="active === $event.detail.panel ? active = 'none' : active = $event.detail.panel">
+            @toggle-detail-panel.window="active === $event.detail.panel ? active = 'none' : active = $event.detail.panel">
             <div class="project-container__detail-panel__related" x-cloak x-show="active === 'related'"
-                 :class="{'active': active === 'related'}" x-data="{selectedProjects: {}}">
+                :class="{'active': active === 'related'}" x-data="{selectedProjects: {}}">
                 <template x-for="project in relatedProjects" :key="project">
                     <div x-text="project" class="project-container__detail-panel__related-item"
-                         @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); dragHandler(); resizeHandler()"
-                         :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }"></div>
+                        @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); dragHandler(); resizeHandler()"
+                        :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }"></div>
                 </template>
             </div>
             <div class="project-container__detail-panel__search search" x-cloak x-show="active === 'search'"
-                 :class="{'active': active === 'search'}" x-data="search()">
+                :class="{'active': active === 'search'}" x-data="search()">
                 <div class="search__container">
                     <svg class="resize" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
                         <path d="M0 0h24v24H0z" fill="none"/>
@@ -203,17 +295,18 @@
                     </svg>
                     <div class="search__bar">
                         <span class="search__bar__icon"
-                              x-on:click="$event.target.nextElementSibling.focus()">🔎</span>
-                        <input type="text"
-                               x-model="projectQuery"
-                               x-on:input="updateSuggestions"
-                               class="search__bar__input"
-                               x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
-                               id="project-query"/>
+                            x-on:click="$event.target.nextElementSibling.focus()">🔎</span>
+                        <input
+                            type="text"
+                            x-model="projectQuery"
+                            x-on:input="updateSuggestions"
+                            class="search__bar__input"
+                            x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
+                            id="project-query"/>
                         <span x-cloak
-                              x-show="projectQuery.length"
-                              x-on:click="projectQuery = ''; updateSuggestions()"
-                              class="search__bar__clear">❌</span>
+                            x-show="projectQuery.length"
+                            x-on:click="projectQuery = ''; updateSuggestions()"
+                            class="search__bar__clear">❌</span>
                     </div>
                     <ul class="search__suggestions">
                         <template x-for="suggestion in suggestions">
@@ -228,21 +321,24 @@
                         <template x-for="(value, key) in fields">
                             <div class="fields__item">
                                 <div class="fields__label__container">
-                                    <label x-bind:for="'search-'+key"
-                                           x-text="key"
-                                           class="fields__label">
+                                    <label
+                                        x-bind:for="'search-'+key"
+                                        x-text="key"
+                                        class="fields__label">
                                     </label>
-                                    <span x-show="key !== 'uid'"
-                                          x-cloak
-                                          class="fields__label__cancel"
-                                          x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null">❌
+                                    <span
+                                        x-show="key !== 'uid'"
+                                        x-cloak
+                                        class="fields__label__cancel"
+                                        x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null">❌
                                     </span>
                                 </div>
-                                <input class="fields__input"
-                                       type="text"
-                                       x-bind:id="'search-'+key"
-                                       :placeholder="key === 'uid' ? 'an1.1:0.1' : ''"
-                                       x-model="fields[key]"/>
+                                <input
+                                    class="fields__input"
+                                    type="text"
+                                    x-bind:id="'search-'+key"
+                                    :placeholder="key === 'uid' ? 'an1.1:0.1' : ''"
+                                    x-model="fields[key]"/>
                             </div>
                         </template>
                     </div>
@@ -265,31 +361,31 @@
                     </div>
                     <div class="search__navigation">
                         <button
-                                x-on:click="await previousHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
-                                x-cloak
-                                x-show="currentPage > 0"
-                                id="previousPage"
-                                class="search__navigation__previous btn btn--previous">Previous
+                            x-on:click="await previousHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
+                            x-cloak
+                            x-show="currentPage > 0"
+                            id="previousPage"
+                            class="search__navigation__previous btn btn--previous">Previous
                         </button>
                         <button
-                                id="search"
-                                x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
-                                class="search__navigation__search btn btn--search">Search
+                            id="search"
+                            x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
+                            class="search__navigation__search btn btn--search">Search
                         </button>
                         <button
-                                x-on:click="await nextHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
-                                x-bind:disabled="!isNextPage"
-                                x-cloak
-                                x-show="isNextPage"
-                                id="nextPage"
-                                class="search__navigation__next btn btn--next">Next
+                            x-on:click="await nextHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
+                            x-bind:disabled="!isNextPage"
+                            x-cloak
+                            x-show="isNextPage"
+                            id="nextPage"
+                            class="search__navigation__next btn btn--next">Next
                         </button>
                     </div>
                     <div x-cloak
-                         x-show="Object.keys(results).length"
-                         x-html="renderResults()"
-                         class="search__results-container"
-                         id="resultsContainer">
+                        x-show="Object.keys(results).length"
+                        x-html="renderResults()"
+                        class="search__results-container"
+                        id="resultsContainer">
                     </div>
                 </div>
             </div>

@@ -21,7 +21,8 @@ class UIDExpander:
     def expand(self):
         data = self.expand_dry()
         for path in data:
-            write_json_data(Path(path), data[path]["data_after"])
+            data_after = data[path]["data_after"]
+            write_json_data(Path(path), data_after)
         self.related_paths.remove(settings.WORK_DIR / self.path)
         main_task_id = self._expand_commit(
             [str(settings.WORK_DIR / self.path)],
@@ -59,12 +60,14 @@ class UIDExpander:
 
             for i in range(start_index, end_index + 2):
                 if i == start_index:
-                    expanded_data[uids[i]] = ""
+                    expanded_data[uids[i]] = "{}" if '_html' in path.stem else ""
                 elif i == end_index + 1:
                     expanded_data[new_uid] = data[uids[end_index]]
                 else:
                     expanded_data[uids[i]] = data[uids[i - 1]]
+
             results[path]["data_after"] = expanded_data
+
         for path in failed_paths:
             results.pop(path, None)
             self.related_paths.discard(path)

@@ -29,7 +29,7 @@ class Finder:
     def _find_exact(self, target_path: Path) -> set[Path]:
         result = set()
         pattern = (
-            f"**/{target_path.parts[-1]}/**" if target_path.is_dir() else f"**/{target_path.stem.split('_')[0]}*.json"
+            f"**/{target_path.parts[-1]}/**" if target_path.is_dir() else f"**/{target_path.stem.split('_')[0]}_*.json"
         )
         for text_type in TextType:
             matches = [path for path in (settings.WORK_DIR / text_type.value).glob(pattern)]
