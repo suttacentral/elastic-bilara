@@ -25,6 +25,152 @@ function fetchTranslation() {
             }
             translation.data[uid] = value;
         },
+        splitBasedOnUid(translations, uid, element) {
+            // this.splitter_uid = uid;
+            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
+            if (!isMergeSplitConditionMet(uid)) {
+                displayMessage(
+                    element,
+                    "This type of uid does not support splitting.",
+                );
+                return false;
+            }
+            let newObj = {};
+            // patten: mn1:1.1
+            const regex = /:([0-9]+(\.[0-9]+)?)$/;
+            if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
+                let sectionNumber = uid.split(':')[1];
+                let integerPart = sectionNumber.split('.')[0];
+                let decimalPart = sectionNumber.split('.')[1];
+                this.splitter_uid = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
+                translations.forEach(translation => {
+                    for (let key in translation.data) {
+                        let keySectionNumber = key.split(':')[1];
+                        let keyIntegerPart = keySectionNumber.split('.')[0];
+                        let keyDecimalPart = keySectionNumber.split('.')[1];
+                        if (keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
+                            newObj[key] = translation.data[key];
+                            newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
+                            newObj[newKey] = "";
+                        } else if (keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
+                            newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(keyDecimalPart) + 1);
+                            newObj[newKey] = translation.data[key];
+                        } else {
+                            newObj[key] = translation.data[key];
+                        }
+                    }
+                    translation.data = newObj;
+                    newObj = {};
+                });
+            }
+
+            // patten: dn1:1.1.1
+            const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
+            if (sectionRegex.test(uid)) {
+                let sectionNumber = uid.split(':')[1];
+                let sectionMainPart = getBeforeLastDot(sectionNumber);
+                let sectionLastPart = getLastNumber(sectionNumber);
+                this.splitter_uid = uid.split(':')[0] + ':' + sectionMainPart + '.' + (parseInt(sectionLastPart) + 1);
+                translations.forEach(translation => {
+                    for (let key in translation.data) {
+                        let keySectionNumber = key.split(':')[1];
+                        let keyMainPart = getBeforeLastDot(keySectionNumber);
+                        let keyLastPart = getLastNumber(keySectionNumber);
+                        if (keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
+                            newObj[key] = translation.data[key];
+                            newKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(sectionLastPart) + 1);
+                            newObj[newKey] = "";
+                        } else if (keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
+                            newKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(keyLastPart) + 1);
+                            newObj[newKey] = translation.data[key];
+                        } else {
+                            newObj[key] = translation.data[key];
+                        }
+                    }
+                    translation.data = newObj;
+                    newObj = {};
+                });
+            }
+            return true;
+        },
+        cancelSplit(translations) {
+            this.translations = this.OriginalTranslations;
+        },
+        mergeBasedOnUid(translations, uid, element) {
+            let newObj = {};
+            this.merger_uid = uid;
+            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
+            if (!isMergeSplitConditionMet(uid)) {
+                displayMessage(
+                    element,
+                    "This type of uid does not support merging.",
+                );
+                return false;
+            }
+            const regex = /:([0-9]+(\.[0-9]+)?)$/;
+            if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
+                let sectionNumber = uid.split(':')[1];
+                let integerPart = sectionNumber.split('.')[0];
+                let decimalPart = sectionNumber.split('.')[1];
+                this.mergee_uid = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
+                this.translations.forEach(translation => {
+                    for (let key in translation.data) {
+                        let keySectionNumber = key.split(':')[1];
+                        let keyIntegerPart = keySectionNumber.split('.')[0];
+                        let keyDecimalPart = keySectionNumber.split('.')[1];
+                        if (keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
+                            nextKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
+                            // if (translation.data[nextKey]) {
+                            newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                            // }
+                        } else if (keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
+                            newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(keyDecimalPart) + 1);
+                            if (translation.data[newKey]) {
+                                newObj[key] = translation.data[newKey];
+                            }
+                        } else {
+                            newObj[key] = translation.data[key];
+                        }
+                    }
+                    translation.data = newObj;
+                    translation.splitting = true;
+                    newObj = {};
+                });
+            }
+
+            // patten: dn1:1.1.1
+            const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
+            if (sectionRegex.test(uid)) {
+                let sectionNumber = uid.split(':')[1];
+                let sectionMainPart = getBeforeLastDot(sectionNumber);
+                let sectionLastPart = getLastNumber(sectionNumber);
+                this.mergee_uid = uid.split(':')[0] + ':' + sectionMainPart + '.' + (parseInt(sectionLastPart) + 1);
+                translations.forEach(translation => {
+                    for (let key in translation.data) {
+                        let keySectionNumber = key.split(':')[1];
+                        let keyMainPart = getBeforeLastDot(keySectionNumber);
+                        let keyLastPart = getLastNumber(keySectionNumber);
+                        if (keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
+                            nextKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(sectionLastPart) + 1);
+                            newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                        } else if (keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
+                            newKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(keyLastPart) + 1);
+                            if (translation.data[newKey]) {
+                                newObj[key] = translation.data[newKey];
+                            }
+                        } else {
+                            newObj[key] = translation.data[key];
+                        }
+                    }
+                    translation.data = newObj;
+                    newObj = {};
+                });
+            }
+            return true;
+        },
+        cancelMerge(translations) {
+            this.translations = this.OriginalTranslations;
+        },
         async findOrCreateObject(key, prefix, source = false) {
             let obj = this.translations.find(item => key in item);
             if (!obj) {
@@ -96,6 +242,67 @@ function fetchTranslation() {
                         "failure",
                     );
                 }
+                displayMessage(
+                    element,
+                    "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
+                );
+            } catch (error) {
+                throw new Error(error);
+            }
+        },
+        async updateHandlerForSplit(muid, prefix, element) {
+            try {
+                payload = {
+                    muid: muid,
+                    prefix: prefix,
+                    splitter_uid: this.splitter_uid,
+                }
+                const response = await requestWithTokenRetry(`projects/split/`, {
+                    credentials: "include",
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const { task_id: taskID } = await response.json();
+                if (!taskID) {
+                    displayMessage(
+                        element,
+                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
+                        "failure",
+                    );
+                }
+
+                displayMessage(
+                    element,
+                    "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
+                );
+            } catch (error) {
+                throw new Error(error);
+            }
+        },
+        async updateHandlerForMerge(muid, prefix, element) {
+            try {
+                payload = {
+                    muid: muid,
+                    prefix: prefix,
+                    merger_uid: this.merger_uid,
+                    mergee_uid: this.mergee_uid,
+                }
+                const response = await requestWithTokenRetry(`projects/merge/`, {
+                    credentials: "include",
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const { task_id: taskID } = await response.json();
+                if (!taskID) {
+                    displayMessage(
+                        element,
+                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
+                        "failure",
+                    );
+                }
+
                 displayMessage(
                     element,
                     "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
@@ -250,6 +457,25 @@ function resizeHandler() {
             adjustVisibleTextareas();
         }
     });
+}
+
+function countChar(str, char) {
+    return str.split(char).length - 1;
+}
+
+function getLastNumber(str) {
+    return str.split('.').pop();
+}
+
+function getBeforeLastDot(str) {
+    return str.substring(0, str.lastIndexOf('.') + 1);
+}
+
+function isMergeSplitConditionMet(uid, key) {
+    const regex = /:([0-9]+(\.[0-9]+)?)$/;
+    const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
+
+    return (regex.test(uid) || sectionRegex.test(uid));
 }
 
 async function getHints(uid, muid, sourceMuid, sourceValue) {
