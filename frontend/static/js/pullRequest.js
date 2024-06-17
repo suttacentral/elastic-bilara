@@ -3,7 +3,9 @@ const publishChangesHandler = async (paths, element) => {
     if (Object.keys(paths).includes("paths")) {
         data = paths["paths"];
     }
-    if (!data.length) return;
+    if (!data.length) {
+        return;
+    }
     try {
         const response = await requestWithTokenRetry(`pr/`, {
             credentials: "include",
@@ -13,12 +15,58 @@ const publishChangesHandler = async (paths, element) => {
                 paths: data,
             }),
         });
-        if (!response.ok)
+        if (!response.ok) {
             return displayMessage(
                 element,
                 `${await response.json().then(data => data.detail.error)}.`,
                 "failure",
             );
+        }
+        const { task_id: taskID, detail: detail } = await response.json();
+        if (!taskID) {
+            displayMessage(
+                element,
+                "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
+                "failure",
+            );
+        }
+        if (element !== null && element !== undefined) {
+            displayMessage(element, "Pull Request has been scheduled.");
+        }
+        return detail;
+    } catch (error) {
+        displayMessage(
+            element,
+            "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
+            "failure",
+        );
+    }
+};
+
+const publishChangesHandlerForSplitOrMerge = async (paths, element) => {
+    let data = Array.isArray(paths) ? [...paths] : [];
+    if (Object.keys(paths).includes("paths")) {
+        data = paths["paths"];
+    }
+    if (!data.length) {
+        return;
+    }
+    try {
+        const response = await requestWithTokenRetry(`pr/split-merge/`, {
+            credentials: "include",
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                paths: data,
+            }),
+        });
+        if (!response.ok) {
+            return displayMessage(
+                element,
+                `${await response.json().then(data => data.detail.error)}.`,
+                "failure",
+            );
+        }
         const { task_id: taskID, detail: detail } = await response.json();
         if (!taskID) {
             displayMessage(

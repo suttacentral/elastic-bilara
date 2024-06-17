@@ -197,6 +197,25 @@ async def get_paths_for_project(
     return PathsOut(paths=data)
 
 
+@router.get("/{muid}/split-merge/", response_model=PathsOut)
+async def get_paths_for_project2(
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    muid: str,
+    prefix: str | None = None,
+    _type: Annotated[
+        str, Query(enum=["root_path", "file_path"], min_length=9, max_length=9)
+    ] = "root_path",
+) -> PathsOut:
+    data: list[str] = sort_paths(
+        search.get_file_paths_for_split_merge(muid=muid, _type=_type, prefix=prefix)
+    )
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Project '{muid}' not found"
+        )
+    return PathsOut(paths=data)
+
+
 @router.get("/{muid}/can-edit/", response_model=dict[str, bool])
 async def get_can_edit(user: Annotated[UserBase, Depends(utils.get_current_user)], muid: str) -> dict[str, bool]:
     return {"can_edit": can_edit_translation(int(user.github_id), muid)}

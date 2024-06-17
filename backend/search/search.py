@@ -217,7 +217,32 @@ class Search:
             query["query"]["bool"]["must"].append({"term": {"prefix": prefix}})
 
         paths: set[str] = set()
+        for hit in self._scroll_search(query):
+            path = hit["_source"][_type]
+            if path is not None:
+                paths.add(path)
 
+        return paths
+
+    def get_file_paths_for_split_merge(self, muid: str, prefix: str = None, exact: bool = False, _type: str = "root_path") -> set[str]:
+        query = {
+            "query": {
+                "bool": {
+                    "must": [],
+                    "should": [
+                        {"term": {"muid": muid}}
+                    ]
+                }
+            },
+            "_source": [_type],
+        }
+        exact = True
+        if prefix is not None and not exact:
+            query["query"]["bool"]["must"].append({"prefix": {"prefix": prefix + '_'}})
+        elif prefix is not None and exact:
+            query["query"]["bool"]["must"].append({"term": {"prefix": prefix}})
+
+        paths: set[str] = set()
         for hit in self._scroll_search(query):
             path = hit["_source"][_type]
             if path is not None:
