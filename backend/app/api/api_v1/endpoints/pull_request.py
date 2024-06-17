@@ -20,3 +20,12 @@ async def create_pull_request(user: Annotated[UserBase, Depends(utils.get_curren
     user = get_user(int(user.github_id))
     result = pr.delay(user.model_dump(), paths.model_dump()["paths"])
     return {"detail": "Pull request creation has been scheduled", "task_id": result.id}
+
+
+@router.post("/split-merge", status_code=status.HTTP_201_CREATED)
+async def create_pull_request_for_split_merge(
+    user: Annotated[UserBase, Depends(utils.get_current_user)], paths: PullRequestData
+):
+    user = get_user(int(user.github_id))
+    result = pr.delay(user.model_dump(), paths.model_dump()["paths"])
+    return {"detail": "Pull request creation has been scheduled", "task_id": result.id}
