@@ -22,7 +22,7 @@ async def create_pull_request(user: Annotated[UserBase, Depends(utils.get_curren
     return {"detail": "Pull request creation has been scheduled", "task_id": result.id}
 
 
-@router.post("/split-merge", status_code=status.HTTP_201_CREATED)
+@router.post("/split-merge/", status_code=status.HTTP_201_CREATED)
 async def create_pull_request_for_split_merge(
     user: Annotated[UserBase, Depends(utils.get_current_user)], paths: PullRequestData
 ):
