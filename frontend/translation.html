@@ -275,7 +275,7 @@
                         <div x-data="{params: new URLSearchParams(window.location.search)}">
                             <button
                                 class="btn btn--project-publish"
-                                x-show="translation.canEdit && isAdmin"
+                                x-show="translation.canEdit && isAdmin && isRoot"
                                 @click="await publishChangesHandlerForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                 Publish Changes For Split Or Merge
                             </button>
