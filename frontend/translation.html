@@ -204,8 +204,8 @@
                                         class="project-header__nav-button btn btn--split"
                                         x-show="translation.canEdit && isAdmin && splitting && isRoot && uid === splittingUid"
                                         @click="
-                                            await updateHandlerForSplit(translation.muid, params.get('prefix'), document.querySelector('p.project-header__message'));
                                             splitting = false
+                                            await updateHandlerForSplit(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('p.project-header__message'));
                                         "
                                     >
                                         Check Split, Then Confirm
@@ -216,8 +216,8 @@
                                         class="project-header__nav-button btn btn--merge"
                                         x-show="translation.canEdit && isAdmin && merging && isRoot && uid === mergingUid"
                                         @click="
-                                            await updateHandlerForMerge(translation.muid, params.get('prefix'), document.querySelector('p.project-header__message'));
                                             merging = false
+                                            await updateHandlerForMerge(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('p.project-header__message'));
                                         "
                                     >
                                         Check Merge, Then Confirm
