@@ -3,7 +3,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.directories.utils import get_matches
-from app.services.projects.utils import write_json_data
+from app.services.projects.utils import write_json_data, write_json_data_for_split_or_merge
 from app.services.users.utils import get_user
 from search.search import Search
 from search.utils import get_json_data
@@ -22,7 +22,7 @@ class UIDExpander:
         data = self.expand_dry()
         for path in data:
             data_after = data[path]["data_after"]
-            write_json_data(Path(path), data_after)
+            write_json_data_for_split_or_merge(Path(path), data_after)
         self.related_paths.remove(settings.WORK_DIR / self.path)
         main_task_id = self._expand_commit(
             [str(settings.WORK_DIR / self.path)],
@@ -58,9 +58,21 @@ class UIDExpander:
                 else:
                     expanded_data[uid] = data[uid]
 
+            split_separator_config = {
+                "root": "",
+                "translation": "",
+                "comment": "",
+                "variant": "",
+                "html": "{}",
+                "reference": ""
+            }
+            split_separator = split_separator_config.get(
+                next((key for key in split_separator_config if key in path.stem), None), ""
+            )
+
             for i in range(start_index, end_index + 2):
                 if i == start_index:
-                    expanded_data[uids[i]] = "{}" if '_html' in path.stem else ""
+                    expanded_data[uids[i]] = split_separator
                 elif i == end_index + 1:
                     expanded_data[new_uid] = data[uids[end_index]]
                 else:
