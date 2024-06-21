@@ -43,7 +43,7 @@ class UIDReducer:
         reduced_data = {match: None for match in self.related_paths}
         for uid in self.uids:
             for path in data:
-                reduced_data[path] = self._reduce(uid, data[path])
+                reduced_data[path] = self._reduce(uid, data[path], path)
                 data[path] = reduced_data[path]
         return reduced_data
 
@@ -51,7 +51,7 @@ class UIDReducer:
         result = commit.delay(get_user(int(self.user.github_id)).model_dump(), changed_paths, message)
         return result.id
 
-    def _reduce(self, segment_id: str, data: dict[str, str]) -> dict[str, str]:
+    def _reduce(self, segment_id: str, data: dict[str, str], path: str) -> dict[str, str]:
         data_copy = data.copy()
         if self.exact:
             data_copy.pop(segment_id, None)
@@ -88,8 +88,20 @@ class UIDReducer:
                 data_copy.pop(segment_id, None)
                 return data_copy
 
+        merge_separator_config = {
+            "root": "",
+            "translation": "",
+            "comment": "| ",
+            "variant": "| ",
+            "html": "manual",
+            "reference": ", ",
+        }
+        merge_separator = merge_separator_config.get(
+            next((key for key in merge_separator_config if key in path.stem), None), ""
+        )
+
         for i in range(start_index, end_index):
-            data_copy[uids[i]] = data_copy[uids[i + 1]]
+            data_copy[uids[i]] = data_copy[uids[i + 1]] + merge_separator
         del data_copy[uids[end_index]]
 
         return data_copy

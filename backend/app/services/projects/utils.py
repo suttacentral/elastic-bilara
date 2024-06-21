@@ -70,6 +70,15 @@ def write_json_data(path: Path, data: dict[str, str]) -> tuple[bool, Exception |
     return True, None
 
 
+def write_json_data_for_split_or_merge(path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
+    try:
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except (OSError, TypeError) as e:
+        return False, e
+    return True, None
+
+
 def sort_data(data: dict[str, str], path: Path):
     if TextType.ROOT.value in path.parts:
         return data

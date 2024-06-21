@@ -151,6 +151,7 @@
     background-color: var(--color-secondary-lighter);
     padding: var(--space-sm) var(--space-md);
     margin-left: var(--space-xs);
+    margin-right: var(--space-xs);
 }
 
 .processing {

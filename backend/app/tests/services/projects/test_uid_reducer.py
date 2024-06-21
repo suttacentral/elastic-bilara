@@ -274,7 +274,7 @@ class TestUIDReducer:
     def test__reduce(self, uid_reducer, segment_id, data, exact, expected_result):
         path = Path("translation/en/test_user/sutta/test/test1/test1.1_translation-en-test_user.json")
         reducer_instance, _, _ = uid_reducer(path, [segment_id], exact)
-        result = reducer_instance._reduce(segment_id, data)
+        result = reducer_instance._reduce(segment_id, data, path)
         assert result == expected_result
 
     @pytest.mark.parametrize(
