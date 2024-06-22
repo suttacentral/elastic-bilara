@@ -39,20 +39,22 @@ function fetchTranslation() {
             // patten: mn1:1.1
             const regex = /:([0-9]+(\.[0-9]+)?)$/;
             if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
+                let sectionUid = uid.split(':')[0];
                 let sectionNumber = uid.split(':')[1];
                 let integerPart = sectionNumber.split('.')[0];
                 let decimalPart = sectionNumber.split('.')[1];
                 this.splitter_uid = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
                 translations.forEach(translation => {
                     for (let key in translation.data) {
+                        let keySectionUid = key.split(':')[0];
                         let keySectionNumber = key.split(':')[1];
                         let keyIntegerPart = keySectionNumber.split('.')[0];
                         let keyDecimalPart = keySectionNumber.split('.')[1];
-                        if (keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
+                        if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
                             newObj[key] = translation.data[key];
                             newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
                             newObj[newKey] = "";
-                        } else if (keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
+                        } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
                             newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(keyDecimalPart) + 1);
                             newObj[newKey] = translation.data[key];
                         } else {
@@ -67,20 +69,22 @@ function fetchTranslation() {
             // patten: dn1:1.1.1
             const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
             if (sectionRegex.test(uid)) {
+                let sectionUid = uid.split(':')[0];
                 let sectionNumber = uid.split(':')[1];
                 let sectionMainPart = getBeforeLastDot(sectionNumber);
                 let sectionLastPart = getLastNumber(sectionNumber);
                 this.splitter_uid = uid.split(':')[0] + ':' + sectionMainPart + '.' + (parseInt(sectionLastPart) + 1);
                 translations.forEach(translation => {
                     for (let key in translation.data) {
+                        let keySectionUid = key.split(':')[0];
                         let keySectionNumber = key.split(':')[1];
                         let keyMainPart = getBeforeLastDot(keySectionNumber);
                         let keyLastPart = getLastNumber(keySectionNumber);
-                        if (keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
+                        if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
                             newObj[key] = translation.data[key];
                             newKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(sectionLastPart) + 1);
                             newObj[newKey] = "";
-                        } else if (keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
+                        } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
                             newKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(keyLastPart) + 1);
                             newObj[newKey] = translation.data[key];
                         } else {
@@ -109,21 +113,23 @@ function fetchTranslation() {
             }
             const regex = /:([0-9]+(\.[0-9]+)?)$/;
             if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
+                let sectionUid = uid.split(':')[0];
                 let sectionNumber = uid.split(':')[1];
                 let integerPart = sectionNumber.split('.')[0];
                 let decimalPart = sectionNumber.split('.')[1];
                 this.mergee_uid = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
                 this.translations.forEach(translation => {
                     for (let key in translation.data) {
+                        let keySectionUid = key.split(':')[0];
                         let keySectionNumber = key.split(':')[1];
                         let keyIntegerPart = keySectionNumber.split('.')[0];
                         let keyDecimalPart = keySectionNumber.split('.')[1];
-                        if (keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
+                        if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
                             nextKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
                             // if (translation.data[nextKey]) {
                             newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
                             // }
-                        } else if (keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
+                        } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
                             newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(keyDecimalPart) + 1);
                             if (translation.data[newKey]) {
                                 newObj[key] = translation.data[newKey];
@@ -141,19 +147,21 @@ function fetchTranslation() {
             // patten: dn1:1.1.1
             const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
             if (sectionRegex.test(uid)) {
+                let sectionUid = uid.split(':')[0];
                 let sectionNumber = uid.split(':')[1];
                 let sectionMainPart = getBeforeLastDot(sectionNumber);
                 let sectionLastPart = getLastNumber(sectionNumber);
                 this.mergee_uid = uid.split(':')[0] + ':' + sectionMainPart + '.' + (parseInt(sectionLastPart) + 1);
                 translations.forEach(translation => {
                     for (let key in translation.data) {
+                        let keySectionUid = key.split(':')[0];
                         let keySectionNumber = key.split(':')[1];
                         let keyMainPart = getBeforeLastDot(keySectionNumber);
                         let keyLastPart = getLastNumber(keySectionNumber);
-                        if (keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
+                        if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
                             nextKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(sectionLastPart) + 1);
                             newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
-                        } else if (keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
+                        } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
                             newKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(keyLastPart) + 1);
                             if (translation.data[newKey]) {
                                 newObj[key] = translation.data[newKey];
