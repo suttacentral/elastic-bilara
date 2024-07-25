@@ -126,9 +126,11 @@ function fetchTranslation() {
                         let keyDecimalPart = keySectionNumber.split('.')[1];
                         if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
                             nextKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
-                            // if (translation.data[nextKey]) {
-                            newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
-                            // }
+                            if (translation.data[nextKey]) {
+                                newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                            } else {
+                                newObj[key] = translation.data[key];
+                            }
                         } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
                             newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(keyDecimalPart) + 1);
                             if (translation.data[newKey]) {
@@ -178,6 +180,13 @@ function fetchTranslation() {
         },
         cancelMerge(translations) {
             this.translations = this.OriginalTranslations;
+        },
+        redirectToHtml() {
+            const params = new URLSearchParams(window.location.search);
+            const prefix = params.get("prefix");
+            const muid = 'html-pli-ms';
+            const source = params.get("source");
+            return (window.location.href = `/translation?prefix=${prefix}&muid=${muid}&source=${source}`);
         },
         async findOrCreateObject(key, prefix, source = false) {
             let obj = this.translations.find(item => key in item);
@@ -284,6 +293,8 @@ function fetchTranslation() {
                     element,
                     "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
                 );
+
+                this.redirectToHtml();
             } catch (error) {
                 throw new Error(error);
             }
@@ -315,6 +326,8 @@ function fetchTranslation() {
                     element,
                     "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
                 );
+
+                this.redirectToHtml();
             } catch (error) {
                 throw new Error(error);
             }

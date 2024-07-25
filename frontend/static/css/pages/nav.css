@@ -45,7 +45,8 @@
 }
 
 .navigation-list--open {
-    color: var(--color-accent-dark)
+    color: var(--color-accent-dark);
+    font-weight: bold;
 }
 
 .navigation-list--open:hover {
