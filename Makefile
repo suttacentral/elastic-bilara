@@ -1,4 +1,4 @@
-COMPOSE := docker-compose -f docker-compose.yml
+COMPOSE := docker compose -f docker-compose.yml
 
 copy_cert:
 	@docker cp kibana:/usr/share/kibana/config/certs/ca/ca.crt ./backend/ca.crt
@@ -28,3 +28,6 @@ down:
 
 test:
 	@$(COMPOSE) exec bilara-backend pytest /app/app/tests -vv
+
+stop:
+	@$(COMPOSE) stop
