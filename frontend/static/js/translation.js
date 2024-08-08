@@ -113,30 +113,43 @@ function fetchTranslation() {
             }
             const regex = /:([0-9]+(\.[0-9]+)?)$/;
             if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
-                let sectionUid = uid.split(':')[0];
-                let sectionNumber = uid.split(':')[1];
-                let integerPart = sectionNumber.split('.')[0];
-                let decimalPart = sectionNumber.split('.')[1];
-                this.mergee_uid = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
+                const [sectionUid, sectionNumber] = uid.split(':');
+                const [integerPart, decimalPart] = sectionNumber.split('.');
+                this.mergee_uid = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
+
+                let needToMergeNextSection = false;
+                let nextSectionFirstKey = '';
                 this.translations.forEach(translation => {
                     for (let key in translation.data) {
-                        let keySectionUid = key.split(':')[0];
-                        let keySectionNumber = key.split(':')[1];
-                        let keyIntegerPart = keySectionNumber.split('.')[0];
-                        let keyDecimalPart = keySectionNumber.split('.')[1];
-                        if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
-                            nextKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(decimalPart) + 1);
+                        const [keySectionUid, keySectionNumber] = key.split(':');
+                        const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
+                        if (`${keySectionUid}:${keyIntegerPart}.${keyDecimalPart}` === `${sectionUid}:${integerPart}.${decimalPart}`) {
+                            let nextKey = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
                             if (translation.data[nextKey]) {
-                                newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                                newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
                             } else {
-                                newObj[key] = translation.data[key];
+                                let nextSectionIntegerPart = `${parseInt(integerPart) + 1}`;
+                                possibleNextKey1 = `${sectionUid}:${nextSectionIntegerPart}.0`;
+                                possibleNextKey2 = `${sectionUid}:${nextSectionIntegerPart}.1`;
+                                nextKey = translation.data[possibleNextKey1] ? possibleNextKey1 : possibleNextKey2;
+                                if (translation.data[nextKey]) {
+                                    this.mergee_uid = nextKey;
+                                    nextSectionFirstKey = nextKey;
+                                    needToMergeNextSection = true;
+                                    newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
+                                } else {
+                                    newObj[key] = translation.data[key];
+                                }
                             }
                         } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
-                            newKey = uid.split(':')[0] + ':' + integerPart + '.' + (parseInt(keyDecimalPart) + 1);
-                            if (translation.data[newKey]) {
-                                newObj[key] = translation.data[newKey];
+                            let nextKey = `${uid.split(':')[0]}:${integerPart}.${parseInt(keyDecimalPart) + 1}`;
+                            if (translation.data[nextKey]) {
+                                newObj[key] = translation.data[nextKey];
                             }
-                        } else {
+                        } else if (needToMergeNextSection && key.length === nextSectionFirstKey.length && key.split(':')[1].split('.')[0] === nextSectionFirstKey.split(':')[1].split('.')[0]) {
+                            this.mergeSectionByNextKey(key, translation, newObj);
+                        }
+                        else {
                             newObj[key] = translation.data[key];
                         }
                     }
@@ -149,25 +162,44 @@ function fetchTranslation() {
             // patten: dn1:1.1.1
             const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
             if (sectionRegex.test(uid)) {
-                let sectionUid = uid.split(':')[0];
-                let sectionNumber = uid.split(':')[1];
-                let sectionMainPart = getBeforeLastDot(sectionNumber);
-                let sectionLastPart = getLastNumber(sectionNumber);
-                this.mergee_uid = uid.split(':')[0] + ':' + sectionMainPart + '.' + (parseInt(sectionLastPart) + 1);
+                const [sectionUid, sectionNumber] = uid.split(':');
+                const sectionMainPart = getBeforeLastDot(sectionNumber);
+                const sectionLastPart = getLastNumber(sectionNumber);
+                this.mergee_uid = `${sectionUid}:${sectionMainPart}.${parseInt(sectionLastPart) + 1}`;
+                let needToMergeNextSection = false;
+                let nextSectionFirstKey = '';
                 translations.forEach(translation => {
                     for (let key in translation.data) {
-                        let keySectionUid = key.split(':')[0];
-                        let keySectionNumber = key.split(':')[1];
-                        let keyMainPart = getBeforeLastDot(keySectionNumber);
-                        let keyLastPart = getLastNumber(keySectionNumber);
-                        if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
-                            nextKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(sectionLastPart) + 1);
-                            newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                        const [keySectionUid, keySectionNumber] = key.split(':');
+                        const keyMainPart = getBeforeLastDot(keySectionNumber);
+                        const keyLastPart = getLastNumber(keySectionNumber);
+
+                        const [keyChapter, keySection, keySubsection] = keySectionNumber.split('.');
+
+                        if (`${keySectionUid}:${keyMainPart}.${keyLastPart}` === `${sectionUid}:${sectionMainPart}.${sectionLastPart}`) {
+                            let nextKey = `${uid.split(':')[0]}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
+                            if (translation.data[nextKey]) {
+                                newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                            } else {
+                                let SectionNumberParts = sectionNumber.split('.');
+                                nextKey = keySectionUid + ':' + SectionNumberParts[0] + '.' + (parseInt(SectionNumberParts[1]) + 1) + '.1';
+                                if (translation.data[nextKey]) {
+                                    this.mergee_uid = nextKey;
+                                    nextSectionFirstKey = nextKey;
+                                    needToMergeNextSection = true;
+                                    newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                                } else {
+                                    newObj[key] = translation.data[key];
+                                }
+                            }
                         } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
-                            newKey = uid.split(':')[0] + ':' + sectionMainPart + (parseInt(keyLastPart) + 1);
+                            let newKey = `${uid.split(':')[0]}:${sectionMainPart}${parseInt(keyLastPart) + 1}`;
                             if (translation.data[newKey]) {
                                 newObj[key] = translation.data[newKey];
                             }
+                        }  else if (needToMergeNextSection && key.length === nextSectionFirstKey.length && key.split(':')[1].split('.')[0] === nextSectionFirstKey.split(':')[1].split('.')[0]
+                            && key.split(':')[1].split('.')[1] === nextSectionFirstKey.split(':')[1].split('.')[1]) {
+                            this.mergeSectionByNextSubsectionKey(key, translation, newObj);
                         } else {
                             newObj[key] = translation.data[key];
                         }
@@ -177,6 +209,25 @@ function fetchTranslation() {
                 });
             }
             return true;
+        },
+        mergeSectionByNextKey(key, translation, newObj) {
+            let nextSectionKeySectionUid = key.split(':')[0];
+            let nextSectionKeySectionNumber = key.split(':')[1];
+            let nextSectionKeyIntegerPart = nextSectionKeySectionNumber.split('.')[0];
+            let nextSectionKeyDecimalPart = nextSectionKeySectionNumber.split('.')[1];
+            nextKey = nextSectionKeySectionUid + ':' + nextSectionKeyIntegerPart + '.' + (parseInt(nextSectionKeyDecimalPart) + 1);
+            if (translation.data[nextKey]) {
+                newObj[key] = translation.data[nextKey];
+            }
+        },
+        mergeSectionByNextSubsectionKey(key, translation, newObj) {
+            let nextSectionKeySectionUid = key.split(':')[0];
+            let nextSectionKeySectionNumber = key.split(':')[1];
+            let SectionNumberParts = nextSectionKeySectionNumber.split('.');
+            nextKey = nextSectionKeySectionUid + ':' + SectionNumberParts[0] + '.' + SectionNumberParts[1] + '.' + (parseInt(SectionNumberParts[2]) + 1);
+            if (translation.data[nextKey]) {
+                newObj[key] = translation.data[nextKey];
+            }
         },
         cancelMerge(translations) {
             this.translations = this.OriginalTranslations;
