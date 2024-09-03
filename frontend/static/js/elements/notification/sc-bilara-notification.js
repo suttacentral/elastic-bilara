@@ -7,6 +7,7 @@ import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/compone
 import "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/tooltip/tooltip.js";
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button-group/button-group.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/progress-bar/progress-bar.js';
 
 import '../addons/sc-bilara-badge.js';
 import "../../auth.js";
@@ -117,6 +118,7 @@ class SCBilaraNotification extends LitElement {
   constructor() {
     super();
     this.notification = [];
+    this.loadingData = true;
   }
 
   render() {
@@ -124,6 +126,8 @@ class SCBilaraNotification extends LitElement {
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
       <div class="notification">
         <h2>Notifications</h2>
+        ${this.loadingData ? html`<sl-progress-bar indeterminate></sl-progress-bar>` : ''}
+
         <div class="notification-content">
           ${this.notification.length > 0 && this.notification?.map(notify => html`
             <div class="notify-item">
@@ -171,6 +175,7 @@ class SCBilaraNotification extends LitElement {
   }
 
   async fetchNotification() {
+    this.loadingData = true;
     try {
       const response = await fetch(`api/v1/notifications/git`);
       const data = await response.json();
@@ -182,6 +187,7 @@ class SCBilaraNotification extends LitElement {
     } catch (error) {
         throw new Error(error);
     }
+    this.loadingData = false;
   }
 }
 
