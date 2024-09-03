@@ -8,6 +8,7 @@ from app.api.api_v1.endpoints import (
     search,
     tasks,
     users,
+    notifications
 )
 from app.services.users import permissions
 from fastapi import APIRouter, Depends
@@ -28,3 +29,4 @@ api_router.include_router(
 )
 api_router.include_router(users.router_exposed, tags=["users"])
 api_router.include_router(remarks.router, tags=["remarks"])
+api_router.include_router(notifications.router, tags=["notifications"])
