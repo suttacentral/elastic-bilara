@@ -129,7 +129,7 @@ class SCBilaraNotification extends LitElement {
         ${this.loadingData ? html`<sl-progress-bar indeterminate></sl-progress-bar>` : ''}
 
         <div class="notification-content">
-          ${this.notification.length > 0 && this.notification?.map(notify => html`
+          ${this.notification.length > 0 ? this.notification?.map(notify => html`
             <div class="notify-item">
                 <div>
                   <p class="notify-item-detail"><strong>Author:</strong> ${notify.author}</p>
@@ -151,7 +151,7 @@ class SCBilaraNotification extends LitElement {
               </div>
               `)}
             </ul>
-          `)}
+          `) : ''}
       </div>
     </div>
     `;
