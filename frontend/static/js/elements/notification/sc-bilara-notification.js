@@ -7,7 +7,7 @@ import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/compone
 import "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/tooltip/tooltip.js";
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button-group/button-group.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/progress-bar/progress-bar.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/spinner/spinner.js';
 
 import '../addons/sc-bilara-badge.js';
 import "../../auth.js";
@@ -109,6 +109,10 @@ class SCBilaraNotification extends LitElement {
     .add {
       background-color: #dafbe1;
     }
+
+    .spinner {
+      text-align: center;
+    }
   `;
 
   static properties = {
@@ -126,7 +130,9 @@ class SCBilaraNotification extends LitElement {
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
       <div class="notification">
         <h2>Notifications</h2>
-        ${this.loadingData ? html`<sl-progress-bar indeterminate></sl-progress-bar>` : ''}
+        <div class="spinner">
+          ${this.loadingData ? html`<sl-spinner style="font-size: 50px; --track-width: 6px;"></sl-spinner>` : ''}
+        </div>
 
         <div class="notification-content">
           ${this.notification.length > 0 ? this.notification?.map(notify => html`
