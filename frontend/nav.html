@@ -18,6 +18,7 @@
     <script src="./static/js/nav.js"></script>
     <script src="./static/js/pullRequest.js"></script>
     <link rel="stylesheet" href="./static/css/style.css"/>
+    <script src="./static/js/elements/notification/sc-bilara-notification-icon.js" type="module"></script>
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
@@ -42,6 +43,9 @@
                     <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
                 </div>
             </li>
+            <div class="image-container">
+                <sc-bilara-notification-icon></sc-bilara-notification-icon>
+            </div>
             <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
                 <a class="main-nav__item-link btn btn--admin" href="/admin">Admin Area</a>
             </li>
