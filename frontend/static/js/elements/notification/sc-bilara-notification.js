@@ -8,6 +8,7 @@ import "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/compone
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button-group/button-group.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/spinner/spinner.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/skeleton/skeleton.js';
 
 import '../addons/sc-bilara-badge.js';
 import "../../auth.js";
@@ -113,6 +114,37 @@ class SCBilaraNotification extends LitElement {
     .spinner {
       text-align: center;
     }
+
+    .skeleton-overview header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+
+      .skeleton-overview header sl-skeleton:last-child {
+        flex: 0 0 auto;
+        width: 30%;
+      }
+
+      .skeleton-overview sl-skeleton {
+        margin-bottom: 1rem;
+      }
+
+      .skeleton-overview sl-skeleton:nth-child(1) {
+        float: left;
+        width: 3rem;
+        height: 3rem;
+        margin-right: 1rem;
+        vertical-align: middle;
+      }
+
+      .skeleton-overview sl-skeleton:nth-child(3) {
+        width: 95%;
+      }
+
+      .skeleton-overview sl-skeleton:nth-child(4) {
+        width: 80%;
+      }
   `;
 
   static properties = {
@@ -135,6 +167,7 @@ class SCBilaraNotification extends LitElement {
         </div>
 
         <div class="notification-content">
+          ${this.loadingData ? html`${this.skeletonTemplate()}` : ''}
           ${this.notification.length > 0 ? this.notification?.map(notify => html`
             <div class="notify-item">
                 <div>
@@ -160,6 +193,24 @@ class SCBilaraNotification extends LitElement {
           `) : ''}
       </div>
     </div>
+    `;
+  }
+
+  skeletonTemplate() {
+    let skeletons = [1, 2, 3, 4]
+    return html`
+      ${skeletons.map(() => html`
+        <div class="skeleton-overview">
+          <header>
+            <sl-skeleton></sl-skeleton>
+            <sl-skeleton></sl-skeleton>
+          </header>
+
+          <sl-skeleton></sl-skeleton>
+          <sl-skeleton></sl-skeleton>
+          <sl-skeleton></sl-skeleton>
+        </div>
+      `)}
     `;
   }
 
