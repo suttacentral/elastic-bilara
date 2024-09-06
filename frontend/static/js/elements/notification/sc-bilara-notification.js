@@ -1,4 +1,5 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+
 import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit-html@3.2.0/directives/unsafe-html.js';
 
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button/button.js';
@@ -145,6 +146,10 @@ class SCBilaraNotification extends LitElement {
       .skeleton-overview sl-skeleton:nth-child(4) {
         width: 80%;
       }
+
+      sl-alert {
+        margin-bottom: 3px;
+      }
   `;
 
   static properties = {
@@ -160,8 +165,12 @@ class SCBilaraNotification extends LitElement {
   render() {
     return html`
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
       <div class="notification">
-        <h2>Notifications</h2>
+        <h2>
+          <i class="bi-bell"></i>Notifications
+          <sl-badge variant="danger" pill>${this.notification.length}</sl-badge>
+        </h2>
         <div class="spinner">
           ${this.loadingData ? html`<sl-spinner style="font-size: 50px; --track-width: 6px;"></sl-spinner>` : ''}
         </div>
@@ -176,8 +185,8 @@ class SCBilaraNotification extends LitElement {
                 </div>
 
                 <sl-button-group label="Alignment">
-                  <sl-button variant="primary" @click="${() => this.#setNotificationAsDone(notify.commit)}">Done</sl-button>
-                  <sl-button href="${'https://github.com/ihongda/bilara-data/commit/'+notify.commit}" target="_blank" variant="primary">View in Github</sl-button>
+                  <sl-button variant="primary" @click="${() => this.#setNotificationAsDone(notify.commit)}">Done <i class="bi-check-circle-fill"></i></sl-button>
+                  <sl-button href="${'https://github.com/ihongda/bilara-data/commit/'+notify.commit}" target="_blank" variant="primary">View in Github <i class="bi-github"></i></sl-button>
                 </sl-button-group>
             </div>
             <ul>${notify.effected_files.map(file => html`
