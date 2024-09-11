@@ -14,8 +14,6 @@ class SCBilaraNotificationIcon extends LitElement {
       right: -6px;
       width: 24px;
       height: 24px;
-      background-color: #c21f30;
-      color: #fff;
       border-radius: 50%;
       display: flex;
       align-items: center;

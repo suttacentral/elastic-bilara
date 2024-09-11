@@ -68,7 +68,9 @@ function formatDate(dateString) {
 function displayMessage(element, message, type) {
     element.textContent = message;
     element.classList.add("project-header__message--show");
-    if (type === "failure") element.classList.add("project-header__message--failure");
+    if (type === "failure") {
+      element.classList.add("project-header__message--failure");
+    }
     if (!isInViewPort(element)) {
         element.classList.add("project-header__message--fixed");
     }
@@ -79,6 +81,41 @@ function displayMessage(element, message, type) {
         element.classList.remove("project-header__message--failure");
         element.classList.remove("project-header__message--fixed");
     }, 15000);
+}
+
+function displayBadge(badgeId, status) {
+    const badge = document.getElementById(badgeId);
+    badge.status = status;
+}
+
+function hideBadge(badgeId) {
+    const badge = document.getElementById(badgeId);
+    badge.status = "";
+}
+
+function addLoadingAttribute(elementId) {
+    element = document.getElementById(elementId);
+    element.setAttribute("loading", "");
+}
+
+function removeLoadingAttribute(elementId) {
+    element = document.getElementById(elementId);
+    element.removeAttribute("loading");
+}
+
+function insertSpinner(badgeId) {
+    const badge = document.getElementById(badgeId);
+    const slSpinner = document.createElement('sl-spinner');
+    slSpinner.id = 'spinner';
+    slSpinner.style="font-size: 2rem;"
+    badge.parentElement.appendChild(slSpinner);
+}
+
+function removeSpinner() {
+    const spinner = document.getElementById('spinner');
+    if (spinner) {
+      spinner.remove();
+    }
 }
 
 function isInViewPort(element) {
@@ -121,3 +158,10 @@ function setMaxHeight(textareas) {
     const maxHeight = Math.max(...textareas.map(textarea => textarea.scrollHeight));
     textareas.forEach(textarea => (textarea.style.height = `${maxHeight}px`));
 }
+
+const BadgeStatus = {
+    COMMITTED: 'committed',
+    PENDING: 'pending',
+    ERROR: 'error',
+    MODIFIED: 'modified'
+};

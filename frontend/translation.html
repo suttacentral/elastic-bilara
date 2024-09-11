@@ -15,6 +15,12 @@
     <script src="./static/js/search.js"></script>
     <script src="./static/js/pullRequest.js"></script>
     <link rel="stylesheet" href="./static/css/style.css"/>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button/button.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/spinner/spinner.js"></script>
+    <script src="./static/js/elements/translation/sc-bilara-translation-edit-status.js" type="module"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
@@ -223,15 +229,20 @@
                                         Check Merge, Then Confirm
                                     </button>
                                 </div>
-                                <textarea class="project-container__content-body__textarea"
-                                    x-bind:value="getValue(translation, uid)"
-                                    x-bind:readonly="!translation.canEdit"
-                                    x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
-                                    x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
-                                    x-on:click="hintClicked = false"
-                                    x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
-                                    x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)">
-                                </textarea>
+                                <div class="project-container__content-body__textarea-container">
+                                    <textarea class="project-container__content-body__textarea"
+                                        x-bind:value="getValue(translation, uid)"
+                                        x-bind:readonly="!translation.canEdit"
+                                        x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
+                                        x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
+                                        x-on:click="hintClicked = false"
+                                        x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
+                                        x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)">
+                                    </textarea>
+                                    <sc-bilara-translation-edit-status
+                                        x-bind:id="isSource ? `root-badge-${uid}` : `translation-badge-${uid}`"
+                                    ></sc-bilara-translation-edit-status>
+                                </div>
                                 <div class="project-container__content-body__hints" x-cloak
                                     x-show="hints.length > 0 && showHints">
                                     <ul class="project-container__content-body__hints-list">
@@ -258,27 +269,24 @@
                         </template>
                     </div>
                     <div class="project-container__content-footer">
-                        <button
-                            class="btn btn--commit"
+                        <sl-button variant="primary" size="large" x-bind:id="isRoot ? `btn-root-commit` : `btn-translation-commit`"
                             x-show="translation.canEdit && !merging && !splitting"
-                            @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'))">
+                            @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'), $event.target.id)">
                             Commit Changes
-                        </button>
+                        </sl-button>
                         <div x-data="{params: new URLSearchParams(window.location.search)}">
-                            <button
-                                class="btn btn--project-publish"
+                            <sl-button variant="success"  size="large" id="btn-publish-changes"
                                 x-show="translation.canEdit && translation.muid === params.get('muid')  && !merging && !splitting"
                                 @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                 Publish Changes
-                            </button>
+                            </sl-button>
                         </div>
                         <div x-data="{params: new URLSearchParams(window.location.search)}">
-                            <button
-                                class="btn btn--project-publish"
+                            <sl-button variant="success"  size="large"  id="btn-publish-changes-split-merge"
                                 x-show="translation.canEdit && isAdmin && isRoot && !merging && !splitting"
                                 @click="await publishChangesHandlerForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                 Publish Changes For Split Or Merge
-                            </button>
+                            </sl-button>
                         </div>
                     </div>
                 </div>
