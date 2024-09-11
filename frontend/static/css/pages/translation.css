@@ -276,3 +276,13 @@
         }
     }
 }
+
+.project-container__content-body__textarea-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.project-container__content-body__textarea-container textarea {
+    margin-right: 2px;
+}

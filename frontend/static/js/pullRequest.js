@@ -7,6 +7,7 @@ const publishChangesHandler = async (paths, element) => {
         return;
     }
     try {
+        addLoadingAttribute('btn-publish-changes');
         const response = await requestWithTokenRetry(`pr/`, {
             credentials: "include",
             method: "POST",
@@ -40,6 +41,8 @@ const publishChangesHandler = async (paths, element) => {
             "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
             "failure",
         );
+    } finally {
+        removeLoadingAttribute('btn-publish-changes');
     }
 };
 
@@ -52,6 +55,7 @@ const publishChangesHandlerForSplitOrMerge = async (paths, element) => {
         return;
     }
     try {
+        addLoadingAttribute('btn-publish-changes-split-merge');
         const response = await requestWithTokenRetry(`pr/split-merge/`, {
             credentials: "include",
             method: "POST",
@@ -85,6 +89,8 @@ const publishChangesHandlerForSplitOrMerge = async (paths, element) => {
             "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
             "failure",
         );
+    } finally {
+        removeLoadingAttribute('btn-publish-changes-split-merge');
     }
 };
 

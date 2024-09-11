@@ -294,7 +294,15 @@ function fetchTranslation() {
                 }
             }
         },
-        async updateHandler(muid, data, element) {
+        async updateHandler(muid, data, element, btnId='btn-translation-commit') {
+            badgeId = `translation-badge-${Object.keys(data)[0]}`;
+            if (Object.keys(data).length === 1) {
+                hideBadge(badgeId);
+                insertSpinner(badgeId);
+            } else {
+                addLoadingAttribute(btnId);
+            }
+            addLoadingAttribute(btnId);
             try {
                 const response = await requestWithTokenRetry(`projects/${muid}/${this.prefix}/`, {
                     credentials: "include",
@@ -310,12 +318,21 @@ function fetchTranslation() {
                         "failure",
                     );
                 }
-                displayMessage(
-                    element,
-                    "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
-                );
+                if (Object.keys(data).length > 1) {
+                    displayMessage(
+                        element,
+                        "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
+                    );
+                }
+                if (Object.keys(data).length === 1) {
+                    removeSpinner();
+                    displayBadge(badgeId, BadgeStatus.COMMITTED);
+                }
             } catch (error) {
+                displayBadge(badgeId, BadgeStatus.ERROR);
                 throw new Error(error);
+            } finally {
+                removeLoadingAttribute(btnId);
             }
         },
         async updateHandlerForSplit(muid, prefix, element) {
