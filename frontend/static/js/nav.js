@@ -23,9 +23,7 @@ function tree() {
             if (element.children.length) {
                 return (element.isOpen = true);
             }
-            this.loading = true;
             await this.addData(element);
-            this.loading = false;
             element.isOpen = true;
         },
         render(element) {
@@ -33,7 +31,8 @@ function tree() {
                 return this.data.map(dir => this.render(dir)).join("");
             }
             let result = `<li class="navigation-list__item">
-                <a href="#" 
+                <a href="#"
+                    onclick="event.preventDefault();"
                     class="navigation-list__item-link"
                     :class="{'navigation-list--open':${element.isOpen}}"
                     x-on:click.prevent="itemClicked('${element.fullName}')"><i x-data="{isFile: ${
