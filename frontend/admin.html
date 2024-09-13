@@ -61,22 +61,7 @@
 </header>
 <main class="flex-grow flex gap-2" x-data="admin()">
     <nav class="w-1/6 ml-2">
-        <!-- <ul class="flex flex-col text-center">
-            <li class="border-b border-gray-400 py-1 px-2">
-                <a href="" @click.prevent="setActiveComponent('users')">Users</a>
-            </li>
-            <li class="border-b border-gray-400 py-1 px-2">
-                <a href="" @click.prevent="setActiveComponent('projects')">Projects</a>
-            </li>
-            <li class="border-b border-gray-400 py-1 px-2">
-                <a href="" @click.prevent="setActiveComponent('roots')">Roots</a>
-            </li>
-            <li class="border-b border-gray-400 py-1 px-2">
-                <a href="" @click.prevent="setActiveComponent('shift')">Shift Segments</a>
-            </li>
-        </ul> -->
-
-        <sl-menu style="max-width: 200px;">
+        <sl-menu>
             <sl-menu-item value="apple" @click.prevent="setActiveComponent('users')">
                 <i class="bi-people"></i>
                 Users

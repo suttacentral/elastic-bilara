@@ -86,3 +86,7 @@
 .arrow.opened::after {
     transform: rotate(180deg);
 }
+
+sl-menu {
+    max-width: 200px;
+}
