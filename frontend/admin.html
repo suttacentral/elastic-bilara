@@ -19,6 +19,10 @@
     <link rel="stylesheet" href="./static/css/components/modals.css"/>
     <link rel="stylesheet" href="./static/css/style.css"/>
 
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/menu/menu.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/menu-item/menu-item.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="flex flex-col min-h-screen" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
 <header class="bg-indigo h-12 border drop-shadow-sm" x-data="getUserInfo()" x-init="getRole()">
@@ -57,7 +61,7 @@
 </header>
 <main class="flex-grow flex gap-2" x-data="admin()">
     <nav class="w-1/6 ml-2">
-        <ul class="flex flex-col text-center">
+        <!-- <ul class="flex flex-col text-center">
             <li class="border-b border-gray-400 py-1 px-2">
                 <a href="" @click.prevent="setActiveComponent('users')">Users</a>
             </li>
@@ -70,7 +74,26 @@
             <li class="border-b border-gray-400 py-1 px-2">
                 <a href="" @click.prevent="setActiveComponent('shift')">Shift Segments</a>
             </li>
-        </ul>
+        </ul> -->
+
+        <sl-menu style="max-width: 200px;">
+            <sl-menu-item value="apple" @click.prevent="setActiveComponent('users')">
+                <i class="bi-people"></i>
+                Users
+            </sl-menu-item>
+            <sl-menu-item value="apple" @click.prevent="setActiveComponent('projects')">
+                <i class="bi-kanban"></i>
+                Projects
+            </sl-menu-item>
+            <sl-menu-item value="banana" @click.prevent="setActiveComponent('roots')">
+                <i class="bi-journal-text"></i>
+                Roots
+            </sl-menu-item>
+            <sl-menu-item value="orange" @click.prevent="setActiveComponent('shift')">
+                <i class="bi-shift"></i>
+                Shift Segments
+            </sl-menu-item>
+        </sl-menu>
     </nav>
     <article class="w-5/6 mr-2">
         <div x-cloak x-show="dataTypes.users.isVisible" x-data="dataTypes.users" x-init="await getUsers()">
