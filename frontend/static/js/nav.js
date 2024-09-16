@@ -31,7 +31,7 @@ function tree() {
                 return this.data.map(dir => this.render(dir)).join("");
             }
             let result = `<li class="navigation-list__item">
-                <a href="#"
+                <a x-bind:href="${element.isFile} ? await calcUrl('${element.fullName}', '${element.muid}', '${element.prefix}') : '#'"
                     onclick="event.preventDefault();"
                     class="navigation-list__item-link"
                     :class="{'navigation-list--open':${element.isOpen}}"
@@ -58,7 +58,9 @@ function tree() {
         itemClicked(name) {
             const element = this.getElementByName(name);
             if (element) {
-                if (element.isFile) return this.redirectToFile(element);
+                if (element.isFile) {
+                    return this.redirectToFile(element);
+                }
                 element.isOpen ? this.close(element) : this.open(element);
             }
         },
@@ -113,6 +115,16 @@ function tree() {
         close(element) {
             element.isOpen = false;
         },
+
+        async calcUrl(elementFullName, elementMuid, elementPrefix) {
+            if (elementFullName.includes("name")) {
+                return '#';
+            }
+            const response = await requestWithTokenRetry(`projects/${elementFullName}/source/`);
+            const { muid: source } = await response.json();
+            const muid = elementMuid === source ? "" : elementMuid;
+            return `/translation?prefix=${elementPrefix}&muid=${muid}&source=${source}`;
+        }
     };
 }
 
