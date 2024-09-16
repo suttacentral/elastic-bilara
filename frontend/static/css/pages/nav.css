@@ -35,6 +35,7 @@
     transition: 0.3s ease;
     margin: var(--space-xxs) 0;
     margin-right: var(--space-sm);
+    cursor: pointer;
 }
 
 .navigation-list__item-link:hover {
