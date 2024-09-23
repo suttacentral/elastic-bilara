@@ -3,7 +3,6 @@ import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+e
 import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit-html@3.2.0/directives/unsafe-html.js';
 
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button/button.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/card/card.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/alert/alert.js';
 import "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/tooltip/tooltip.js";
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js';
