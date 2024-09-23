@@ -19,95 +19,28 @@
     <script src="./static/js/pullRequest.js"></script>
     <link rel="stylesheet" href="./static/css/style.css"/>
     <script src="./static/js/elements/notification/sc-bilara-notification-icon.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
-<header>
-    <nav>
-        <ul class="main-nav">
-            <li class="main-nav__item">
-                <a href="/nav" class="main-nav__item-link">Bilara</a>
-            </li>
-            <li class="main-nav__item">
-                <details class="main-nav__item-detail">
-                    <summary>How to</summary>
-                    <div></div>
-                    <!-- Add this later-->
-                </details>
-            </li>
-            <li class="main-nav__item main-nav__item--right hide-mobile">
-                <div class="user-container" x-cloak x-show="!!username">
-                    <img :src="avatarURL"
-                         :alt="`${username}'s github profile picture`"
-                         class="user-avatar"/>
-                    <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
-                </div>
-            </li>
-            <div class="image-container">
-                <sc-bilara-notification-icon></sc-bilara-notification-icon>
-            </div>
-            <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
-                <a class="main-nav__item-link btn btn--admin" href="/admin">Admin Area</a>
-            </li>
-            <li class="main-nav__item hide-mobile">
-                <a class="main-nav__item-link btn btn--main" @click.prevent="await logout()">Logout</a>
-            </li>
-        </ul>
-    </nav>
-    <nav>
-        <ul class="main-nav-mobile" x-data="{isOpen: false}">
-            <li class="main-nav-mobile__item main-nav-mobile__item--full main-nav-mobile__item--show main-nav-mobile__item--space-between">
-                <a href="/nav" class="main-nav-mobile__item-link">Bilara</a>
-                <div class="main-nav-mobile__burger" @click="isOpen = !isOpen"
-                     :class="{ 'open': isOpen }">
-                    <span class="main-nav-mobile__burger--line"></span>
-                    <span class="main-nav-mobile__burger--line"></span>
-                </div>
-            </li>
-            <li class="main-nav-mobile__item"
-                :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
-                <div class="user-container" x-cloak x-show="!!username">
-                    <img :src="avatarURL"
-                         :alt="`${username}'s github profile picture`"
-                         class="user-avatar"/>
-                    <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
-                </div>
-            </li>
-            <li class="main-nav-mobile__item"
-                :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'" x-cloak
-                x-show="isAdmin && isActive">
-                <a class="main-nav-mobile__item-link btn btn--admin" href="/admin">Admin Area</a>
-            </li>
-            <li class="main-nav-mobile__item"
-                :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
-                <a class="main-nav-mobile__item-link btn btn--main" @click.prevent="await logout()">Logout</a>
-            </li>
-        </ul>
-    </nav>
-</header>
+    <header>
+        <sc-bilara-nav-main></sc-bilara-nav-main>
+        <sc-bilara-nav-main-mobile></sc-bilara-nav-main-mobile>
+    </header>
 
-<main class="main-content">
-    <p id="pull-request-message"></p>
-    <div class="navigation-container navigation-container--pushdown" x-cloak x-show="isActive" x-data="tree()">
-        <div x-cloak x-show="loading" class="modal">
-            <div class="spinner"></div>
+    <main class="main-content">
+        <p id="pull-request-message"></p>
+        <div class="navigation-container navigation-container--pushdown" x-cloak x-show="isActive" x-data="tree()">
+            <div x-cloak x-show="loading" class="modal">
+                <div class="spinner"></div>
+            </div>
+            <ul class="navigation-list" x-html="render()"></ul>
         </div>
-        <ul class="navigation-list" x-html="render()"></ul>
-    </div>
-</main>
-<footer class="main-footer">
-    <p class="main-footer__description">Computer Assisted Translation for SuttaCentral</p>
-    <ul class="main-footer__list">
-        <li class="main-footer__list-item">
-            <a href="https://suttacentral.net/" class="main-footer__list-item-link">SuttaCentral</a>
-        </li>
-        <li class="main-footer__list-item">
-            <a href="https://github.com/suttacentral/bilara" class="main-footer__list-item-link">Github</a>
-        </li>
-        <li class="main-footer__list-item">
-            <a href="https://discourse.suttacentral.net/" class="main-footer__list-item-link">Forum</a>
-        </li>
-    </ul>
-</footer>
+    </main>
+
+    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
 </body>
 </html>

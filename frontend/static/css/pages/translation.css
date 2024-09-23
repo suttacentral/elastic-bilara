@@ -72,13 +72,14 @@
 
 .project-container__content {
     flex: auto;
-    display: flex;
     flex-wrap: nowrap;
     gap: var(--space-lg);
 }
 
 .project-container__content-details {
     width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .project-container__content-header {
@@ -286,3 +287,21 @@
 .project-container__content-body__textarea-container textarea {
     margin-right: 2px;
 }
+
+.split-panel-divider sl-split-panel {
+    --divider-width: 3px;
+    --min: 250px;
+    --max: calc(100% - 250px);
+}
+
+.split-panel-divider sl-split-panel::part(divider) {
+    background-color: var(--color-primary-light);
+}
+
+.split-panel-divider i {
+    position: absolute;
+    border-radius: var(--sl-border-radius-small);
+    background: var(--color-primary-light);
+    padding: 0.5rem 0.125rem;
+}
+

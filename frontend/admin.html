@@ -17,410 +17,339 @@
     <script src="./static/js/admin.js"></script>
     <link rel="stylesheet" href="./static/css/components/tooltip.css"/>
     <link rel="stylesheet" href="./static/css/components/modals.css"/>
+    <link rel="stylesheet" href="./static/css/variables/colors.css"/>
     <link rel="stylesheet" href="./static/css/style.css"/>
 
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/menu/menu.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/menu-item/menu-item.js"></script>
+    <script src="./static/js/elements/admin/sc-bilara-admin-header.js" type="module"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="flex flex-col min-h-screen" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
-<header class="bg-indigo h-12 border drop-shadow-sm" x-data="getUserInfo()" x-init="getRole()">
-    <nav class="h-full">
-        <ul class="flex items-center h-full">
-            <li class="mx-4 uppercase tracking-wide font-bold">
-                <a href="/nav">Bilara</a>
-            </li>
-            <li>
-                <details class="relative">
-                    <summary>How to</summary>
-                    <div class="absolute"></div>
-                    <!-- Add this later-->
-                </details>
-            </li>
-            <li class="ml-auto mr-2">
-                <div class="flex items-center h-10 space-x-2" x-cloak x-show="!!username">
-                    <img :src="avatarURL"
-                         :alt="`${username}'s github profile picture`"
-                         class="h-full w-auto object-cover rounded-full border-2 border-amber-300"/>
-                    <span>Welcome, <strong x-text="username"></strong>!</span>
-                </div>
-            </li>
-            <li :class="{'mr-2': isAdmin}" x-cloak x-show="isAdmin && isActive"><a
-                    class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
-                    href="/admin">Admin Area</a></li>
-            <li class="mr-4">
-                <a
-                        class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
-                        @click.prevent="await logout()"
-                >Logout
-                </a>
-            </li>
-        </ul>
-    </nav>
-</header>
-<main class="flex-grow flex gap-2" x-data="admin()">
-    <nav class="w-1/6 ml-2">
-        <sl-menu>
-            <sl-menu-item value="apple" @click.prevent="setActiveComponent('users')">
-                <i class="bi-people"></i>
-                Users
-            </sl-menu-item>
-            <sl-menu-item value="apple" @click.prevent="setActiveComponent('projects')">
-                <i class="bi-kanban"></i>
-                Projects
-            </sl-menu-item>
-            <sl-menu-item value="banana" @click.prevent="setActiveComponent('roots')">
-                <i class="bi-journal-text"></i>
-                Roots
-            </sl-menu-item>
-            <sl-menu-item value="orange" @click.prevent="setActiveComponent('shift')">
-                <i class="bi-shift"></i>
-                Shift Segments
-            </sl-menu-item>
-        </sl-menu>
-    </nav>
-    <article class="w-5/6 mr-2">
-        <div x-cloak x-show="dataTypes.users.isVisible" x-data="dataTypes.users" x-init="await getUsers()">
-            <div class="my-2 flex justify-around items-center gap-2"
-                 x-data="{open: false, newUser: {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}}">
-                <div class="w-full border p-2 my-2 rounded" x-cloak x-show="open">
-                    <form @submit.prevent="await createUser(newUser);
-            await getUsers();
-            open=!open;
-            newUser = {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}">
-                        <div class="flex justify-between items-center gap-2">
-                            <div class="w-1/2">
-                                <label for="githubId">Github ID</label>
-                                <input type="text" id="githubId" x-model="newUser.githubId"
-                                       class="border p-1 rounded w-full">
-                            </div>
-                            <div class="w-1/2">
-                                <label for="role">Role</label>
-                                <select name="role" id="role" x-model="newUser.role" class="border p-1 rounded w-full">
-                                    <template x-for="role in ROLES">
-                                        <option x-text="role" :value="role" :selected="role === 'writer'"></option>
-                                    </template>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center gap-2 mt-2">
-                            <div class="w-1/2">
-                                <label for="username">Username</label>
-                                <input type="text" id="username" x-model="newUser.username"
-                                       class="border p-1 rounded w-full">
-                            </div>
-                            <div class="w-1/2">
-                                <label for="email">Email</label>
-                                <input type="email" id="email" x-model="newUser.email"
-                                       class="border p-1 rounded w-full">
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center gap-2 mt-2">
-                            <div class="w-1/2">
-                                <label for="avatarUrl">Avatar URL</label>
-                                <input type="text" id="avatarUrl" x-model="newUser.avatarUrl"
-                                       class="border p-1 rounded w-full">
-                            </div>
-                            <div class="w-1/2 flex justify-end">
-                                <button type="submit"
-                                        class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer">
-                                    Submit
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <button class="ml-auto self-start rounded my-2 py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
-                        @click="open = !open" x-text="open ? '-' : '+'">
-                </button>
-            </div>
-            <ul>
-                <template x-for="(user, key) in users" :key="user.id">
-                    <li class="border p-2 mb-2 rounded">
-                        <div @click="user.showDetails = !user.showDetails"
-                             class="flex items-center justify-between h-12 text-center cursor-pointer">
-                            <p class="w-1/5" x-text="user.username"></p>
-                            <p class="w-1/5" x-text="`Last seen on ${formatDate(user.last_login)}`"></p>
-                            <p class="w-1/5" x-text="user.is_active ? 'active' : 'inactive'"
-                            ></p>
-                            <p class="w-1/5" x-text="user.role"></p>
-                            <img :src="user.avatar_url" :alt="`${user.username}'s github profile picture`"
-                                 class="h-full object-contain rounded-full border-2 border-amber-300"/>
-                        </div>
-                        <div x-cloak x-show="user.showDetails" class="mt-2">
-                            <div class="flex justify-between items-center gap-2 my-4">
-                                <div class="w-1/3">
-                                    <label :for="`${key}-role`">Role</label>
-                                    <select :name="`${key}-role`" :id="`${key}-role`" x-model="user.role"
-                                            x-on:change="await setUsersRole(user.github_id, user.role); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
-                                            class="border p-1 rounded">
+    <header class="bg-indigo h-12 border drop-shadow-sm" x-data="getUserInfo()" x-init="getRole()">
+        <sc-bilara-admin-header></sc-bilara-admin-header>
+    </header>
+
+    <main class="flex-grow flex gap-2" x-data="admin()">
+        <nav class="w-1/6 ml-2">
+            <sl-menu>
+                <sl-menu-item value="apple" @click.prevent="setActiveComponent('users')">
+                    <i class="bi-people"></i>
+                    Users
+                </sl-menu-item>
+                <sl-menu-item value="apple" @click.prevent="setActiveComponent('projects')">
+                    <i class="bi-kanban"></i>
+                    Projects
+                </sl-menu-item>
+                <sl-menu-item value="banana" @click.prevent="setActiveComponent('roots')">
+                    <i class="bi-journal-text"></i>
+                    Roots
+                </sl-menu-item>
+                <sl-menu-item value="orange" @click.prevent="setActiveComponent('shift')">
+                    <i class="bi-shift"></i>
+                    Shift Segments
+                </sl-menu-item>
+            </sl-menu>
+        </nav>
+        <article class="w-5/6 mr-2">
+            <div x-cloak x-show="dataTypes.users.isVisible" x-data="dataTypes.users" x-init="await getUsers()">
+                <div class="my-2 flex justify-around items-center gap-2"
+                    x-data="{open: false, newUser: {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}}">
+                    <div class="w-full border p-2 my-2 rounded" x-cloak x-show="open">
+                        <form @submit.prevent="await createUser(newUser);
+                await getUsers();
+                open=!open;
+                newUser = {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}">
+                            <div class="flex justify-between items-center gap-2">
+                                <div class="w-1/2">
+                                    <label for="githubId">Github ID</label>
+                                    <input type="text" id="githubId" x-model="newUser.githubId"
+                                        class="border p-1 rounded w-full">
+                                </div>
+                                <div class="w-1/2">
+                                    <label for="role">Role</label>
+                                    <select name="role" id="role" x-model="newUser.role" class="border p-1 rounded w-full">
                                         <template x-for="role in ROLES">
-                                            <option x-text="role" :value="role"
-                                                    :selected="role === user.role"></option>
-                                        </template>
-                                    </select>
-                                </div>
-                                <div class="w-1/3 md:flex md:justify-end md:items-center md:gap-1">
-                                    <label :for="`${key}-role`">Activate/Deactivate</label>
-                                    <select :name="`${key}-state`" :id="`${key}-state`"
-                                            x-model="user.is_active"
-                                            x-on:change="await activateUser(user.github_id, user.is_active); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
-                                            class="border p-1 rounded">
-                                        <template x-for="state in ['true', 'false']">
-                                            <option x-text="state === 'true' ? 'active' : 'inactive'" :value="state"
-                                                    :selected="user.is_active === (state === 'true')"></option>
+                                            <option x-text="role" :value="role" :selected="role === 'writer'"></option>
                                         </template>
                                     </select>
                                 </div>
                             </div>
                             <div class="flex justify-between items-center gap-2 mt-2">
-                                <p><span class="italic">Github ID:</span>
-                                    <span x-text="user.github_id" class="font-bold"></span>
-                                </p>
-                                <p><span class="italic">Username:</span>
-                                    <span x-text="user.username" class="font-bold"></span>
-                                </p>
-                                <p><span class="italic">Email: </span>
-                                    <span x-text="user.email" class="font-bold"></span>
-                                </p>
+                                <div class="w-1/2">
+                                    <label for="username">Username</label>
+                                    <input type="text" id="username" x-model="newUser.username"
+                                        class="border p-1 rounded w-full">
+                                </div>
+                                <div class="w-1/2">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" x-model="newUser.email"
+                                        class="border p-1 rounded w-full">
+                                </div>
                             </div>
                             <div class="flex justify-between items-center gap-2 mt-2">
-                                <p><span class="italic">Avatar URL: </span>
-                                    <span x-text="user.avatar_url" class="font-bold"></span>
-                                </p>
-                                <p><span class="italic">Number of Remarks: </span>
-                                    <span x-text="user.remarks.length" class="font-bold"></span>
-                                </p>
+                                <div class="w-1/2">
+                                    <label for="avatarUrl">Avatar URL</label>
+                                    <input type="text" id="avatarUrl" x-model="newUser.avatarUrl"
+                                        class="border p-1 rounded w-full">
+                                </div>
+                                <div class="w-1/2 flex justify-end">
+                                    <button type="submit"
+                                            class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer">
+                                        Submit
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex justify-between items-center gap-2 mt-2">
-                                <p><span class="italic">Joined on: </span><span
-                                        x-text="formatDate(user.created_on)" class="font-bold"></span>
-                                </p>
-                                <p><span class="italic">Last seen on: </span>
-                                    <span x-text="formatDate(user.last_login)" class="font-bold"></span>
-                                </p>
+                        </form>
+                    </div>
+                    <button class="ml-auto self-start rounded my-2 py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
+                            @click="open = !open" x-text="open ? '-' : '+'">
+                    </button>
+                </div>
+                <ul>
+                    <template x-for="(user, key) in users" :key="user.id">
+                        <li class="border p-2 mb-2 rounded">
+                            <div @click="user.showDetails = !user.showDetails"
+                                class="flex items-center justify-between h-12 text-center cursor-pointer">
+                                <p class="w-1/5" x-text="user.username"></p>
+                                <p class="w-1/5" x-text="`Last seen on ${formatDate(user.last_login)}`"></p>
+                                <p class="w-1/5" x-text="user.is_active ? 'active' : 'inactive'"
+                                ></p>
+                                <p class="w-1/5" x-text="user.role"></p>
+                                <img :src="user.avatar_url" :alt="`${user.username}'s github profile picture`"
+                                    class="h-full object-contain rounded-full border-2 border-amber-300"/>
                             </div>
-                            <div class="flex justify-end items-center gap-2 mt-4"
-                                 x-data="{ modalShown: false, selectedUser: null }">
-                                <button class="rounded py-2 px-4 bg-red-500 hover:bg-red-400 text-white hover:cursor-pointer"
-                                        @click.prevent="selectedUser = user; modalShown = true">Delete User
-                                </button>
-                                <div x-cloak
-                                     x-show="modalShown"
-                                     class="fixed z-10 inset-0 overflow-y-auto"
-                                     aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                                    <div class="flex items-center justify-center min-h-screen">
-                                        <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all my-8 align-middle w-1/3">
-                                            <div class="bg-white py-4 px-4">
-                                                <h2 class="font-semibold"
-                                                    x-text="selectedUser ? `Remove ${selectedUser.username}?`: ''"></h2>
-                                                <p class="text-gray-500">Are you sure you want to delete this user?</p>
-                                                <div class="mt-5">
-                                                    <button
-                                                            @click="modalShown = false"
-                                                            class="rounded py-2 px-4 bg-gray-500 hover:bg-gray-400 text-white mr-2">
-                                                        Cancel
-                                                    </button>
-                                                    <button
-                                                            @click.prevent="await deleteUser(selectedUser.github_id); await getUsers(); modalShown = false; selectedUser = null"
-                                                            class="rounded py-2 px-4 bg-red-500 hover:bg-red-400 text-white">
-                                                        Confirm
-                                                    </button>
+                            <div x-cloak x-show="user.showDetails" class="mt-2">
+                                <div class="flex justify-between items-center gap-2 my-4">
+                                    <div class="w-1/3">
+                                        <label :for="`${key}-role`">Role</label>
+                                        <select :name="`${key}-role`" :id="`${key}-role`" x-model="user.role"
+                                                x-on:change="await setUsersRole(user.github_id, user.role); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
+                                                class="border p-1 rounded">
+                                            <template x-for="role in ROLES">
+                                                <option x-text="role" :value="role"
+                                                        :selected="role === user.role"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div class="w-1/3 md:flex md:justify-end md:items-center md:gap-1">
+                                        <label :for="`${key}-role`">Activate/Deactivate</label>
+                                        <select :name="`${key}-state`" :id="`${key}-state`"
+                                                x-model="user.is_active"
+                                                x-on:change="await activateUser(user.github_id, user.is_active); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
+                                                class="border p-1 rounded">
+                                            <template x-for="state in ['true', 'false']">
+                                                <option x-text="state === 'true' ? 'active' : 'inactive'" :value="state"
+                                                        :selected="user.is_active === (state === 'true')"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center gap-2 mt-2">
+                                    <p><span class="italic">Github ID:</span>
+                                        <span x-text="user.github_id" class="font-bold"></span>
+                                    </p>
+                                    <p><span class="italic">Username:</span>
+                                        <span x-text="user.username" class="font-bold"></span>
+                                    </p>
+                                    <p><span class="italic">Email: </span>
+                                        <span x-text="user.email" class="font-bold"></span>
+                                    </p>
+                                </div>
+                                <div class="flex justify-between items-center gap-2 mt-2">
+                                    <p><span class="italic">Avatar URL: </span>
+                                        <span x-text="user.avatar_url" class="font-bold"></span>
+                                    </p>
+                                    <p><span class="italic">Number of Remarks: </span>
+                                        <span x-text="user.remarks.length" class="font-bold"></span>
+                                    </p>
+                                </div>
+                                <div class="flex justify-between items-center gap-2 mt-2">
+                                    <p><span class="italic">Joined on: </span><span
+                                            x-text="formatDate(user.created_on)" class="font-bold"></span>
+                                    </p>
+                                    <p><span class="italic">Last seen on: </span>
+                                        <span x-text="formatDate(user.last_login)" class="font-bold"></span>
+                                    </p>
+                                </div>
+                                <div class="flex justify-end items-center gap-2 mt-4"
+                                    x-data="{ modalShown: false, selectedUser: null }">
+                                    <button class="rounded py-2 px-4 bg-red-500 hover:bg-red-400 text-white hover:cursor-pointer"
+                                            @click.prevent="selectedUser = user; modalShown = true">Delete User
+                                    </button>
+                                    <div x-cloak
+                                        x-show="modalShown"
+                                        class="fixed z-10 inset-0 overflow-y-auto"
+                                        aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                                        <div class="flex items-center justify-center min-h-screen">
+                                            <div class="bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all my-8 align-middle w-1/3">
+                                                <div class="bg-white py-4 px-4">
+                                                    <h2 class="font-semibold"
+                                                        x-text="selectedUser ? `Remove ${selectedUser.username}?`: ''"></h2>
+                                                    <p class="text-gray-500">Are you sure you want to delete this user?</p>
+                                                    <div class="mt-5">
+                                                        <button
+                                                                @click="modalShown = false"
+                                                                class="rounded py-2 px-4 bg-gray-500 hover:bg-gray-400 text-white mr-2">
+                                                            Cancel
+                                                        </button>
+                                                        <button
+                                                                @click.prevent="await deleteUser(selectedUser.github_id); await getUsers(); modalShown = false; selectedUser = null"
+                                                                class="rounded py-2 px-4 bg-red-500 hover:bg-red-400 text-white">
+                                                            Confirm
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </li>
-                </template>
-            </ul>
-        </div>
-        <div x-cloak x-show="dataTypes.projects.isVisible" x-data="dataTypes.projects">
-            <div class="flex justify-center align-middle gap-4 my-2">
-                <button x-on:click="toggleAdd()" class="px-2 py-1 border border-red-950 rounded">Add</button>
-                <button x-on:click="toggleRemove()" class="px-2 py-1 border border-red-950 rounded">Remove</button>
+                        </li>
+                    </template>
+                </ul>
             </div>
-            <div x-cloak x-show="showAdd" x-data="addNewProject()" class="mt-4">
-                <div x-cloak x-show="loading" class="modal">
-                    <div class="spinner"></div>
+            <div x-cloak x-show="dataTypes.projects.isVisible" x-data="dataTypes.projects">
+                <div class="flex justify-center align-middle gap-4 my-2">
+                    <button x-on:click="toggleAdd()" class="px-2 py-1 border border-red-950 rounded">Add</button>
+                    <button x-on:click="toggleRemove()" class="px-2 py-1 border border-red-950 rounded">Remove</button>
                 </div>
-                <p x-cloak x-show="invalidData" class="text-center my-1 text-red-500">The form contains invalid
-                    data.</p>
-                <form class="w-1/2 mx-auto flex flex-col flex-wrap gap-4">
-                    <div class="flex justify-between items-center">
-                        <label class="w-1/4" for="baseInputAddProjects">Root path:</label>
-                        <input id="baseInputAddProjects" class="border w-full p-2 rounded" type="text" x-model="base"
-                               @input="await handleInput()"
-                               @keyup="await handleKeyUp($event)"
-                               list="baseSuggestionsAddProjects">
-                        <datalist id="baseSuggestionsAddProjects">
-                            <template x-for="dir in directories" :key="dir">
-                                <option x-bind:value="dir"></option>
-                            </template>
-                            <template x-for="file in files" :key="file">
-                                <option x-bind:value="file"></option>
-                            </template>
-                        </datalist>
+                <div x-cloak x-show="showAdd" x-data="addNewProject()" class="mt-4">
+                    <div x-cloak x-show="loading" class="modal">
+                        <div class="spinner"></div>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <label class="w-1/4" for="userProjects">User:</label>
-                        <select id="userProjects" x-model="user" class="w-full p-2 border rounded">
-                            <option value="">Select a user...</option>
-                            <template x-for="user in users">
-                                <option x-text="user.username" :value="user.github_id"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div class="flex-col justify-between items-center">
-                        <p x-cloak x-show="!validLanguageCode" class="my-1 text-red-500">Language code must be 2 or 3
-                            characters long.</p>
+                    <p x-cloak x-show="invalidData" class="text-center my-1 text-red-500">The form contains invalid
+                        data.</p>
+                    <form class="w-1/2 mx-auto flex flex-col flex-wrap gap-4">
                         <div class="flex justify-between items-center">
-                            <label class="w-1/4" for="languageProjects">Language code:</label>
-                            <input id="languageProjects" :class="{ 'border-red-500': !validLanguageCode }"
-                                   class="border w-full p-2 rounded" type="text" x-model="languageCode"
-                                   placeholder="en" x-on:input.debounce.500ms="checkLanguageCode">
+                            <label class="w-1/4" for="baseInputAddProjects">Root path:</label>
+                            <input id="baseInputAddProjects" class="border w-full p-2 rounded" type="text" x-model="base"
+                                @input="await handleInput()"
+                                @keyup="await handleKeyUp($event)"
+                                list="baseSuggestionsAddProjects">
+                            <datalist id="baseSuggestionsAddProjects">
+                                <template x-for="dir in directories" :key="dir">
+                                    <option x-bind:value="dir"></option>
+                                </template>
+                                <template x-for="file in files" :key="file">
+                                    <option x-bind:value="file"></option>
+                                </template>
+                            </datalist>
                         </div>
-                    </div>
-                    <button @click.prevent="await handleSubmit()"
-                            class="w-fit ml-auto border rounded border-red-950 px-2 py-1">Create
-                    </button>
-                </form>
-                <div x-cloak x-show="created.status" class="text-center my-2">
-                    <p>You have created <span x-text="created.paths.length"></span> files, for the user <span
-                            x-text="created.username"></span></p>
-                    <ul>
-                        <template x-for="path in created.paths" :key="path">
-                            <li x-text="path"></li>
-                        </template>
-                    </ul>
-                </div>
-            </div>
-            <div x-cloak x-show="showRemove" x-data="removeProject()">
-                <div x-cloak x-show="loading" class="modal">
-                    <div class="spinner"></div>
-                </div>
-                <form class="w-1/2 mx-auto flex flex-col flex-wrap gap-4">
-                    <p x-cloak x-show="!validPath" class="text-red-600">Invalid file path</p>
-                    <div class="flex justify-between items-center">
-                        <label class="w-1/4" for="baseInputRemoveProjects">File path:</label>
-                        <input id="baseInputRemoveProjects" class="border w-full p-2 rounded" type="text" x-model="base"
-                               @input="await handleInput()"
-                               @keyup="await handleKeyUp($event)"
-                               list="baseSuggestionsRemoveProjects">
-                        <datalist id="baseSuggestionsRemoveProjects">
-                            <template x-for="dir in directories" :key="dir">
-                                <option x-bind:value="dir"></option>
-                            </template>
-                            <template x-for="file in files" :key="file">
-                                <option x-bind:value="file"></option>
-                            </template>
-                        </datalist>
-                    </div>
-                    <div class="flex justify-end align-middle">
-                        <button @click.prevent="await handleSubmit(true)"
-                                class="border rounded border-red-950 px-2 py-1" x-bind:disabled="!validPath">Delete
+                        <div class="flex justify-between items-center">
+                            <label class="w-1/4" for="userProjects">User:</label>
+                            <select id="userProjects" x-model="user" class="w-full p-2 border rounded">
+                                <option value="">Select a user...</option>
+                                <template x-for="user in users">
+                                    <option x-text="user.username" :value="user.github_id"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div class="flex-col justify-between items-center">
+                            <p x-cloak x-show="!validLanguageCode" class="my-1 text-red-500">Language code must be 2 or 3
+                                characters long.</p>
+                            <div class="flex justify-between items-center">
+                                <label class="w-1/4" for="languageProjects">Language code:</label>
+                                <input id="languageProjects" :class="{ 'border-red-500': !validLanguageCode }"
+                                    class="border w-full p-2 rounded" type="text" x-model="languageCode"
+                                    placeholder="en" x-on:input.debounce.500ms="checkLanguageCode">
+                            </div>
+                        </div>
+                        <button @click.prevent="await handleSubmit()"
+                                class="w-fit ml-auto border rounded border-red-950 px-2 py-1">Create
                         </button>
+                    </form>
+                    <div x-cloak x-show="created.status" class="text-center my-2">
+                        <p>You have created <span x-text="created.paths.length"></span> files, for the user <span
+                                x-text="created.username"></span></p>
+                        <ul>
+                            <template x-for="path in created.paths" :key="path">
+                                <li x-text="path"></li>
+                            </template>
+                        </ul>
                     </div>
-                </form>
-                <p x-cloak x-show="message"
-                   class="border border-neutral-500 bg-green-400 rounded text-center w-fit mx-auto p-4">Deletion has
-                    been scheduled.</p>
-                <div x-cloak x-show="data && data.length > 0" x-data="{modal: false}"
-                     class="flex flex-col gap-8 align-middle justify-center text-center mt-4">
-                    <p>Please review the data below.</p>
-                    <p>You are going to delete the following, including all the files within directories:</p>
-                    <ul class="flex flex-col gap-5 justify-center align-middle">
-                        <template x-for="item in data" :key="item.path">
-                            <li x-data="tooltip()" class="flex justify-center gap-5">
-                                <span x-text="item.path" class="border border-red-950 rounded py-1 px-2 cursor-pointer"
-                                      @mouseover="await fetchData(item.path)"
-                                      @mouseleave="hide()"></span>
-                                <span x-text="item.muid" class="border border-red-950 rounded py-1 px-2"></span>
-                                <span x-text="item.language" class="border border-red-950 rounded py-1 px-2"></span>
-                                <div x-cloak x-show="show" class="tooltip" @mouseover="await fetchData(item.path)"
-                                     @mouseleave="hide()">
-                                    <ul>
-                                        <template x-for="file in tooltipData" :key="file">
-                                            <li x-text="file"></li>
-                                        </template>
-                                    </ul>
+                </div>
+                <div x-cloak x-show="showRemove" x-data="removeProject()">
+                    <div x-cloak x-show="loading" class="modal">
+                        <div class="spinner"></div>
+                    </div>
+                    <form class="w-1/2 mx-auto flex flex-col flex-wrap gap-4">
+                        <p x-cloak x-show="!validPath" class="text-red-600">Invalid file path</p>
+                        <div class="flex justify-between items-center">
+                            <label class="w-1/4" for="baseInputRemoveProjects">File path:</label>
+                            <input id="baseInputRemoveProjects" class="border w-full p-2 rounded" type="text" x-model="base"
+                                @input="await handleInput()"
+                                @keyup="await handleKeyUp($event)"
+                                list="baseSuggestionsRemoveProjects">
+                            <datalist id="baseSuggestionsRemoveProjects">
+                                <template x-for="dir in directories" :key="dir">
+                                    <option x-bind:value="dir"></option>
+                                </template>
+                                <template x-for="file in files" :key="file">
+                                    <option x-bind:value="file"></option>
+                                </template>
+                            </datalist>
+                        </div>
+                        <div class="flex justify-end align-middle">
+                            <button @click.prevent="await handleSubmit(true)"
+                                    class="border rounded border-red-950 px-2 py-1" x-bind:disabled="!validPath">Delete
+                            </button>
+                        </div>
+                    </form>
+                    <p x-cloak x-show="message"
+                    class="border border-neutral-500 bg-green-400 rounded text-center w-fit mx-auto p-4">Deletion has
+                        been scheduled.</p>
+                    <div x-cloak x-show="data && data.length > 0" x-data="{modal: false}"
+                        class="flex flex-col gap-8 align-middle justify-center text-center mt-4">
+                        <p>Please review the data below.</p>
+                        <p>You are going to delete the following, including all the files within directories:</p>
+                        <ul class="flex flex-col gap-5 justify-center align-middle">
+                            <template x-for="item in data" :key="item.path">
+                                <li x-data="tooltip()" class="flex justify-center gap-5">
+                                    <span x-text="item.path" class="border border-red-950 rounded py-1 px-2 cursor-pointer"
+                                        @mouseover="await fetchData(item.path)"
+                                        @mouseleave="hide()"></span>
+                                    <span x-text="item.muid" class="border border-red-950 rounded py-1 px-2"></span>
+                                    <span x-text="item.language" class="border border-red-950 rounded py-1 px-2"></span>
+                                    <div x-cloak x-show="show" class="tooltip" @mouseover="await fetchData(item.path)"
+                                        @mouseleave="hide()">
+                                        <ul>
+                                            <template x-for="file in tooltipData" :key="file">
+                                                <li x-text="file"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                        <button @click.prevent="modal = !modal"
+                                class="mx-auto w-fit border-red-950 border rounded py-1 px-2 bg-red-600 text-white">Delete
+                        </button>
+                        <div x-cloak x-show="modal" class="modal" @click="modal = !modal">
+                            <div class="border border-red-950 rounded p-4" @click.stop>
+                                <p>Are you sure you want to delete the files?</p>
+                                <div class="flex justify-center gap-8 align-middle mt-4">
+                                    <button @click.prevent="await handleSubmit(false); modal = !modal"
+                                            class="border border-red-950 rounded py-1 px-2 bg-red-600 text-white">Yes
+                                    </button>
+                                    <button @click.prevent="modal = !modal"
+                                            class="border border-red-950 rounded py-1 px-2 bg-amber-200">No
+                                    </button>
                                 </div>
-                            </li>
-                        </template>
-                    </ul>
-                    <button @click.prevent="modal = !modal"
-                            class="mx-auto w-fit border-red-950 border rounded py-1 px-2 bg-red-600 text-white">Delete
-                    </button>
-                    <div x-cloak x-show="modal" class="modal" @click="modal = !modal">
-                        <div class="border border-red-950 rounded p-4" @click.stop>
-                            <p>Are you sure you want to delete the files?</p>
-                            <div class="flex justify-center gap-8 align-middle mt-4">
-                                <button @click.prevent="await handleSubmit(false); modal = !modal"
-                                        class="border border-red-950 rounded py-1 px-2 bg-red-600 text-white">Yes
-                                </button>
-                                <button @click.prevent="modal = !modal"
-                                        class="border border-red-950 rounded py-1 px-2 bg-amber-200">No
-                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div x-cloak x-show="dataTypes.roots.isVisible" x-data="dataTypes.roots" x-init="await getData(base)">
-            <p x-cloak id="rootCreateMessage" x-show="message"></p>
-            <div class="flex gap-2 justify-center mt-2">
-                <input id="baseInput" class="border w-1/2 p-2 rounded" type="text" x-model="base"
-                       @input="await handleInput()"
-                       @keyup="await handleKeyUp($event)"
-                       list="baseSuggestions">
-                <datalist id="baseSuggestions">
-                    <template x-for="dir in directories" :key="dir">
-                        <option x-bind:value="dir"></option>
-                    </template>
-                    <template x-for="file in files" :key="file">
-                        <option x-bind:value="file"></option>
-                    </template>
-                </datalist>
-                <button @click.prevent="await create()"
-                        class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer">
-                    Create
-                </button>
-                <div id="loadingContainer"></div>
-            </div>
-            <div x-cloak x-show="isFile" class="mt-2">
-                <template x-for="(data, index) in rootData" :key="index">
-                    <div class="flex gap-2 justify-center my-2">
-                        <input class="w-1/6 border rounded p-2"
-                               :class="{'cursor-pointer': index === (rootData.length - 1)}" type="text"
-                               x-model="data.id"
-                               @focus="addInputPair(index)" placeholder="Segment ID">
-                        <input class="w-1/2 border rounded p-2" type="text" x-model="data.value"
-                               placeholder="Segment Value">
-                    </div>
-                </template>
-            </div>
-        </div>
-        <div x-cloak x-show="dataTypes.shift.isVisible" x-data="dataTypes.shift">
-            <div x-cloak x-show="loading" class="modal">
-                <div class="spinner"></div>
-            </div>
-            <p x-cloak x-show="message"
-               class="border border-neutral-500 bg-green-400 rounded text-center w-fit mx-auto p-4 sticky top-0 left-0">
-                Deletion has
-                been scheduled.</p>
-            <div class="w-1/2 mx-auto flex flex-col flex-wrap gap-4 mt-4">
-                <p x-cloak x-show="!validPath" class="text-red-600">Invalid file path</p>
-                <div class="flex justify-between items-center gap-2">
-                    <label for="baseInputShift" class="w-1/4">File path:</label>
-                    <input id="baseInputShift" class="border w-full p-2 rounded" type="text" x-model="base"
-                           @input="await handleInput()"
-                           @keyup="await handleKeyUp($event)"
-                           list="baseSuggestionsShift">
-                    <datalist id="baseSuggestionsShift">
+            <div x-cloak x-show="dataTypes.roots.isVisible" x-data="dataTypes.roots" x-init="await getData(base)">
+                <p x-cloak id="rootCreateMessage" x-show="message"></p>
+                <div class="flex gap-2 justify-center mt-2">
+                    <input id="baseInput" class="border w-1/2 p-2 rounded" type="text" x-model="base"
+                        @input="await handleInput()"
+                        @keyup="await handleKeyUp($event)"
+                        list="baseSuggestions">
+                    <datalist id="baseSuggestions">
                         <template x-for="dir in directories" :key="dir">
                             <option x-bind:value="dir"></option>
                         </template>
@@ -428,126 +357,170 @@
                             <option x-bind:value="file"></option>
                         </template>
                     </datalist>
+                    <button @click.prevent="await create()"
+                            class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer">
+                        Create
+                    </button>
+                    <div id="loadingContainer"></div>
                 </div>
-                <div x-cloak x-show="base.endsWith('.json')" class="flex items-center gap-2 my-2">
-                    <div class="w-1/4">
-                        <label for="exact">Exact: </label>
-                        <input type="checkbox" id="exact" x-model="exact">
-                    </div>
-                    <div class="flex justify-between items-center gap-4 w-full">
-                        <label for="shiftInput" class="w-1/4">Segment ID:</label>
-                        <input id="shiftInput" class="border w-full p-2 rounded" x-model="segment"
-                               list="shiftSuggestions"
-                               @keyup.enter="addSegment(segment)">
-                        <datalist id="shiftSuggestions">
-                            <template x-for="id in segmentIDs" :key="id">
-                                <option x-bind:value="id" x-show="!selectedIDs.includes(id)"></option>
+                <div x-cloak x-show="isFile" class="mt-2">
+                    <template x-for="(data, index) in rootData" :key="index">
+                        <div class="flex gap-2 justify-center my-2">
+                            <input class="w-1/6 border rounded p-2"
+                                :class="{'cursor-pointer': index === (rootData.length - 1)}" type="text"
+                                x-model="data.id"
+                                @focus="addInputPair(index)" placeholder="Segment ID">
+                            <input class="w-1/2 border rounded p-2" type="text" x-model="data.value"
+                                placeholder="Segment Value">
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <div x-cloak x-show="dataTypes.shift.isVisible" x-data="dataTypes.shift">
+                <div x-cloak x-show="loading" class="modal">
+                    <div class="spinner"></div>
+                </div>
+                <p x-cloak x-show="message"
+                class="border border-neutral-500 bg-green-400 rounded text-center w-fit mx-auto p-4 sticky top-0 left-0">
+                    Deletion has
+                    been scheduled.</p>
+                <div class="w-1/2 mx-auto flex flex-col flex-wrap gap-4 mt-4">
+                    <p x-cloak x-show="!validPath" class="text-red-600">Invalid file path</p>
+                    <div class="flex justify-between items-center gap-2">
+                        <label for="baseInputShift" class="w-1/4">File path:</label>
+                        <input id="baseInputShift" class="border w-full p-2 rounded" type="text" x-model="base"
+                            @input="await handleInput()"
+                            @keyup="await handleKeyUp($event)"
+                            list="baseSuggestionsShift">
+                        <datalist id="baseSuggestionsShift">
+                            <template x-for="dir in directories" :key="dir">
+                                <option x-bind:value="dir"></option>
+                            </template>
+                            <template x-for="file in files" :key="file">
+                                <option x-bind:value="file"></option>
                             </template>
                         </datalist>
                     </div>
+                    <div x-cloak x-show="base.endsWith('.json')" class="flex items-center gap-2 my-2">
+                        <div class="w-1/4">
+                            <label for="exact">Exact: </label>
+                            <input type="checkbox" id="exact" x-model="exact">
+                        </div>
+                        <div class="flex justify-between items-center gap-4 w-full">
+                            <label for="shiftInput" class="w-1/4">Segment ID:</label>
+                            <input id="shiftInput" class="border w-full p-2 rounded" x-model="segment"
+                                list="shiftSuggestions"
+                                @keyup.enter="addSegment(segment)">
+                            <datalist id="shiftSuggestions">
+                                <template x-for="id in segmentIDs" :key="id">
+                                    <option x-bind:value="id" x-show="!selectedIDs.includes(id)"></option>
+                                </template>
+                            </datalist>
+                        </div>
+                    </div>
+                    <div x-cloak x-show="segmentIDs && segmentIDs.length > 0"
+                        class="flex justify-between gap-12 items-start">
+                        <ul class="flex flex-wrap gap-2">
+                            <template x-for="id in selectedIDs" :key="id">
+                                <li x-text="id" class="border rounded px-1 py-0.5 cursor-pointer"
+                                    @click="removeSegment(id)"></li>
+                            </template>
+                        </ul>
+                        <button @click="await handleSubmit(true)"
+                                class="border rounded border-red-950 px-2 py-1" :disabled="!selectedIDs.length > 0">Shift
+                        </button>
+                    </div>
                 </div>
-                <div x-cloak x-show="segmentIDs && segmentIDs.length > 0"
-                     class="flex justify-between gap-12 items-start">
-                    <ul class="flex flex-wrap gap-2">
-                        <template x-for="id in selectedIDs" :key="id">
-                            <li x-text="id" class="border rounded px-1 py-0.5 cursor-pointer"
-                                @click="removeSegment(id)"></li>
-                        </template>
-                    </ul>
-                    <button @click="await handleSubmit(true)"
-                            class="border rounded border-red-950 px-2 py-1" :disabled="!selectedIDs.length > 0">Shift
-                    </button>
-                </div>
-            </div>
-            <div>
-                <div x-cloak x-show="data && data.length > 0" class="mt-4 mx-4" x-data="{modal: false}">
-                    <p class="text-center">Please review the data below.</p>
-                    <p class="text-center">You are going to change the following files:</p>
-                    <ul class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-12">
-                        <template x-for="(item, index) in data" :key="item.path">
-                            <li>
-                                <div class="flex gap-2 align-middle sticky top-0 left-0 bg-white my-2">
-                                    <span class="border rounded py-0.5 px-1 font-bold text-blue-500 underline"><a
-                                            target="_blank"
-                                            x-bind:href="window.location.href.replace('/admin', '') + '/translation?prefix=' + item.prefix + '&muid=' + item.muid + '&source=' + item.source_muid"
-                                            x-text="item.filename"></a></span>
-                                    <span x-text="item.muid" class="border rounded py-0.5 px-1 font-bold"
-                                          @click="window.location.href"></span>
-                                    <span x-text="item.prefix" class="border rounded py-0.5 px-1 font-bold"></span>
-                                    <span x-text="item.language" class="border rounded py-0.5 px-1 font-bold"></span>
-                                </div>
-                                <div class="flex gap-2 justify-between">
-                                    <div class="flex flex-col gap-2" x-data="adjust()">
-                                        <p class="text-center sticky top-8 left-0 bg-white underline">Data before the
-                                            shift</p>
-                                        <template x-for="(segment, segmentID) in item.data_before"
-                                                  :key="item.path+segmentID">
-                                            <template x-if="shouldDisplay(index, segmentID)">
-                                                <div>
-                                                    <label x-bind:for="item.path+segmentID+'before'"
-                                                           x-text="segmentID"></label>
-                                                    <textarea x-bind:id="item.path+segmentID+'before'"
-                                                              x-bind:value="segment" class="w-full" disabled></textarea>
-                                                </div>
-                                            </template>
-                                        </template>
+                <div>
+                    <div x-cloak x-show="data && data.length > 0" class="mt-4 mx-4" x-data="{modal: false}">
+                        <p class="text-center">Please review the data below.</p>
+                        <p class="text-center">You are going to change the following files:</p>
+                        <ul class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-12">
+                            <template x-for="(item, index) in data" :key="item.path">
+                                <li>
+                                    <div class="flex gap-2 align-middle sticky top-0 left-0 bg-white my-2">
+                                        <span class="border rounded py-0.5 px-1 font-bold text-blue-500 underline"><a
+                                                target="_blank"
+                                                x-bind:href="window.location.href.replace('/admin', '') + '/translation?prefix=' + item.prefix + '&muid=' + item.muid + '&source=' + item.source_muid"
+                                                x-text="item.filename"></a></span>
+                                        <span x-text="item.muid" class="border rounded py-0.5 px-1 font-bold"
+                                            @click="window.location.href"></span>
+                                        <span x-text="item.prefix" class="border rounded py-0.5 px-1 font-bold"></span>
+                                        <span x-text="item.language" class="border rounded py-0.5 px-1 font-bold"></span>
                                     </div>
-                                    <div class="flex flex-col gap-2">
-                                        <p class="text-center sticky top-8 left-0 bg-white underline">Data after the
-                                            shift</p>
-                                        <template x-for="(segment, segmentID) in item.data_before"
-                                                  :key="item.path+segmentID+'after'">
-                                            <template x-if="shouldDisplay(index, segmentID)">
-                                                <div class="flex-1">
-                                                    <label x-bind:for="item.path+segmentID+'after'"
-                                                           x-text="segmentID"
-                                                           :class="{'bg-red-600': !(segmentID in item.data_after),
-                                                                    'text-white': !(segmentID in item.data_after),
-                                                                    'bg-amber-200': item.data_before[segmentID] !== item.data_after[segmentID]}"></label>
-                                                    <textarea x-bind:id="item.path+segmentID+'after'"
-                                                              x-bind:value="item.data_after[segmentID]"
-                                                              x-show="segmentID in item.data_after" class="w-full"
-                                                              disabled
-                                                              :class="{'bg-amber-200': item.data_before[segmentID] !== item.data_after[segmentID]}"></textarea>
-                                                    <p class="text-center bg-red-600 text-white"
-                                                       x-show="!(segmentID in item.data_after)">Data
-                                                        no longer available</p>
-                                                </div>
+                                    <div class="flex gap-2 justify-between">
+                                        <div class="flex flex-col gap-2" x-data="adjust()">
+                                            <p class="text-center sticky top-8 left-0 bg-white underline">Data before the
+                                                shift</p>
+                                            <template x-for="(segment, segmentID) in item.data_before"
+                                                    :key="item.path+segmentID">
+                                                <template x-if="shouldDisplay(index, segmentID)">
+                                                    <div>
+                                                        <label x-bind:for="item.path+segmentID+'before'"
+                                                            x-text="segmentID"></label>
+                                                        <textarea x-bind:id="item.path+segmentID+'before'"
+                                                                x-bind:value="segment" class="w-full" disabled></textarea>
+                                                    </div>
+                                                </template>
                                             </template>
-                                        </template>
+                                        </div>
+                                        <div class="flex flex-col gap-2">
+                                            <p class="text-center sticky top-8 left-0 bg-white underline">Data after the
+                                                shift</p>
+                                            <template x-for="(segment, segmentID) in item.data_before"
+                                                    :key="item.path+segmentID+'after'">
+                                                <template x-if="shouldDisplay(index, segmentID)">
+                                                    <div class="flex-1">
+                                                        <label x-bind:for="item.path+segmentID+'after'"
+                                                            x-text="segmentID"
+                                                            :class="{'bg-red-600': !(segmentID in item.data_after),
+                                                                        'text-white': !(segmentID in item.data_after),
+                                                                        'bg-amber-200': item.data_before[segmentID] !== item.data_after[segmentID]}"></label>
+                                                        <textarea x-bind:id="item.path+segmentID+'after'"
+                                                                x-bind:value="item.data_after[segmentID]"
+                                                                x-show="segmentID in item.data_after" class="w-full"
+                                                                disabled
+                                                                :class="{'bg-amber-200': item.data_before[segmentID] !== item.data_after[segmentID]}"></textarea>
+                                                        <p class="text-center bg-red-600 text-white"
+                                                        x-show="!(segmentID in item.data_after)">Data
+                                                            no longer available</p>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                        </div>
                                     </div>
+                                </li>
+                            </template>
+                        </ul>
+                        <button @click.prevent="modal = !modal"
+                                class="ml-auto w-fit border-red-950 border rounded py-1 px-2 bg-red-600 text-white my-4">Shift
+                        </button>
+                        <div x-cloak x-show="modal" class="modal" @click="modal = !modal">
+                            <div class="border border-red-950 rounded p-4 bg-neutral-300" @click.stop>
+                                <p>Are you sure you want to change all the files?</p>
+                                <div class="flex justify-center gap-8 align-middle mt-4">
+                                    <button @click.prevent="modal = !modal; await handleSubmit(false)"
+                                            class="border border-red-950 rounded py-1 px-2 bg-red-600 text-white">Yes
+                                    </button>
+                                    <button @click.prevent="modal = !modal"
+                                            class="border border-red-950 rounded py-1 px-2 bg-amber-200">No
+                                    </button>
                                 </div>
-                            </li>
-                        </template>
-                    </ul>
-                    <button @click.prevent="modal = !modal"
-                            class="ml-auto w-fit border-red-950 border rounded py-1 px-2 bg-red-600 text-white my-4">Shift
-                    </button>
-                    <div x-cloak x-show="modal" class="modal" @click="modal = !modal">
-                        <div class="border border-red-950 rounded p-4 bg-neutral-300" @click.stop>
-                            <p>Are you sure you want to change all the files?</p>
-                            <div class="flex justify-center gap-8 align-middle mt-4">
-                                <button @click.prevent="modal = !modal; await handleSubmit(false)"
-                                        class="border border-red-950 rounded py-1 px-2 bg-red-600 text-white">Yes
-                                </button>
-                                <button @click.prevent="modal = !modal"
-                                        class="border border-red-950 rounded py-1 px-2 bg-amber-200">No
-                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </article>
-</main>
-<footer class="flex justify-around items-center h-28 border drop-shadow-sm">
-    <p>Computer Assisted Translation for SuttaCentral</p>
-    <ul>
-        <li><a href="https://suttacentral.net/">SuttaCentral</a></li>
-        <li><a href="https://github.com/suttacentral/bilara">Github</a></li>
-        <li><a href="https://discourse.suttacentral.net/">Forum</a></li>
-    </ul>
-</footer>
+        </article>
+    </main>
+
+    <footer class="flex justify-around items-center h-28 border drop-shadow-sm">
+        <p>Computer Assisted Translation for SuttaCentral</p>
+        <ul>
+            <li><a href="https://suttacentral.net/">SuttaCentral</a></li>
+            <li><a href="https://github.com/suttacentral/bilara">Github</a></li>
+            <li><a href="https://discourse.suttacentral.net/">Forum</a></li>
+        </ul>
+    </footer>
 </body>
 </html>

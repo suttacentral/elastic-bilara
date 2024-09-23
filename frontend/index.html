@@ -8,45 +8,35 @@
     <link rel="stylesheet" href="./static/css/main.css">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
     <script src="./static/js/auth.js"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
 </head>
 
 <body class="page-layout">
-<header>
-    <nav>
-        <ul class="main-nav index-main-nav">
-            <li class="main-nav__item"><a href="/" class="main-nav__item-link">Bilara</a></li>
-            <li class="main-nav__item">
-                <details class="main-nav__item-detail">
-                    <summary>How to</summary>
-                    <div></div> <!-- Add this later-->
-                </details>
-            </li>
-            <li class="main-nav__item main-nav__item--right main-nav__item--up">
-                <a href="api/v1/login/" class="main-nav__item-link btn btn--main">Login</a>
-            </li>
-        </ul>
-    </nav>
-</header>
-<main class="main-content main-content--index" x-init="await getToken()">
-    <p class="main-content__description index-main__description index-main__description--push-top">Your submissions will
-        be committed under your Github username. </p>
-    <p class="main-content__description index-main__description">Preferably, use your real name for your Github
-        account.</p>
-    <p class="main-content__description index-main__description">To log in, use the log in button on the header.</p>
-</main>
-<footer class="main-footer">
-    <p class="main-footer__description">Computer Assisted Translation for SuttaCentral</p>
-    <ul class="main-footer__list">
-        <li class="main-footer__list-item">
-            <a href="https://suttacentral.net/" class="main-footer__list-item-link">SuttaCentral</a>
-        </li>
-        <li class="main-footer__list-item">
-            <a href="https://github.com/suttacentral/bilara" class="main-footer__list-item-link">Github</a>
-        </li>
-        <li class="main-footer__list-item">
-            <a href="https://discourse.suttacentral.net/" class="main-footer__list-item-link">Forum</a>
-        </li>
-    </ul>
-</footer>
+    <header>
+        <nav>
+            <ul class="main-nav index-main-nav">
+                <li class="main-nav__item"><a href="/" class="main-nav__item-link">Bilara</a></li>
+                <li class="main-nav__item">
+                    <details class="main-nav__item-detail">
+                        <summary>How to</summary>
+                        <div></div> <!-- Add this later-->
+                    </details>
+                </li>
+                <li class="main-nav__item main-nav__item--right main-nav__item--up">
+                    <a href="api/v1/login/" class="main-nav__item-link btn btn--main">Login</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="main-content main-content--index" x-init="await getToken()">
+        <p class="main-content__description index-main__description index-main__description--push-top">Your submissions will
+            be committed under your Github username. </p>
+        <p class="main-content__description index-main__description">Preferably, use your real name for your Github
+            account.</p>
+        <p class="main-content__description index-main__description">To log in, use the log in button on the header.</p>
+    </main>
+
+    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
 </body>
 </html>
