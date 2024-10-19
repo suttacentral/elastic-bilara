@@ -9,8 +9,9 @@ function fetchTranslation() {
             const source = params.get("source");
 
             await this.findOrCreateObject(source, this.prefix, true);
-            if (muid) await this.findOrCreateObject(muid, this.prefix);
-
+            if (muid) {
+                await this.findOrCreateObject(muid, this.prefix);
+            }
             const projects = await this.fetchRelatedProjects(this.prefix);
             this.relatedProjects = projects.filter(project => project !== muid && project !== source);
             dragHandler();
@@ -295,7 +296,7 @@ function fetchTranslation() {
             }
         },
         async updateHandler(muid, data, element, btnId='btn-translation-commit') {
-            badgeId = `translation-badge-${Object.keys(data)[0]}`;
+            const badgeId = `translation-badge-${muid}-${Object.keys(data)[0]}`;
             if (Object.keys(data).length === 1) {
                 hideBadge(badgeId);
                 insertSpinner(badgeId);
@@ -545,6 +546,14 @@ function resizeHandler() {
             document.removeEventListener("mouseup", up);
             adjustVisibleTextareas();
         }
+    });
+}
+
+function moveContentDetails() {
+    const contentDetails = Array.from(document.querySelectorAll('.project-container__content-details'));
+    const translationTemplate = document.querySelector('#translation-template');
+    contentDetails.forEach(detail => {
+        translationTemplate.appendChild(detail);
     });
 }
 
