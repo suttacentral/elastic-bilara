@@ -1,5 +1,4 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
-import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit-html@3.2.0/directives/unsafe-html.js';
 
 export class SCBilaraTranslation extends LitElement {
   static styles = [
@@ -39,9 +38,9 @@ export class SCBilaraTranslation extends LitElement {
     return html`
       <sl-split-panel>
         <i class="bi-grip-vertical" slot="divider"></i>
-        <div slot="start" class="content-detail">
+        <div slot="start" class="content-detail-container">
         </div>
-        <div slot="end"  class="content-detail">
+        <div slot="end"  class="content-detail-container">
           ${this.renderPanels(count, current + 1)}
         </div>
       </sl-split-panel>
@@ -50,7 +49,7 @@ export class SCBilaraTranslation extends LitElement {
 
   firstUpdated() {
     if (this.panels % 2!== 0) {
-      const lastContentDetail = document.querySelector('.content-detail:last-child');
+      const lastContentDetail = document.querySelector('.content-detail-container:last-child');
       lastContentDetail.style.display = 'none';
     }
   }
@@ -76,9 +75,6 @@ export class SCBilaraTranslation extends LitElement {
     if (changedProperties.has('translationsCount')) {
       this.panels = parseInt(this.translationsCount);
       const positions = this._calculatePositions(100, this.panels);
-      const contentDetails = Array.from(document.querySelectorAll('.project-container__content-details'));
-      this.contentDetails = contentDetails;
-
       if (this.panels > 0) {
         const splitPanels = Array.from(document.querySelectorAll('sl-split-panel'));
         splitPanels.forEach((div, i) => {
@@ -88,9 +84,9 @@ export class SCBilaraTranslation extends LitElement {
 
       setTimeout(() => {
         const contentDetails = Array.from(document.querySelectorAll('.project-container__content-details'));
-        const splitPanelContentDetails = Array.from(document.querySelectorAll('.content-detail'));
+        const splitPanelContentDetails = Array.from(document.querySelectorAll('.content-detail-container'));
         let j = 0;
-        splitPanelContentDetails.forEach((div, i) => {
+        splitPanelContentDetails.forEach((div) => {
           if (contentDetails[j] && !div.querySelector('sl-split-panel')) {
               div.appendChild(contentDetails[j]);
               j++;
