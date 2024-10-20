@@ -23,6 +23,7 @@
     <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script src="./static/js/elements/translation/sc-bilara-translation.js" type="module"></script>
     <script src="./static/js/elements/translation/sc-bilara-translation-project-header.js" type="module"></script>
     <script src="./static/js/elements/translation/sc-bilara-translation-project-actions.js" type="module"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
@@ -39,103 +40,104 @@
         x-data="{...fetchTranslation(), active: null}" x-cloak x-show="isActive"
         @toggle-detail-panel.window="active === $event.detail.panel ? active = null : active = $event.detail.panel">
 
+
         <sc-bilara-translation-project-header></sc-bilara-translation-project-header>
+
         <div class="project-container">
             <div class="project-container__content split-panel-divider">
-                <sl-split-panel>
-                    <i class="bi-grip-vertical" slot="divider"></i>
-                    <template
-                        x-data="{splitting: false, merging: false, mergingUid: '', splittingUid: ''}"
-                        x-for="(translation, index) in translations"
-                        :key="index">
-                        <div
-                            class="project-container__content-details"
-                            :slot="translation.isSource ? 'start' : 'end'"
-                            :style="`order: ${index}`"
-                            style="height: 200px; background: var(--sl-color-neutral-50); display: flex; align-items: center; justify-content: center; overflow: hidden;"
-                            x-data="{ clicked: false, isRoot: translation.isSource }"
-                            :class="{ 'border-effect': clicked }">
-                            <div class="project-container__content-body" x-data="textareaAdjuster();">
-                                <template
-                                    x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
-                                    :key="uid">
-                                    <div class="project-container__content-body__section"
-                                        :data-index="i"
-                                        x-data="{
-                                            hints: [],
-                                            showHints: false,
-                                            uid: uid,
-                                            muid: translation.muid,
-                                            hintClicked: false,
-                                            isSource: translation.isSource,
-                                            sourceMuid: new URLSearchParams(window.location.search).get('source'),
-                                            sourceValue: translations.find(item => item.muid === new URLSearchParams(window.location.search).get('source')).data[uid]}">
+                <sc-bilara-translation :translationsCount="translations.length"></sc-bilara-translation>
+                <template
+                    id="translation-template"
+                    x-data="{splitting: false, merging: false, mergingUid: '', splittingUid: ''}"
+                    x-for="(translation, index) in translations"
+                    :key="index">
+                    <div
+                        class="project-container__content-details"
+                        :slot="translation.isSource ? 'start' : 'end'"
+                        :style="`order: ${index}`"
+                        style="height: 200px; background: var(--sl-color-neutral-50); display: flex; align-items: center; justify-content: center; overflow: hidden;"
+                        x-data="{ clicked: false, isRoot: translation.isSource }"
+                        :class="{ 'border-effect': clicked }">
+                        <div class="project-container__content-body" x-data="textareaAdjuster();">
+                            <template
+                                x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
+                                :key="uid">
+                                <div class="project-container__content-body__section"
+                                    :data-index="i"
+                                    x-data="{
+                                        hints: [],
+                                        showHints: false,
+                                        uid: uid,
+                                        muid: translation.muid,
+                                        hintClicked: false,
+                                        isSource: translation.isSource,
+                                        sourceMuid: new URLSearchParams(window.location.search).get('source'),
+                                        sourceValue: translations.find(item => item.muid === new URLSearchParams(window.location.search).get('source')).data[uid]}">
 
-                                        <sc-bilara-translation-project-actions></sc-bilara-translation-project-actions>
+                                    <sc-bilara-translation-project-actions></sc-bilara-translation-project-actions>
 
-                                        <div class="project-container__content-body__textarea-container">
-                                            <textarea class="project-container__content-body__textarea"
-                                                x-bind:value="getValue(translation, uid)"
-                                                x-bind:readonly="!translation.canEdit"
-                                                x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
-                                                x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
-                                                x-on:click="hintClicked = false"
-                                                x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
-                                                x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)">
-                                            </textarea>
-                                            <sc-bilara-translation-edit-status
-                                                x-bind:id="isSource ? `root-badge-${uid}` : `translation-badge-${uid}`"
-                                            ></sc-bilara-translation-edit-status>
-                                        </div>
-                                        <div class="project-container__content-body__hints" x-cloak
-                                            x-show="hints.length > 0 && showHints">
-                                            <ul class="project-container__content-body__hints-list">
-                                                <template x-for="hint in hints.slice(0, 5)">
-                                                    <li @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; observeSections()"
-                                                    class="project-container__content-body__hints-list-item">
-                                                        <p x-text="hint.uid" class="project-container__content-body__hints-list-item__uid"></p>
-                                                        <div class="project-container__content-body__hints-list-item__info">
-                                                            <p x-text="hint.segment"
-                                                            class="project-container__content-body__hints-list-item__info-source"></p>
-                                                            <div class="project-container__content-body__hints-list-item__info-translation">
-                                                                <p x-text="hint.translation_hints"
-                                                                    class="project-container__content-body__hints-list-item__info-translation__text"></p>
-                                                                <span x-text="'('+ hint.strength + ')'"
-                                                                    class="project-container__content-body__hints-list-item__info-translation__strength">
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </li>
-                                                </template>
-                                            </ul>
-                                        </div>
+                                    <div class="project-container__content-body__textarea-container">
+                                        <textarea class="project-container__content-body__textarea"
+                                            x-bind:value="getValue(translation, uid)"
+                                            x-bind:readonly="!translation.canEdit"
+                                            x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
+                                            x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
+                                            x-on:click="hintClicked = false"
+                                            x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
+                                            x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)">
+                                        </textarea>
+                                        <sc-bilara-translation-edit-status
+                                            x-bind:id="isSource ? `root-badge-${muid}-${uid}` : `translation-badge-${muid}-${uid}`"
+                                        ></sc-bilara-translation-edit-status>
                                     </div>
-                                </template>
-                            </div>
-                            <div class="project-container__content-footer">
-                                <sl-button variant="primary" size="large" x-bind:id="isRoot ? `btn-root-commit` : `btn-translation-commit`"
-                                    x-show="translation.canEdit && !merging && !splitting"
-                                    @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'), $event.target.id)">
-                                    Commit Changes
+                                    <div class="project-container__content-body__hints" x-cloak
+                                        x-show="hints.length > 0 && showHints">
+                                        <ul class="project-container__content-body__hints-list">
+                                            <template x-for="hint in hints.slice(0, 5)">
+                                                <li @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; observeSections()"
+                                                class="project-container__content-body__hints-list-item">
+                                                    <p x-text="hint.uid" class="project-container__content-body__hints-list-item__uid"></p>
+                                                    <div class="project-container__content-body__hints-list-item__info">
+                                                        <p x-text="hint.segment"
+                                                        class="project-container__content-body__hints-list-item__info-source"></p>
+                                                        <div class="project-container__content-body__hints-list-item__info-translation">
+                                                            <p x-text="hint.translation_hints"
+                                                                class="project-container__content-body__hints-list-item__info-translation__text"></p>
+                                                            <span x-text="'('+ hint.strength + ')'"
+                                                                class="project-container__content-body__hints-list-item__info-translation__strength">
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="project-container__content-footer">
+                            <sl-button variant="primary" size="large" x-bind:id="isRoot ? `btn-root-commit` : `btn-translation-commit`"
+                                x-show="translation.canEdit && !merging && !splitting"
+                                @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'), $event.target.id)">
+                                Commit Changes
+                            </sl-button>
+                            <div x-data="{params: new URLSearchParams(window.location.search)}">
+                                <sl-button variant="success"  size="large" id="btn-publish-changes"
+                                    x-show="translation.canEdit && translation.muid === params.get('muid')  && !merging && !splitting"
+                                    @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
+                                    Publish Changes
                                 </sl-button>
-                                <div x-data="{params: new URLSearchParams(window.location.search)}">
-                                    <sl-button variant="success"  size="large" id="btn-publish-changes"
-                                        x-show="translation.canEdit && translation.muid === params.get('muid')  && !merging && !splitting"
-                                        @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
-                                        Publish Changes
-                                    </sl-button>
-                                </div>
-                                <div x-data="{params: new URLSearchParams(window.location.search)}">
-                                    <sl-button variant="success"  size="large"  id="btn-publish-changes-split-merge"
-                                        x-show="translation.canEdit && isAdmin && isRoot && !merging && !splitting"
-                                        @click="await publishChangesHandlerForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
-                                        Publish Changes For Split Or Merge
-                                    </sl-button>
-                                </div>
+                            </div>
+                            <div x-data="{params: new URLSearchParams(window.location.search)}">
+                                <sl-button variant="success"  size="large"  id="btn-publish-changes-split-merge"
+                                    x-show="translation.canEdit && isAdmin && isRoot && !merging && !splitting"
+                                    @click="await publishChangesHandlerForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
+                                    Publish Changes For Split Or Merge
+                                </sl-button>
                             </div>
                         </div>
-                    </template>
-                </sl-split-panel>
+                    </div>
+                </template>
             </div>
             <div class="project-container__detail-panel" x-data="{ active: null }"
                 @toggle-detail-panel.window="active === $event.detail.panel ? active = 'none' : active = $event.detail.panel">
@@ -143,7 +145,7 @@
                     :class="{'active': active === 'related'}" x-data="{selectedProjects: {}}">
                     <template x-for="project in relatedProjects" :key="project">
                         <div x-text="project" class="project-container__detail-panel__related-item"
-                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); dragHandler(); resizeHandler()"
+                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); moveContentDetails(); "
                             :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }"></div>
                     </template>
                 </div>
