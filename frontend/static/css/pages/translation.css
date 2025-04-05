@@ -150,6 +150,10 @@
     flex-direction: row;
 }
 
+.project-container__content-body__hints {
+    position: absolute;
+}
+
 .project-container__content-body__hints-list {
     display: flex;
     flex-direction: column;
