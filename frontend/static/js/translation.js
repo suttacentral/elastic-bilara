@@ -32,6 +32,7 @@ function fetchTranslation() {
             translation.data[uid] = value;
         },
         async splitBasedOnUid(translations, uid, element) {
+            document.querySelector('.dialog-split-hint')?.show();
             this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
             if (this.htmlProjectName) {
                 const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
