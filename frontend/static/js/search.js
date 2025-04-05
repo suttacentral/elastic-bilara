@@ -24,8 +24,12 @@ const search = () => {
                 const params = new URLSearchParams(window.location.search);
                 const muid = params.get("muid");
                 const source = params.get("source");
-                if (muid) this.toggleSelectedProjects(muid);
-                if (source) this.toggleSelectedProjects(source);
+                if (muid) {
+                  this.toggleSelectedProjects(muid);
+                }
+                if (source) {
+                  this.toggleSelectedProjects(source);
+                }
             } catch (error) {
                 throw new Error(error);
             }

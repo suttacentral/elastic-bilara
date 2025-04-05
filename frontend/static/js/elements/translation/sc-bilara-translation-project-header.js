@@ -37,4 +37,5 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
     `;
   }
 }
+
 customElements.define('sc-bilara-translation-project-header', SCBilaraTranslationProjectHeader);
