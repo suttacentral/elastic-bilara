@@ -2,6 +2,8 @@ function fetchTranslation() {
     return {
         translations: [],
         relatedProjects: [],
+        htmlProjectName: '',
+        htmlProject: null,
         async init() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
@@ -14,8 +16,11 @@ function fetchTranslation() {
             }
             const projects = await this.fetchRelatedProjects(this.prefix);
             this.relatedProjects = projects.filter(project => project !== muid && project !== source);
-            dragHandler();
-            resizeHandler();
+
+            this.htmlProjectName = projects.find(project => project.includes('html'));
+            if (this.htmlProjectName) {
+                this.htmlProject = await this.createObject(this.htmlProjectName, this.prefix);
+            }
         },
         getValue(translation, uid) {
             return translation.data[uid] || "";
@@ -28,7 +33,12 @@ function fetchTranslation() {
         },
         async splitBasedOnUid(translations, uid, element) {
             this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
-            await this.toggleRelatedProject('html-pli-ms');
+            if (this.htmlProjectName) {
+                const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
+                if (!existingProject) {
+                    this.translations.push(this.htmlProject);
+                }
+            }
 
             if (!isMergeSplitConditionMet(uid)) {
                 displayMessage(
@@ -263,6 +273,23 @@ function fetchTranslation() {
             }
             return obj;
         },
+        async createObject(key, prefix, source = false) {
+            let obj = this.translations.find(item => key in item);
+            if (!obj) {
+                try {
+                    const data = await this.fetchData(key, prefix);
+                    obj = { canEdit: false, muid: key, prefix: prefix };
+                    obj["data"] = data.data;
+                    obj["canEdit"] = data["can_edit"];
+                } catch (error) {
+                    throw new Error(error);
+                }
+                if (source) {
+                    obj.isSource = true;
+                }
+            }
+            return obj;
+        },
         async fetchData(key, prefix) {
             try {
                 const response = await requestWithTokenRetry(`projects/${key}/${prefix}/`);
@@ -492,66 +519,6 @@ function adjustVisibleTextareas() {
     for (const el of uniqueVisibleElements) {
         adjustTextareas(el.querySelector("textarea"));
     }
-}
-
-function dragHandler() {
-    const container = document.querySelector(".project-container__content");
-    const dragElems = document.querySelectorAll(".draggable-container");
-
-    dragElems.forEach(elem => {
-        elem.addEventListener("dragstart", event => {
-            const draggable = elem.closest(".project-container__content-details");
-            draggable.classList.add("dragging");
-            event.dataTransfer.setDragImage(draggable, event.clientX, event.clientY);
-        });
-
-        elem.addEventListener("dragend", e => {
-            const afterElement = document
-                .elementFromPoint(e.clientX, e.clientY)
-                .closest(".project-container__content-details");
-            if (!afterElement) return;
-            const dragging = document.querySelector(".dragging");
-            const orderTarget = afterElement.style.order;
-            afterElement.style.order = dragging.style.order;
-            dragging.style.order = orderTarget;
-            dragging.classList.remove("dragging");
-        });
-    });
-
-    container.addEventListener("dragover", e => {
-        e.preventDefault();
-    });
-}
-
-function resizeHandler() {
-    const resizables = document.querySelectorAll(".resize");
-    resizables.forEach(resize => {
-        const container = resize.parentElement.parentElement;
-        let x, w;
-
-        resize.addEventListener("mousedown", e => {
-            x = e.clientX;
-            w = container.clientWidth;
-            document.addEventListener("mousemove", move);
-            document.addEventListener("mouseup", up);
-        });
-
-        function move(e) {
-            const mx = e.clientX;
-            const cx = mx - x;
-            const detailPanel = container.parentElement;
-            if (detailPanel.classList.contains("project-container__detail-panel")) {
-                detailPanel.style.maxWidth = "100%";
-            }
-            container.style.width = `${w + cx}px`;
-        }
-
-        function up(e) {
-            document.removeEventListener("mousemove", move);
-            document.removeEventListener("mouseup", up);
-            adjustVisibleTextareas();
-        }
-    });
 }
 
 function moveContentDetails() {
