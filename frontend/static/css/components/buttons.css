@@ -133,10 +133,12 @@
     background-color: var(--color-primary-light);
     margin-left: var(--space-xs);
     margin-right: var(--space-xs);
+    height: fit-content;
 }
 
 .btn--merge {
     background-color: var(--color-primary);
+    height: fit-content;
 }
 
 .btn--disabled {
@@ -149,9 +151,9 @@
 
 .btn--cancel {
     background-color: var(--color-secondary-lighter);
-    padding: var(--space-sm) var(--space-md);
     margin-left: var(--space-xs);
     margin-right: var(--space-xs);
+    height: fit-content;
 }
 
 .processing {

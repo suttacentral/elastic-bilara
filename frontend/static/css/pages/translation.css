@@ -148,6 +148,7 @@
 .project-container__content-body__action {
     display: flex;
     flex-direction: row;
+    align-items: center;
 }
 
 .project-container__content-body__hints {
@@ -309,3 +310,16 @@ sl-split-panel i {
     padding: 0.5rem 0.125rem;
 }
 
+sl-dialog::part(panel) {
+    background-color: var(--color-primary-lighter);
+}
+
+sl-dialog::part(header) {
+    background-color: var(--color-primary-lighter);
+    border-bottom: 1px solid var(--color-primary-dark);
+}
+
+sl-dialog::part(title) {
+    font-size: var(--text-xxl);
+    color: var(--color-black);
+}
