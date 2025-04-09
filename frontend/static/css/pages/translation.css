@@ -320,6 +320,13 @@ sl-dialog::part(header) {
 }
 
 sl-dialog::part(title) {
-    font-size: var(--text-xxl);
+    font-size: var(--text-l);
     color: var(--color-black);
+}
+
+.dialog-split-merge-hint .dialog-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-sm);
 }

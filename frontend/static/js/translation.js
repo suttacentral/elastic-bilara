@@ -32,21 +32,24 @@ function fetchTranslation() {
             translation.data[uid] = value;
         },
         async splitBasedOnUid(translations, uid, element) {
-            document.querySelector('.dialog-split-hint')?.show();
-            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
-            if (this.htmlProjectName) {
-                const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
-                if (!existingProject) {
-                    this.translations.push(this.htmlProject);
-                }
-            }
-
             if (!isMergeSplitConditionMet(uid)) {
                 displayMessage(
                     element,
                     "This type of uid does not support splitting."
                 );
                 return false;
+            }
+
+            if (localStorage.getItem('enableSplitMergeHintDialog') === "true") {
+                document.querySelector('.dialog-split-merge-hint')?.show();
+            }
+
+            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
+            if (this.htmlProjectName) {
+                const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
+                if (!existingProject) {
+                    this.translations.push(this.htmlProject);
+                }
             }
 
             const [sectionUid, sectionNumber] = uid.split(':');
@@ -69,7 +72,11 @@ function fetchTranslation() {
                             // The current paragraph to be split
                             newObj[key] = translation.data[key];
                             const newKey = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
-                            newObj[newKey] = "";
+                            if (translation.muid.includes('html')) {
+                                newObj[newKey] = "{}";
+                            } else {
+                                newObj[newKey] = "";
+                            }
                         } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && parseInt(keyDecimalPart) >= parseInt(decimalPart) + 1) {
                             // The paragraph after the split point needs to be moved
                             const newKey = `${sectionUid}:${integerPart}.${parseInt(keyDecimalPart) + 1}`;
@@ -98,7 +105,11 @@ function fetchTranslation() {
                             // The current paragraph to be split
                             newObj[key] = translation.data[key];
                             const newKey = `${sectionUid}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
-                            newObj[newKey] = "";
+                            if (translation.muid.includes('html')) {
+                                newObj[newKey] = "{}";
+                            } else {
+                                newObj[newKey] = "";
+                            }
                         } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && parseInt(keyLastPart) >= parseInt(sectionLastPart) + 1) {
                             // The paragraph after the split point needs to be moved
                             const newKey = `${sectionUid}:${sectionMainPart}${parseInt(keyLastPart) + 1}`;
@@ -115,12 +126,10 @@ function fetchTranslation() {
         },
         cancelSplit(translations) {
             // this.translations = this.OriginalTranslations;
+            // this.translations = JSON.parse(JSON.stringify(this.OriginalTranslations));
             window.location.reload();
         },
         mergeBasedOnUid(translations, uid, element) {
-            let newObj = {};
-            this.merger_uid = uid;
-            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
             if (!isMergeSplitConditionMet(uid)) {
                 displayMessage(
                     element,
@@ -128,6 +137,21 @@ function fetchTranslation() {
                 );
                 return false;
             }
+
+            let newObj = {};
+            this.merger_uid = uid;
+            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
+            if (this.htmlProjectName) {
+                const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
+                if (!existingProject) {
+                    this.translations.push(this.htmlProject);
+                }
+            }
+
+            if (localStorage.getItem('enableSplitMergeHintDialog') === true) {
+                document.querySelector('.dialog-split-merge-hint')?.show();
+            }
+
             const regex = /:([0-9]+(\.[0-9]+)?)$/;
             if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
                 const [sectionUid, sectionNumber] = uid.split(':');
@@ -247,7 +271,8 @@ function fetchTranslation() {
             }
         },
         cancelMerge(translations) {
-            this.translations = this.OriginalTranslations;
+            // this.translations = this.OriginalTranslations;
+            window.location.reload();
         },
         redirectToHtml() {
             const params = new URLSearchParams(window.location.search);
