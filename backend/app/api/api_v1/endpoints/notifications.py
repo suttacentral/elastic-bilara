@@ -176,8 +176,6 @@ async def mark_notification_as_done(
     commit_id: str,
     user: str = Depends(auth_utils.get_current_user),
 ):
-    print(user)
-    print(commit_id)
     with get_sess() as sess:
         if (
             sess.query(Notification)

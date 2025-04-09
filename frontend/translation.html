@@ -20,6 +20,7 @@
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/spinner/spinner.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/split-panel/split-panel.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/dialog/dialog.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/checkbox/checkbox.js"></script>
     <script src="./static/js/elements/translation/sc-bilara-translation-edit-status.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
@@ -32,9 +33,17 @@
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
-    <sl-dialog label="Hint" class="dialog-split-hint">
+    <sl-dialog label="Hint" class="dialog-split-merge-hint">
         When any split is made, you must check the HTML and confirm it is correct.
-        <sl-button slot="footer" variant="primary" @click="document.querySelector('.dialog-split-hint').hide()" class="cc cc-logo" click="document.querySelector('.dialog-overview').hide()">Close</sl-button>
+        <br>
+        <div class="dialog-footer">
+            <sl-checkbox @sl-change="localStorage.setItem('enableSplitMergeHintDialog', false);">Don't show again</sl-checkbox>
+            <sl-button slot="footer" variant="primary"
+                @click="document.querySelector('.dialog-split-merge-hint').hide()"
+                class="cc cc-logo"
+            >Close
+            </sl-button>
+        </div>
     </sl-dialog>
 
     <header>
