@@ -40,8 +40,12 @@ function fetchTranslation() {
                 return false;
             }
 
-            if (localStorage.getItem('enableSplitMergeHintDialog') === "true") {
-                document.querySelector('.dialog-split-merge-hint')?.show();
+            if (localStorage.getItem('enableSplitHintDialog') === null) {
+                localStorage.setItem('enableSplitHintDialog', true);
+            }
+
+            if (localStorage.getItem('enableSplitHintDialog') === "true") {
+                document.querySelector('.dialog-split-hint')?.show();
             }
 
             this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
@@ -148,8 +152,12 @@ function fetchTranslation() {
                 }
             }
 
-            if (localStorage.getItem('enableSplitMergeHintDialog') === true) {
-                document.querySelector('.dialog-split-merge-hint')?.show();
+            if (localStorage.getItem('enableMergeHintDialog') === null) {
+                localStorage.setItem('enableMergeHintDialog', true);
+            }
+
+            if (localStorage.getItem('enableMergeHintDialog') === "true") {
+                document.querySelector('.dialog-merge-hint')?.show();
             }
 
             const regex = /:([0-9]+(\.[0-9]+)?)$/;

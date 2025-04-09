@@ -33,13 +33,26 @@
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
-    <sl-dialog label="Hint" class="dialog-split-merge-hint">
+    <sl-dialog label="Hint" class="dialog-split-hint">
         When any split is made, you must check the HTML and confirm it is correct.
         <br>
         <div class="dialog-footer">
-            <sl-checkbox @sl-change="localStorage.setItem('enableSplitMergeHintDialog', false);">Don't show again</sl-checkbox>
+            <sl-checkbox @sl-change="localStorage.setItem('enableSplitHintDialog', false);">Don't show again</sl-checkbox>
             <sl-button slot="footer" variant="primary"
-                @click="document.querySelector('.dialog-split-merge-hint').hide()"
+                @click="document.querySelector('.dialog-split-hint').hide()"
+                class="cc cc-logo"
+            >Close
+            </sl-button>
+        </div>
+    </sl-dialog>
+
+    <sl-dialog label="Hint" class="dialog-merge-hint">
+        When any merge is made, you must check the HTML and confirm it is correct.
+        <br>
+        <div class="dialog-footer">
+            <sl-checkbox @sl-change="localStorage.setItem('enableMergeHintDialog', false);">Don't show again</sl-checkbox>
+            <sl-button slot="footer" variant="primary"
+                @click="document.querySelector('.dialog-merge-hint').hide()"
                 class="cc cc-logo"
             >Close
             </sl-button>
