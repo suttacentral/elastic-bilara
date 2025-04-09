@@ -324,7 +324,7 @@ sl-dialog::part(title) {
     color: var(--color-black);
 }
 
-.dialog-split-merge-hint .dialog-footer {
+.dialog-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
