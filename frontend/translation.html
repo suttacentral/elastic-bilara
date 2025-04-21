@@ -37,7 +37,7 @@
         When any split is made, you must check the HTML and confirm it is correct.
         <br>
         <div class="dialog-footer">
-            <sl-checkbox @sl-change="localStorage.setItem('enableSplitHintDialog', false);">Don't show again</sl-checkbox>
+            <sl-checkbox @sl-change="localStorage.setItem('enableSplitHintDialog', !$event.target.checked);">Don't show again</sl-checkbox>
             <sl-button slot="footer" variant="primary"
                 @click="document.querySelector('.dialog-split-hint').hide()"
                 class="cc cc-logo"
@@ -50,7 +50,7 @@
         When any merge is made, you must check the HTML and confirm it is correct.
         <br>
         <div class="dialog-footer">
-            <sl-checkbox @sl-change="localStorage.setItem('enableMergeHintDialog', false);">Don't show again</sl-checkbox>
+            <sl-checkbox @sl-change="localStorage.setItem('enableMergeHintDialog', !$event.target.checked);">Don't show again</sl-checkbox>
             <sl-button slot="footer" variant="primary"
                 @click="document.querySelector('.dialog-merge-hint').hide()"
                 class="cc cc-logo"
