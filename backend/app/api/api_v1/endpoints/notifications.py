@@ -105,8 +105,16 @@ def get_recently_git_updated_files(user: str = Depends(auth_utils.get_current_us
                     'change_detail': format_change_detail(get_change_detail(file_name, parsed_git_show_details), file_name)
                 })
 
-            commit = git_commit.split(" ")[0]
-            message = git_commit.split(" ")[1] + ' ' + git_commit.split(" ")[2]
+            parts = git_commit.split(" ", 3)
+            commit = parts[0] if parts else ""
+
+            if len(parts) >= 3:
+                message = " ".join(parts[1:3])
+            elif len(parts) == 2:
+                message = parts[1]
+            else:
+                message = ""
+
             git_detail = {
                 'info': git_commit,
                 'commit': commit,
