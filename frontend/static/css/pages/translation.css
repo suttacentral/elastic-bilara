@@ -152,7 +152,9 @@
 }
 
 .project-container__content-body__hints {
-    position: absolute;
+    /* position: absolute; */
+    width: -moz-available;
+    width: -webkit-fill-available;
 }
 
 .project-container__content-body__hints-list {
