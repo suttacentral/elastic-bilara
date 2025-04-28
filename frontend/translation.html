@@ -150,7 +150,7 @@
                             </sl-button>
                             <div x-data="{params: new URLSearchParams(window.location.search)}">
                                 <sl-button variant="success"  size="large" id="btn-publish-changes"
-                                    x-show="translation.canEdit && translation.muid === params.get('muid')  && !merging && !splitting"
+                                    x-show="translation.canEdit && !merging && !splitting"
                                     @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                     Publish Changes
                                 </sl-button>
