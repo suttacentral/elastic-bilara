@@ -7,7 +7,6 @@ authors = ["Admin <admin@example.com>"]
 [[tool.poetry.source]]
 name = "aliyun"
 url = "https://mirrors.aliyun.com/pypi/simple/"
-secondary = true
 
 [tool.poetry.dependencies]
 python = "3.11.3"
