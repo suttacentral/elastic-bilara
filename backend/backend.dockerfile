@@ -4,7 +4,7 @@ ENV PYTHONUNBUFFERED 1
 
 # Upgrade pip and install Poetry
 RUN pip install --upgrade pip && \
-    pip install poetry
+    pip install poetry==1.8.5
 
 RUN poetry config virtualenvs.create false
 
