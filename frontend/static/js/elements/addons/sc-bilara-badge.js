@@ -6,7 +6,7 @@ export class SCBilaraBadge extends LitElement {
       padding: 0.1em 0.2em;
       border-radius: 0.6rem;
       color: #ffffff;
-      font-family: sans-serif;
+      font-family: 'Source Sans 3',
       font-size: 0.7em;
       font-weight: bold;
     }

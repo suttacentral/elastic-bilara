@@ -1,6 +1,6 @@
 :root {
-    --font-primary: sans-serif;
-    --font-secondary: serif;
+    --font-primary: 'Source Sans 3';
+    --font-secondary: 'Source Serif 4';
 
     --text-base-size: 1em;
     --text-scale-ratio: 1.2;
