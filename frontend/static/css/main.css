@@ -1,3 +1,5 @@
+@import "variables/fonts.css";
+
 @import "base/reset.css";
 
 @import "variables/colors.css";
@@ -5,7 +7,6 @@
 @import "variables/shadows.css";
 @import "variables/buttons.css";
 @import "variables/typography.css";
-
 
 @import "layout/body.css";
 @import "layout/header.css";
