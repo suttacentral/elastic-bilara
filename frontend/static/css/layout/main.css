@@ -3,3 +3,57 @@
     flex-grow: 1;
     overflow: hidden;
 }
+
+#how-to-details{
+    margin: 2rem 4%
+}
+
+#how-to-details summary{
+    font-weight: bold;
+}
+
+#how-to-details  div{
+    margin-top: 1em;
+    line-height: 1.5;
+}
+
+#how-to-details p, 
+#how-to-details ul, 
+#how-to-details ol {
+    margin: 0 0 1em 0;
+}
+
+#how-to-details li{
+    margin: 0 0 .5em 1em
+}
+
+#how-to-details li li{
+    margin: 1em 0 .5em 1em
+}
+
+#how-to-details ol {
+    list-style-type: decimal;
+}
+
+#how-to-details ul {
+    list-style-type: disc;
+}
+
+#how-to-details  a{
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: .2em;
+    color: var(--color-accent);
+}
+
+b{
+    font-weight: bold;
+}
+
+kbd{
+    font-family: monospace;
+    border: 1px solid var(--color-black);
+    padding: .2em .4em;
+    border-radius: 4px;
+    background-color: #ccc;
+}

@@ -24,13 +24,6 @@ export class SCBilaraNavMain extends LitElement {
               <li class="main-nav__item">
                   <a href="/nav" class="main-nav__item-link">Bilara</a>
               </li>
-              <li class="main-nav__item">
-                  <details class="main-nav__item-detail">
-                      <summary>How to</summary>
-                      <div></div>
-                      <!-- Add this later-->
-                  </details>
-              </li>
               <li class="main-nav__item main-nav__item--right hide-mobile">
                   <div class="user-container" x-cloak x-show="!!username">
                       <img
