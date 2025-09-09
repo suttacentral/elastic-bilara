@@ -21,18 +21,20 @@ export class SCBilaraNavMain extends LitElement {
     return html`
       <nav>
         <ul class="main-nav">
-              <li class="main-nav__item">
+              <li class="main-nav__item go-home">
                   <a href="/nav" class="main-nav__item-link">Bilara</a>
               </li>
               <li class="main-nav__item main-nav__item--right hide-mobile">
-                  <div class="user-container" x-cloak x-show="!!username">
+                <a href="https://github.com/username" class="username-link">
+                  <figure class="user-container" x-cloak x-show="!!username">
                       <img
                         :src="avatarURL"
                         x-bind:alt="username + 's github profile picture'"
                         class="user-avatar"
                         title="profile picture"/>
-                      <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
-                  </div>
+                      <figcaption x-text="username"></figcaption>
+                  </figure>
+                </a>
               </li>
               <div class="image-container">
                 <sc-bilara-notification-icon></sc-bilara-notification-icon>

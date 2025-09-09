@@ -5,7 +5,6 @@
     gap: var(--space-md);
     padding: var(--space-lg) var(--space-md);
     background-color: var(--color-primary-light);
-    font-size: var(--text-lg);
 }
 
 

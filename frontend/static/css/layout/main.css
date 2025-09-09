@@ -5,16 +5,17 @@
 }
 
 #how-to-details{
-    margin: var(--space-lg);
+    margin: var(--space-sm);
 }
 
 #how-to-details summary{
-    font-weight: bold;
+    font-weight: 500;
 }
 
 #how-to-details  div{
     margin-top: var(--space-md);
     line-height: 1.5;
+    padding: var(--space-sm);
 }
 
 #how-to-details p, 

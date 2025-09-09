@@ -27,12 +27,16 @@ export class SCBilaraNavMainMobile extends LitElement {
               </li>
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
-                  <div class="user-container" x-cloak x-show="!!username">
-                      <img :src="avatarURL"
-                          x-bind:alt="username + 's github profile picture'"
-                          class="user-avatar"/>
-                      <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
-                  </div>
+                <a href="https://github.com/username" class="username-link">
+                  <figure class="user-container" x-cloak x-show="!!username">
+                      <img
+                        :src="avatarURL"
+                        x-bind:alt="username + 's github profile picture'"
+                        class="user-avatar"
+                        title="profile picture"/>
+                      <figcaption x-text="username"></figcaption>
+                  </figure>
+                </a>
               </li>
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'" x-cloak

@@ -1,11 +1,15 @@
 .btn {
-    padding: var(--space-xxs) var(--space-xs);
+    padding: 0 var(--space-sm);
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-primary-darker);
-    box-shadow: var(--shadow-xxs);
     font-size: var(--btn-font-size);
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+    vertical-align: middle;
+    height: var(--space-lg);
+    line-height: var(--space-lg);
 }
 .btn:hover {
     box-shadow: var(--shadow-xs);
@@ -14,6 +18,7 @@
 .btn--main, .btn--admin {
     background-color: var(--color-primary-dark);
     color: var(--color-white);
+
 }
 
 .btn--main:hover, .btn--admin:hover {

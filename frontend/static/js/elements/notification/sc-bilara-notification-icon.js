@@ -8,6 +8,10 @@ class SCBilaraNotificationIcon extends LitElement {
       display: inline-block;
     }
 
+    .icon-wrapper img {
+      height: 32px;
+    }
+
     .notification-count {
       position: absolute;
       top: -6px;
@@ -34,11 +38,9 @@ class SCBilaraNotificationIcon extends LitElement {
 
   render() {
     return html`
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
       <div class="icon-wrapper">
         <div>
-          <a href="/notifications" target="_blank"><img src="./static/img/notification.png" alt="notification"/></a>
+          <a href="/notifications" target="_blank"><img src="./static/img/notification.svg" alt="notification"/></a>
           ${this.count > 0
             ? html`<div class="notification-count"><sl-badge variant="danger" pill pulse>${this.count}</sl-badge></div>`
             : ''}

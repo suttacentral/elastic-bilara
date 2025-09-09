@@ -5,11 +5,17 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    padding: var(--space-xs) var(--space-sm);
+    padding: var(--space-xxs) var(--space-sm);
     background-color: var(--color-primary);
-    font-size: var(--text-lg);
+    font-size: var(--text-md);
 }
 
+.go-home {
+    font-family: serif;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    font-variant-caps: all-small-caps;
+}
 
 .main-nav-mobile, .mobile-hide {
     display: none;
@@ -74,7 +80,6 @@
         justify-content: center;
         background-color: var(--color-primary);
         font-size: var(--text-lg);
-        box-shadow: 0 2px 3px var(--color-shadow);
     }
 
     .main-nav-mobile__item {

@@ -1,8 +1,9 @@
 @import "spacing.css";
 
 :root {
-    --btn-font-size: 1em;
-    --btn-sm: calc(var(--btn-font-size) - 0.2em);
-    --btn-md: calc(var(--btn-font-size) + 0.2em);
-    --btn-lg: calc(var(--btn-font-size) + 0.4em);
+    --btn-font-size: .833333333rem;
+    --btn-scale-ratio: 1.2;
+    --btn-sm: calc((var(--btn-font-size) / var(--btn-scale-ratio));
+    --btn-md: calc(var(--btn-font-size));
+    --btn-lg: calc(var(--btn-font-size) * var(--btn-scale-ratio));
 }
