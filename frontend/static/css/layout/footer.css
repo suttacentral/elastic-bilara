@@ -3,9 +3,8 @@
     justify-content: space-around;
     align-items: center;
     gap: var(--space-md);
-    padding: var(--space-sm) var(--space-md);
-    background-color: var(--color-primary);
-    box-shadow: 0 -2px 5px var(--color-shadow);
+    padding: var(--space-lg) var(--space-md);
+    background-color: var(--color-primary-light);
     font-size: var(--text-lg);
 }
 
@@ -37,10 +36,4 @@
     }
 }
 
-@media (max-width: 575px) {
-    .main-footer {
-        box-shadow: 0 -2px 5px var(--color-shadow);
-    }
-
-}
 

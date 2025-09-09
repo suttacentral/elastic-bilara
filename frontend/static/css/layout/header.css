@@ -7,8 +7,7 @@
     gap: var(--space-md);
     padding: var(--space-xs) var(--space-sm);
     background-color: var(--color-primary);
-    font-size: var(--text-xxl);
-    box-shadow: 0 2px 5px var(--color-shadow);
+    font-size: var(--text-lg);
 }
 
 
@@ -40,14 +39,14 @@
 @media (max-width: 1199px) {
     .main-nav {
         gap: var(--space-sm);
-        font-size: var(--text-xl);
+        font-size: var(--text-lg);
     }
 }
 
 @media (max-width: 991px) {
     .main-nav {
         gap: var(--space-xs);
-        font-size: var(--text-lg);
+        font-size: var(--text-md);
     }
 }
 

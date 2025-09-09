@@ -26,20 +26,6 @@
     color: var(--color-black);
 }
 
-
-@media (max-width: 767px) {
-    .btn {
-        font-size: var(--btn-md);
-    }
-}
-
-@media (max-width: 575px) {
-    .btn {
-        font-size: var(--text-lg);
-    }
-}
-
-
 .main-nav-mobile__burger {
     cursor: pointer;
     width: 30px;

@@ -5,7 +5,7 @@
 }
 
 #how-to-details{
-    margin: 2rem 4%
+    margin: var(--space-lg);
 }
 
 #how-to-details summary{
@@ -13,22 +13,22 @@
 }
 
 #how-to-details  div{
-    margin-top: 1em;
+    margin-top: var(--space-md);
     line-height: 1.5;
 }
 
 #how-to-details p, 
 #how-to-details ul, 
 #how-to-details ol {
-    margin: 0 0 1em 0;
+    margin: 0 0 var(--space-md) 0;
 }
 
 #how-to-details li{
-    margin: 0 0 .5em 1em
+    margin: 0 0 var(--space-xs) var(--space-md)
 }
 
 #how-to-details li li{
-    margin: 1em 0 .5em 1em
+    margin: var(--space-md) 0 var(--space-xs) var(--space-md)
 }
 
 #how-to-details ol {
