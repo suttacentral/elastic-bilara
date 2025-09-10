@@ -4,8 +4,9 @@
     font-size: var(--btn-font-size);
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
-    font-weight: 600;
+    font-weight: 500;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
     display: inline-block;
     vertical-align: middle;
     height: var(--space-lg);

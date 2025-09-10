@@ -1,5 +1,7 @@
 :root {
-    font-family: var(--font-sans)
+    font-family: var(--font-sans);
+    font-kerning: normal;
+    line-height: var(--body-line-height);
 }
 
 [x-cloak] {

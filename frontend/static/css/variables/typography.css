@@ -14,5 +14,5 @@
     --text-xxxl: calc(1rem * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio));
 
     --heading-line-height: 1.2;
-    --body-line-height: 1.4;
+    --body-line-height: 1.44;
 }

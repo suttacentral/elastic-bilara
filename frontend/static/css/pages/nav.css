@@ -22,6 +22,8 @@
 
 .mdi::before {
     color: var(--color-accent);
+    display: inline-block;
+    vertical-align: bottom;
 }
 
 .navigation-list  .btn {

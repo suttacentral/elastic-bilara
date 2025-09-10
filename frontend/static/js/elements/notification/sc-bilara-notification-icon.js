@@ -10,6 +10,7 @@ class SCBilaraNotificationIcon extends LitElement {
 
     .icon-wrapper img {
       height: 32px;
+      vertical-align: middle;
     }
 
     .notification-count {
