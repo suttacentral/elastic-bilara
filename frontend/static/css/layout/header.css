@@ -11,7 +11,7 @@
 }
 
 .go-home {
-    font-family: serif;
+    font-family: var(--font-serif);
     font-weight: bold;
     letter-spacing: 0.1em;
     font-variant-caps: all-small-caps;

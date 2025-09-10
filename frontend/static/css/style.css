@@ -1,3 +1,7 @@
+:root {
+    font-family: var(--font-sans)
+}
+
 [x-cloak] {
     display: none !important;
 }
