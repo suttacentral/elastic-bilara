@@ -1,11 +1,16 @@
 .btn {
-    padding: var(--space-xxs) var(--space-xs);
+    padding: 0 var(--space-sm);
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-primary-darker);
-    box-shadow: var(--shadow-xxs);
     font-size: var(--btn-font-size);
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+    vertical-align: middle;
+    height: var(--space-lg);
+    line-height: var(--space-lg);
 }
 .btn:hover {
     box-shadow: var(--shadow-xs);
@@ -15,6 +20,7 @@
     /* background-color: var(--color-primary-dark); */
     background-color: var(--bilara-black);
     color: var(--color-white);
+
 }
 
 .btn--main:hover, .btn--admin:hover {
@@ -26,20 +32,6 @@
     background-color: var(--color-primary-lighter);
     color: var(--color-black);
 }
-
-
-@media (max-width: 767px) {
-    .btn {
-        font-size: var(--btn-md);
-    }
-}
-
-@media (max-width: 575px) {
-    .btn {
-        font-size: var(--text-lg);
-    }
-}
-
 
 .main-nav-mobile__burger {
     cursor: pointer;

@@ -1,8 +1,11 @@
 .navigation-container {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: var(--text-xxl);
+    justify-content: left;
+    font-size: var(--text-md);
+    margin: var(--space-xxl) 20vw;
+    padding: var(--space-sm) var(--space-sm) var(--space-sm) 0;
+    border: 2px dashed var(--color-secondary-dark);
+    border-radius: var(--radius-lg);
 }
 
 .navigation-container--pushdown {
@@ -10,11 +13,21 @@
 }
 
 .navigation-list {
-    padding-left: var(--space-sm);
+    padding: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    margin: var(--space-xs) 0;
+    justify-content: left;
+    width: 100%;
+}
+
+.mdi::before {
+    color: var(--color-accent);
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+.navigation-list  .btn {
+    float: right;
 }
 
 .navigation-list:first-of-type {
@@ -22,20 +35,19 @@
 }
 
 .navigation-list__item {
-    padding: var(--space-xxs) var(--space-xs);
+    padding: var(--space-xxs) 0 var(--space-xxs) var(--space-md);
     min-width: var(--space-xxl);
     margin: var(--space-xxs) 0;
     color: var(--bilara-primary-text-color);
 }
 
 .navigation-list__item-link {
+    display: inline-block;
     text-decoration: none;
-    /* color: var(--color-black); */
     color: var(--bilara-primary-text-color);
     padding: var(--space-xxs) var(--space-xs);
     border-radius: var(--radius-sm);
     transition: 0.3s ease;
-    margin: var(--space-xxs) 0;
     margin-right: var(--space-sm);
     cursor: pointer;
 }
@@ -43,7 +55,6 @@
 .navigation-list__item-link:hover {
     background-color: var(--color-primary-light);
     color: var(--color-accent-dark);
-    border: 1px solid var(--color-primary-darker);
     border-radius: var(--radius-sm);
 }
 
@@ -59,7 +70,8 @@
 
 @media (max-width: 1199px) {
     .navigation-container {
-        font-size: var(--text-xl);
+        font-size: var(--text-md);
+        margin: var(--space-xxl);
     }
 }
 
@@ -69,15 +81,12 @@
     }
 
     .navigation-container {
-        font-size: var(--text-xl);
+        font-size: var(--text-md);
+        margin: var(--space-lg) var(--space-xs);
     }
 
     .navigation-list__item-link:has( .mdi-file-document-outline) {
         font-size: var(--text-md);
-    }
-
-    .navigation-container--pushdown {
-        margin-top: var(--space-xxs);
     }
 
     .navigation-list__item {

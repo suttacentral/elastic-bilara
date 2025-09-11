@@ -3,3 +3,59 @@
     flex-grow: 1;
     overflow: hidden;
 }
+
+#how-to-details{
+    margin: var(--space-sm);
+}
+
+#how-to-details summary{
+    font-weight: 500;
+    font-style: italic;
+    font-family: var(--font-serif);
+}
+
+#how-to-details  div{
+    margin-top: var(--space-md);
+    padding: var(--space-sm);
+}
+
+#how-to-details p, 
+#how-to-details ul, 
+#how-to-details ol {
+    margin: 0 0 var(--space-md) 0;
+}
+
+#how-to-details li{
+    margin: 0 0 var(--space-xs) var(--space-md)
+}
+
+#how-to-details li li{
+    margin: var(--space-md) 0 var(--space-xs) var(--space-md)
+}
+
+#how-to-details ol {
+    list-style-type: decimal;
+}
+
+#how-to-details ul {
+    list-style-type: disc;
+}
+
+#how-to-details  a{
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: .2em;
+    color: var(--color-accent);
+}
+
+b{
+    font-weight: bold;
+}
+
+kbd{
+    font-family: monospace;
+    border: 1px solid var(--color-black);
+    padding: .2em .4em;
+    border-radius: 4px;
+    background-color: #ccc;
+}

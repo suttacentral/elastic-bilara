@@ -1,18 +1,18 @@
 :root {
-    --font-primary: 'Source Sans 3';
-    --font-secondary: 'Source Serif 4';
+    --font-sans: 'Source Sans VF', sans-serif;
+    --font-serif: 'Source Serif VF', serif;
 
-    --text-base-size: 1em;
+    --text-base-size: 1rem;
     --text-scale-ratio: 1.2;
 
-    --text-xs: calc(1em / (var(--text-scale-ratio) * var(--text-scale-ratio)));
-    --text-sm: calc(1em / var(--text-scale-ratio));
-    --text-md: calc(1em * var(--text-scale-ratio));
-    --text-lg: calc(1em * var(--text-scale-ratio) * var(--text-scale-ratio));
-    --text-xl: calc(1em * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio));
-    --text-xxl: calc(1em * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio));
-    --text-xxxl: calc(1em * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio));
+    --text-xs: calc(1rem / (var(--text-scale-ratio) * var(--text-scale-ratio)));
+    --text-sm: calc(1rem / var(--text-scale-ratio));
+    --text-md: calc(1rem * var(--text-scale-ratio));
+    --text-lg: calc(1rem * var(--text-scale-ratio) * var(--text-scale-ratio));
+    --text-xl: calc(1rem * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio));
+    --text-xxl: calc(1rem * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio));
+    --text-xxxl: calc(1rem * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio));
 
     --heading-line-height: 1.2;
-    --body-line-height: 1.4;
+    --body-line-height: 1.44;
 }
