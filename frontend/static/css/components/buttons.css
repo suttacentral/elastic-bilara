@@ -61,17 +61,12 @@
     color: var(--color-secondary-lighter);
 }
 
-.btn--project-publish {
-    padding: var(--space-sm) var(--space-md);
-}
-
 .btn--publish:hover, .btn--project-publish:hover {
     background-color: var(--color-secondary-lighter);
     color: var(--color-accent-dark);
 }
 
 .btn--commit {
-    padding: var(--space-sm) var(--space-md);
     background-color: var(--color-accent-dark);
     color: var(--color-white);
 }
@@ -81,12 +76,10 @@
 }
 
 .btn--related-projects {
-    padding: var(--space-xs) var(--space-md);
     background-color: var(--color-cta-dark);
     color: var(--color-white);
 }
 .btn--search{
-    padding: var(--space-xs) var(--space-md);
     background-color: var(--color-accent);
     color: var(--color-white);
 }
@@ -122,15 +115,15 @@
 }
 
 .btn--split {
-    background-color: var(--color-primary-light);
-    margin-left: var(--space-xs);
-    margin-right: var(--space-xs);
     height: fit-content;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.05em;
 }
 
 .btn--merge {
-    background-color: var(--color-primary);
     height: fit-content;
+    font-variant-caps: all-small-caps;
+    letter-spacing: 0.05em;
 }
 
 .btn--disabled {

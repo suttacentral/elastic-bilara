@@ -16,12 +16,12 @@ export class ScBilaraTranslationProjectActions extends LitElement {
   render() {
     return html`
       <div class="project-container__content-body__action">
-          <p class="project-container__content-body__text"
+          <span class="project-container__content-body__text-uid"
               :class="{'project-container__content-body__text--hide': translation.muid !== new URLSearchParams(window.location.search).get('source')}"
               x-text="uid">
-          </p>
-          <button class="project-header__nav-button btn btn--split"
-              x-data="{ caption: 'Split' }"
+          </span>
+          <button class="project-header__nav-button btn--split"
+              x-data="{ caption: 'split' }"
               x-text="caption"
               @click="
                   if (splitBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
@@ -33,8 +33,8 @@ export class ScBilaraTranslationProjectActions extends LitElement {
               x-bind:disabled="splitting || merging"
               x-bind:class="{'btn--disabled': splitting || merging}">
           </button>
-          <button class="project-header__nav-button btn btn--merge"
-              x-data="{ caption: 'Merge' }"
+          <button class="project-header__nav-button btn--merge"
+              x-data="{ caption: 'merge' }"
               x-text="caption"
               @click="
                   if (mergeBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
@@ -62,7 +62,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
 
           <button
               x-data="{params: new URLSearchParams(window.location.search)}"
-              class="project-header__nav-button btn btn--split"
+              class="project-header__nav-button btn--split"
               x-show="translation.canEdit && isAdmin && splitting && isRoot && uid === splittingUid"
               @click="
                   splitting = false;
@@ -74,7 +74,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
 
           <button
               x-data="{params: new URLSearchParams(window.location.search)}"
-              class="project-header__nav-button btn btn--merge"
+              class="project-header__nav-button btn--merge"
               x-show="translation.canEdit && isAdmin && merging && isRoot && uid === mergingUid"
               @click="
                   merging = false;

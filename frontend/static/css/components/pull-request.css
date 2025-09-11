@@ -1,5 +1,4 @@
 .pull-request-container {
-    font-size: var(--text-xl);
     overflow: scroll;
     max-height: 75vh;
     scrollbar-width: none;
@@ -129,7 +128,6 @@
 
 .pull-request-message {
     text-align: center;
-    font-size: var(--text-lg);
     padding: var(--space-md) var(--space-lg);
     border-radius: var(--radius-sm);
     margin: 0 var(--space-md);
@@ -140,6 +138,5 @@
 @media (max-width: 575px) {
     .pull-request-container {
         height: auto;
-        font-size: var(--text-lg);
     }
 }

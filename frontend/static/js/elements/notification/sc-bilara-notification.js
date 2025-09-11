@@ -74,10 +74,6 @@ class SCBilaraNotification extends LitElement {
 
     }
 
-    li {
-      font-size: var(--text-lg)
-    }
-
     .notify-item a {
       text-decoration: none;
     }

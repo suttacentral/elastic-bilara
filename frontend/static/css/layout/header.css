@@ -44,21 +44,18 @@
 
 @media (max-width: 1199px) {
     .main-nav {
-        gap: var(--space-sm);
-        font-size: var(--text-lg);
+        gap: var(--space-md);
     }
 }
 
 @media (max-width: 991px) {
     .main-nav {
-        gap: var(--space-xs);
-        font-size: var(--text-md);
+        gap: var(--space-sm);
     }
 }
 
 @media (max-width: 767px) {
     .main-nav {
-        font-size: var(--text-md);
     }
 
     .main-nav__item-detail {
@@ -79,7 +76,6 @@
         flex-direction: column;
         justify-content: center;
         background-color: var(--color-primary);
-        font-size: var(--text-lg);
     }
 
     .main-nav-mobile__item {
