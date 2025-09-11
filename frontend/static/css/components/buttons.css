@@ -12,7 +12,8 @@
 }
 
 .btn--main, .btn--admin {
-    background-color: var(--color-primary-dark);
+    /* background-color: var(--color-primary-dark); */
+    background-color: var(--bilara-black);
     color: var(--color-white);
 }
 

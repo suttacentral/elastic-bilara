@@ -14,7 +14,8 @@
 
 .user-welcome{
     font-size: var(--text-sm);
-    color: var(--color-black);
+    /* color: var(--color-black); */
+    color: var(--bilara-secondary-text-color);
 }
 
 .user-welcome strong {

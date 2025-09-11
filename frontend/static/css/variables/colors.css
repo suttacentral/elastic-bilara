@@ -31,3 +31,71 @@
     --color-disabled: #E0E0E0;
 }
 
+
+:root {
+    --color-primary: var(--bilara-primary-color, #D9B26F);
+    --color-secondary: var(--bilara-secondary-color, #FFC10A);
+    --color-background: var(--bilara-primary-background-color, #fdf6e3);
+    --color-background-secondary: var(--bilara-secondary-background-color, #eee8d5);
+    --color-background-tertiary: var(--bilara-tertiary-background-color, #BEB9AA);
+    --color-text: var(--bilara-primary-text-color, #657b83);
+    --color-text-emphasized: var(--bilara-emphasized-text-color, #586e75);
+    --color-text-secondary: var(--bilara-secondary-text-color, #93a1a1);
+
+    --color-accent: var(--bilara-yellow, rgba(255, 194, 2, 0.3));
+    --color-warning: var(--bilara-orange, #cb4b16);
+    --color-error: var(--bilara-red, #dc322f);
+    --color-success: var(--bilara-green, #859900);
+    --color-info: var(--bilara-blue, #268bd2);
+}
+
+body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navigation-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: var(--text-xxl);
+    background-color: var(--bilara-primary-background-color);
+    /* border-bottom: 1px solid var(--color-background-tertiary); */
+}
+
+.navigation-list {
+    padding-left: var(--space-sm);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: var(--space-xs) 0;
+}
+
+.navigation-list__item-link {
+    text-decoration: none;
+    color: var(--color-text);
+    padding: var(--space-xxs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: all 0.3s ease;
+    margin: var(--space-xxs) 0;
+    margin-right: var(--space-sm);
+    cursor: pointer;
+}
+
+.navigation-list__item-link:hover {
+    background-color: var(--color-primary);
+    color: var(--color-background);
+    border: 1px solid var(--color-secondary);
+    border-radius: var(--radius-sm);
+}
+
+.theme-selector {
+    margin-left: var(--space-md);
+    padding: var(--space-xxs) var(--space-xs);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    border: 1px solid var(--color-background-tertiary);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+}

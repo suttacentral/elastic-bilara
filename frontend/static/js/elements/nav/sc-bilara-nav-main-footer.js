@@ -9,6 +9,7 @@ export class SCBilaraNavMainFooter extends LitElement {
     return html`
       <footer class="main-footer">
         <p class="main-footer__description">Computer Assisted Translation for SuttaCentral</p>
+        <div id="theme-selector-container"></div>
         <ul class="main-footer__list">
             <li class="main-footer__list-item">
                 <a href="https://suttacentral.net/" class="main-footer__list-item-link">SuttaCentral</a>

@@ -68,6 +68,7 @@
     gap: var(--space-sm);
     padding: var(--space-xs) var(--space-sm);
     max-width: 100vw;
+    color: var(--bilara-secondary-background-color);
 }
 
 .project-container__content {
