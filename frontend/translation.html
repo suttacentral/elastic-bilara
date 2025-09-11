@@ -85,6 +85,9 @@
                         style="height: 200px; display: flex; align-items: center; justify-content: center; overflow: hidden;"
                         x-data="{ clicked: false, isRoot: translation.isSource }"
                         :class="{ 'border-effect': clicked }">
+                        <div class="project-container__content-header">
+                            foo-bar-moo
+                        </div>
                         <div class="project-container__content-body" x-data="textareaAdjuster();">
                             <template
                                 x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"

@@ -81,9 +81,12 @@
     top: 0;
     display: flex;
     align-items: center;
-    color: var(--color-black);
+    color: var(--color-white);
+    padding: 0 var(--space-sm);
+    font-size: var(--text-sm);
+    font-weight: 600;
     margin-bottom: var(--space-sm);
-    background-color: var(--color-primary-lighter);
+    background-color: var(--color-accent);
     margin-top: 0;
 
     & .draggable-container {
