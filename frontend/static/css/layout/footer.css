@@ -4,7 +4,11 @@
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-lg) var(--space-md);
-    background-color: var(--color-primary-light);
+    /* background-color: var(--color-primary-light); */
+
+    background-color: var(--bilara-tertiary-background-color);
+    box-shadow: 0 -2px 5px var(--color-shadow);
+    font-size: var(--text-lg);
 }
 
 

@@ -37,13 +37,17 @@
 .navigation-list__item {
     padding: var(--space-xxs) 0 var(--space-xxs) var(--space-md);
     min-width: var(--space-xxl);
+    margin: var(--space-xxs) 0;
+    color: var(--bilara-primary-text-color);
 }
 
 .navigation-list__item-link {
     display: inline-block;
     text-decoration: none;
-    color: var(--color-black);
-    padding: var(--space-xxs) var(--space-sm);
+    /* color: var(--color-black);
+    padding: var(--space-xxs) var(--space-sm); */
+    color: var(--bilara-primary-text-color);
+    padding: var(--space-xxs) var(--space-xs);
     border-radius: var(--radius-sm);
     transition: 0.3s ease;
     margin-right: var(--space-sm);
