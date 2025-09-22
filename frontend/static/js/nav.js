@@ -1,13 +1,72 @@
 function tree() {
     return {
         loading: false,
+        showAllContent: false,
+        filterUsername: "",
         data: [],
-        async init() {
+        async loadAllDirectories() {
             const response = await requestWithTokenRetry("directories/");
             const { directories, base } = await response.json();
             for (const directory of directories) {
                 this.data.push(new Element(directory, base, false, false));
             }
+        },
+        async init() {
+            const userInfo = getUserInfo();
+            await userInfo.getRole();
+            this.filterUsername = userInfo.username;
+
+            if (!this.showAllContent) {
+                const response = await requestWithTokenRetry(`directories/search/${this.filterUsername}/`);
+                const { matches } = await response.json();
+
+                if (matches.length === 0 || matches.total_matches === 0) {
+                    await this.loadAllDirectories();
+                    return;
+                }
+
+                const rootElementsMap = new Map();
+                for (const match of matches) {
+                    const pathParts = match.path.split('/').filter(part => part !== '');
+
+                    if (pathParts.length === 0) continue;
+
+                    let currentElement = null;
+                    let currentBase = null;
+
+                    for (let i = 0; i < pathParts.length; i++) {
+                        const pathPart = pathParts[i] + '/';
+
+                        if (i === 0) {
+                            if (!rootElementsMap.has(pathPart)) {
+                                const newElement = new Element(pathPart + "/", null, false, false);
+                                rootElementsMap.set(pathPart, newElement);
+                                this.data.push(newElement);
+                            }
+                            currentElement = rootElementsMap.get(pathPart);
+                            currentBase = pathPart;
+                        } else {
+                            let childElement = currentElement.children.find(child => 
+                                child.name === pathPart + "/"
+                            );
+
+                            if (!childElement) {
+                                childElement = new Element(pathPart + "/", currentBase, false, false);
+                                currentElement.add(childElement);
+                            }
+                            currentElement = childElement;
+                            currentBase = currentBase + "/" + pathPart;
+                        }
+                    }
+                }
+            } else {
+                await this.loadAllDirectories();
+            }
+        },
+        toggleShowAll() {
+            this.showAllContent = !this.showAllContent;
+            this.data = [];
+            this.init();
         },
         async addData(element) {
             const response = await requestWithTokenRetry(`directories/${element.fullName}`);

@@ -145,16 +145,23 @@
         </div>
       </details>
       <p id="pull-request-message"></p>
-      <div
-        class="navigation-container navigation-container--pushdown"
-        x-cloak
-        x-show="isActive"
-        x-data="tree()"
-      >
-        <div x-cloak x-show="loading" class="modal">
-          <div class="spinner"></div>
+
+      <div x-cloak x-show="isActive" x-data="tree()">
+        <div class="show-all-button-container">
+          <button
+            @click="toggleShowAll()"
+            :disabled="loading"
+            class="btn btn--admin"
+          >
+            <span x-text="showAllContent ? 'Show filtered content' : 'Show all content'"></span>
+          </button>
         </div>
-        <ul class="navigation-list" x-html="render()"></ul>
+        <div class="navigation-container navigation-container--pushdown">
+          <div x-cloak x-show="loading" class="modal">
+            <div class="spinner"></div>
+          </div>
+          <ul class="navigation-list" x-html="render()"></ul>
+        </div>
       </div>
     </main>
 
