@@ -57,37 +57,42 @@ function fetchTranslation() {
             }
 
             const [sectionUid, sectionNumber] = uid.split(':');
-            const isTwoLevelFormat = countChar(sectionNumber, '.') === 1;
+            const isTwoLevelFormat = /^[0-9]+\.[0-9]+$/.test(sectionNumber);
             const isThreeLevelFormat = /[0-9]+\.[0-9]+\.[0-9]+$/.test(sectionNumber);
 
             // Processing two-level format: mn1:1.1
             if (isTwoLevelFormat) {
                 const [integerPart, decimalPart] = sectionNumber.split('.');
-                this.splitter_uid = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
+                const splitPointNumber = parseInt(decimalPart);
+                this.splitter_uid = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
 
                 translations.forEach(translation => {
-                    let newObj = {};
+                    const newObj = {};
 
-                    for (let key in translation.data) {
+                    for (const key in translation.data) {
                         const [keySectionUid, keySectionNumber] = key.split(':');
                         const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
+                        const keyDecimalNumber = parseInt(keyDecimalPart);
 
-                        if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
-                            // The current paragraph to be split
+                        // Paragraphs that do not match the current section will be retained.
+                        if (keySectionUid !== sectionUid || keyIntegerPart !== integerPart) {
                             newObj[key] = translation.data[key];
-                            const newKey = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
-                            if (translation.muid.includes('html')) {
-                                newObj[newKey] = "{}";
-                            } else {
-                                newObj[newKey] = "";
-                            }
-                        } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && parseInt(keyDecimalPart) >= parseInt(decimalPart) + 1) {
-                            // The paragraph after the split point needs to be moved
-                            const newKey = `${sectionUid}:${integerPart}.${parseInt(keyDecimalPart) + 1}`;
-                            newObj[newKey] = translation.data[key];
+                            continue;
+                        }
+
+                        // Paragraphs that match the current section need to be processed.
+                        if (keyDecimalNumber < splitPointNumber) {
+                            // Paragraphs before the split point remain unchanged.
+                            newObj[key] = translation.data[key];
+                        } else if (keyDecimalNumber === splitPointNumber) {
+                            // Split point: retain the original paragraph and insert a new paragraph.
+                            newObj[key] = translation.data[key];
+                            const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
+                            newObj[newKey] = translation.muid.includes('html') ? "{}" : "";
                         } else {
-                            // Unaffected paragraphs
-                            newObj[key] = translation.data[key];
+                            // Paragraphs after the split point: increment the number.
+                            const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
+                            newObj[newKey] = translation.data[key];
                         }
                     }
                     translation.data = newObj;
@@ -97,30 +102,43 @@ function fetchTranslation() {
             // Processing level 3 format: dn1:1.1.1
             else if (isThreeLevelFormat) {
                 const sectionMainPart = getBeforeLastDot(sectionNumber);
-                const sectionLastPart = getLastNumber(sectionNumber);
-                this.splitter_uid = `${sectionUid}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
+                const sectionLastPart = parseInt(getLastNumber(sectionNumber));
+                this.splitter_uid = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+
                 translations.forEach(translation => {
-                    let newObj = {};
-                    for (let key in translation.data) {
+                    const newObj = {};
+
+                    for (const key in translation.data) {
                         const [keySectionUid, keySectionNumber] = key.split(':');
+
+                        // Paragraphs that do not match the current section will be retained.
+                        if (keySectionUid !== sectionUid) {
+                            newObj[key] = translation.data[key];
+                            continue;
+                        }
+
                         const keyMainPart = getBeforeLastDot(keySectionNumber);
-                        const keyLastPart = getLastNumber(keySectionNumber);
-                        if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
-                            // The current paragraph to be split
+                        const keyLastPart = parseInt(getLastNumber(keySectionNumber));
+
+                        // Paragraphs that do not match the current subsection will be retained.
+                        if (keyMainPart !== sectionMainPart) {
                             newObj[key] = translation.data[key];
-                            const newKey = `${sectionUid}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
-                            if (translation.muid.includes('html')) {
-                                newObj[newKey] = "{}";
-                            } else {
-                                newObj[newKey] = "";
-                            }
-                        } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && parseInt(keyLastPart) >= parseInt(sectionLastPart) + 1) {
-                            // The paragraph after the split point needs to be moved
-                            const newKey = `${sectionUid}:${sectionMainPart}${parseInt(keyLastPart) + 1}`;
-                            newObj[newKey] = translation.data[key];
+                            continue;
+                        }
+
+                        // Process the paragraph of the current subsection
+                        if (keyLastPart < sectionLastPart) {
+                            // Paragraphs before the split point remain unchanged.
+                            newObj[key] = translation.data[key];
+                        } else if (keyLastPart === sectionLastPart) {
+                            // Split point: retain the original paragraph and insert a new paragraph.
+                            newObj[key] = translation.data[key];
+                            const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+                            newObj[newKey] = translation.muid.includes('html') ? "{}" : "";
                         } else {
-                            // Unaffected paragraphs
-                            newObj[key] = translation.data[key];
+                            // Paragraphs after the split point: increment the number.
+                            const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
+                            newObj[newKey] = translation.data[key];
                         }
                     }
                     translation.data = newObj;
@@ -164,97 +182,173 @@ function fetchTranslation() {
             if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
                 const [sectionUid, sectionNumber] = uid.split(':');
                 const [integerPart, decimalPart] = sectionNumber.split('.');
-                this.mergee_uid = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
+                const decimalNumber = parseInt(decimalPart);
+                this.mergee_uid = `${sectionUid}:${integerPart}.${decimalNumber + 1}`;
 
                 let needToMergeNextSection = false;
                 let nextSectionFirstKey = '';
+
                 this.translations.forEach(translation => {
-                    for (let key in translation.data) {
+                    const newObj = {};
+
+                    for (const key in translation.data) {
                         const [keySectionUid, keySectionNumber] = key.split(':');
+
+                        // If it does not match the current section, keep it directly.
+                        if (keySectionUid !== sectionUid) {
+                            newObj[key] = translation.data[key];
+                            continue;
+                        }
+
                         const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
-                        if (`${keySectionUid}:${keyIntegerPart}.${keyDecimalPart}` === `${sectionUid}:${integerPart}.${decimalPart}`) {
-                            let nextKey = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
+                        const keyDecimalNumber = parseInt(keyDecimalPart);
+
+                        // If it does not match the current section, keep it directly.
+                        if (keyIntegerPart !== integerPart) {
+                            // If cross-section merging is needed, check if it is a paragraph of the target section
+                            if (needToMergeNextSection) {
+                                const nextSectionNumber = parseInt(nextSectionFirstKey.split(':')[1].split('.')[0]);
+                                const currentSectionNumber = parseInt(keyIntegerPart);
+
+                                if (currentSectionNumber === nextSectionNumber) {
+                                    this.mergeSectionByNextKey(key, translation, newObj);
+                                    continue;
+                                }
+                            }
+                            newObj[key] = translation.data[key];
+                            continue;
+                        }
+
+                        // Process the paragraph of the current section
+                        if (keyDecimalNumber < decimalNumber) {
+                            // Paragraphs before the split point remain unchanged.
+                            newObj[key] = translation.data[key];
+                        } else if (keyDecimalNumber === decimalNumber) {
+                            // Split point: retain the original paragraph and insert a new paragraph.
+                            const nextKey = `${sectionUid}:${integerPart}.${decimalNumber + 1}`;
+
                             if (translation.data[nextKey]) {
+                                // The next paragraph within the same section exists
                                 newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
                             } else {
-                                let nextSectionIntegerPart = `${parseInt(integerPart) + 1}`;
-                                possibleNextKey1 = `${sectionUid}:${nextSectionIntegerPart}.0`;
-                                possibleNextKey2 = `${sectionUid}:${nextSectionIntegerPart}.1`;
-                                nextKey = translation.data[possibleNextKey1] ? possibleNextKey1 : possibleNextKey2;
-                                if (translation.data[nextKey]) {
-                                    this.mergee_uid = nextKey;
-                                    nextSectionFirstKey = nextKey;
+                                // Try to merge across sections
+                                const nextSectionIntegerPart = parseInt(integerPart) + 1;
+                                const possibleNextKey1 = `${sectionUid}:${nextSectionIntegerPart}.0`;
+                                const possibleNextKey2 = `${sectionUid}:${nextSectionIntegerPart}.1`;
+                                const crossSectionNextKey = translation.data[possibleNextKey1] 
+                                    ? possibleNextKey1 
+                                    : possibleNextKey2;
+
+                                if (translation.data[crossSectionNextKey]) {
+                                    this.mergee_uid = crossSectionNextKey;
+                                    nextSectionFirstKey = crossSectionNextKey;
                                     needToMergeNextSection = true;
-                                    newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
+                                    newObj[key] = `${translation.data[key]} ${translation.data[crossSectionNextKey]}`;
                                 } else {
+                                    // No mergeable paragraph exists, keep it unchanged
                                     newObj[key] = translation.data[key];
                                 }
                             }
-                        } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
-                            let nextKey = `${uid.split(':')[0]}:${integerPart}.${parseInt(keyDecimalPart) + 1}`;
+                        } else {
+                            // Paragraphs after the split point: decrement the number.
+                            const nextKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
                             if (translation.data[nextKey]) {
                                 newObj[key] = translation.data[nextKey];
+                            } else {
+                                // This is the last paragraph, delete it (because it has been merged into the previous one)
+                                // Do not add to newObj
                             }
-                        } else if (needToMergeNextSection && key.length === nextSectionFirstKey.length && key.split(':')[1].split('.')[0] === nextSectionFirstKey.split(':')[1].split('.')[0]) {
-                            this.mergeSectionByNextKey(key, translation, newObj);
-                        }
-                        else {
-                            newObj[key] = translation.data[key];
                         }
                     }
+
                     translation.data = newObj;
                     translation.splitting = true;
-                    newObj = {};
                 });
             }
 
-            // patten: dn1:1.1.1
-            const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
+            // Pattern: dn1:1.1.1
+            const sectionRegex = /^:[0-9]+\.[0-9]+\.[0-9]+$/;
             if (sectionRegex.test(uid)) {
                 const [sectionUid, sectionNumber] = uid.split(':');
                 const sectionMainPart = getBeforeLastDot(sectionNumber);
-                const sectionLastPart = getLastNumber(sectionNumber);
-                this.mergee_uid = `${sectionUid}:${sectionMainPart}.${parseInt(sectionLastPart) + 1}`;
+                const sectionLastPart = parseInt(getLastNumber(sectionNumber));
+                this.mergee_uid = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+
                 let needToMergeNextSection = false;
                 let nextSectionFirstKey = '';
+
                 translations.forEach(translation => {
-                    for (let key in translation.data) {
+                    const newObj = {};
+
+                    for (const key in translation.data) {
                         const [keySectionUid, keySectionNumber] = key.split(':');
+
+                        // If it does not match the current section, keep it directly.
+                        if (keySectionUid !== sectionUid) {
+                            newObj[key] = translation.data[key];
+                            continue;
+                        }
+
                         const keyMainPart = getBeforeLastDot(keySectionNumber);
-                        const keyLastPart = getLastNumber(keySectionNumber);
+                        const keyLastPart = parseInt(getLastNumber(keySectionNumber));
 
-                        const [keyChapter, keySection, keySubsection] = keySectionNumber.split('.');
+                        // If it does not match the current subsection, keep it directly.
+                        if (keyMainPart !== sectionMainPart) {
+                            // If cross-subsection merging is needed, check if it is a paragraph of the target subsection
+                            if (needToMergeNextSection) {
+                                const [nextChapter, nextSection] = nextSectionFirstKey.split(':')[1].split('.');
+                                const [keyChapter, keySection] = keySectionNumber.split('.');
 
-                        if (`${keySectionUid}:${keyMainPart}.${keyLastPart}` === `${sectionUid}:${sectionMainPart}.${sectionLastPart}`) {
-                            let nextKey = `${uid.split(':')[0]}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
+                                if (keyChapter === nextChapter && keySection === nextSection) {
+                                    this.mergeSectionByNextSubsectionKey(key, translation, newObj);
+                                    continue;
+                                }
+                            }
+                            newObj[key] = translation.data[key];
+                            continue;
+                        }
+
+                        // Process the paragraph of the current subsection
+                        if (keyLastPart < sectionLastPart) {
+                            // Paragraphs before the split point remain unchanged.
+                            newObj[key] = translation.data[key];
+                        } else if (keyLastPart === sectionLastPart) {
+                            // Split point: retain the original paragraph and insert a new paragraph.
+                            const nextKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+
                             if (translation.data[nextKey]) {
-                                newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                                // The next paragraph within the same section exists
+                                newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
                             } else {
-                                let SectionNumberParts = sectionNumber.split('.');
-                                nextKey = keySectionUid + ':' + SectionNumberParts[0] + '.' + (parseInt(SectionNumberParts[1]) + 1) + '.1';
-                                if (translation.data[nextKey]) {
-                                    this.mergee_uid = nextKey;
-                                    nextSectionFirstKey = nextKey;
+                                // Try to merge across subsections
+                                const [chapter, section] = sectionNumber.split('.');
+                                const nextSection = parseInt(section) + 1;
+                                const crossSubsectionNextKey = `${sectionUid}:${chapter}.${nextSection}.1`;
+
+                                if (translation.data[crossSubsectionNextKey]) {
+                                    this.mergee_uid = crossSubsectionNextKey;
+                                    nextSectionFirstKey = crossSubsectionNextKey;
                                     needToMergeNextSection = true;
-                                    newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
+                                    newObj[key] = `${translation.data[key]} ${translation.data[crossSubsectionNextKey]}`;
                                 } else {
+                                    // No mergeable paragraph exists, keep it unchanged
                                     newObj[key] = translation.data[key];
                                 }
                             }
-                        } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
-                            let newKey = `${uid.split(':')[0]}:${sectionMainPart}${parseInt(keyLastPart) + 1}`;
-                            if (translation.data[newKey]) {
-                                newObj[key] = translation.data[newKey];
-                            }
-                        }  else if (needToMergeNextSection && key.length === nextSectionFirstKey.length && key.split(':')[1].split('.')[0] === nextSectionFirstKey.split(':')[1].split('.')[0]
-                            && key.split(':')[1].split('.')[1] === nextSectionFirstKey.split(':')[1].split('.')[1]) {
-                            this.mergeSectionByNextSubsectionKey(key, translation, newObj);
                         } else {
-                            newObj[key] = translation.data[key];
+                            // Paragraphs after the split point: decrement the number.
+                            const nextKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
+                            if (translation.data[nextKey]) {
+                                newObj[key] = translation.data[nextKey];
+                            } else {
+                                // This is the last paragraph, delete it (because it has been merged into the previous one)
+                                // Do not add to newObj
+                            }
                         }
                     }
+
                     translation.data = newObj;
-                    newObj = {};
+                    translation.splitting = true;
                 });
             }
             return true;
