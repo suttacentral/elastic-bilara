@@ -199,7 +199,7 @@ services:
       - ./bilara_server_block.conf:/opt/bitnami/nginx/conf/server_blocks/bilara_server_block.conf:ro
       - ./logs/nginx/:/var/logs/nginx
       - ./frontend:/var/www/html
-      - nginx_certs:/certs
+      - certs:/certs
       - ./scripts/generate_nginx_certs.sh:/scripts/generate_nginx_certs.sh
     ports:
       - 9080:80
@@ -213,8 +213,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  nginx_certs:
-    driver: local
   certs:
     driver: local
   elasticsearch_data:
