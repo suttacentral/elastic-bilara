@@ -168,6 +168,7 @@
     border: 1px solid var(--color-accent);
     border-radius: var(--radius-sm);
     padding: var(--space-xs) var(--space-sm);
+    color: var(--sl-color-gray-800);
 }
 
 .project-container__content-body__hints-list-item__uid, .project-container__content-body__hints-list-item__info-translation__strength {
@@ -217,7 +218,7 @@
         position: absolute;
         right: 0px;
         width: max-content;
-        background-color: var(--color-primary-lighter);
+        background-color: var(--bilara-primary-color);
         overflow: hidden;
 }
 
