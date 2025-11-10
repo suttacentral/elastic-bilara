@@ -1,5 +1,5 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js';
+import '../addons/sc-bilara-circle-badge.js';
 
 class SCBilaraNotificationIcon extends LitElement {
   static styles = css`
@@ -43,7 +43,7 @@ class SCBilaraNotificationIcon extends LitElement {
         <div>
           <a href="/notifications" target="_blank"><img src="./static/img/notification.svg" alt="notification"/></a>
           ${this.count > 0
-            ? html`<div class="notification-count"><sl-badge variant="danger" pill pulse>${this.count}</sl-badge></div>`
+            ? html`<div class="notification-count"><sc-circle-badge variant="danger" pulse content="${this.count}"size="small"></sc-circle-badge></div>`
             : ''}
         </div>
       </div>

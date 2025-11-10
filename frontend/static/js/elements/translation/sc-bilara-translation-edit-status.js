@@ -1,5 +1,5 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js';
+import '../addons/sc-bilara-circle-badge.js';
 
 export class SCBilaraTranslationEditStatus extends LitElement {
     static styles = [
@@ -26,10 +26,10 @@ export class SCBilaraTranslationEditStatus extends LitElement {
 
     badgeTemplate() {
         return {
-            error: html`<sl-badge variant="danger" pill><i class="bi-x"></i></sl-badge>`,
-            modified: html`<sl-badge variant="success" pill><i class="bi-exclamation-triangle"></i></sl-badge>`,
-            pending: html`<sl-badge variant="neutral" pill><i class="bi-check2"></i></sl-badge>`,
-            committed: html`<sl-badge variant="success" pill><i class="bi-check2"></i></sl-badge>`,
+            error: html`<sc-circle-badge variant="danger" content="×" size="small"></sc-circle-badge>`,
+            modified: html`<sc-circle-badge variant="success" size="small"><i class="bi-exclamation-triangle"></i></sc-circle-badge>`,
+            pending: html`<sc-circle-badge variant="neutral" size="small"><i class="bi-check2"></i></sc-circle-badge>`,
+            committed: html`<sc-circle-badge variant="success" content="✓" size="small"></sc-circle-badge>`,
         }[this.status] || html``;
     }
 
