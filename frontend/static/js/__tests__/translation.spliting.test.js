@@ -6,26 +6,26 @@ describe('splitBasedOnUid - Two Level Format', () => {
             {
                 muid: 'test-project',
                 data: {
-                    'mn1:1.1': 'First paragraph',
-                    'mn1:1.2': 'Second paragraph',
-                    'mn1:1.3': 'Third paragraph',
-                    'mn1:2.1': 'Different section'
+                    'dn1:0.1': 'Long Discourses 1 ',
+                    'dn1:0.2': 'The Divine Net ',
+                    'dn1:1.0': '1. Talk on Wanderers ',
+                    'dn1:2.0': 'Different section'
                 }
             },
             {
                 muid: 'html-pli-ms',
                 data: {
-                    'mn1:1.1': '{}',
-                    'mn1:1.2': '{}',
-                    'mn1:1.3': '{}',
-                    'mn1:2.1': '{}'
+                    'dn1:0.1': '{}',
+                    'dn1:0.2': '{}',
+                    'dn1:1.0': '{}',
+                    'dn1:2.0': '{}'
                 }
             }
         ];
     });
 
     test('should correctly identify two-level format', () => {
-        const sectionNumber = '1.2';
+        const sectionNumber = '0.1';
         const isTwoLevelFormat = /^[0-9]+\.[0-9]+$/.test(sectionNumber);
         expect(isTwoLevelFormat).toBe(true);
     });
@@ -37,17 +37,17 @@ describe('splitBasedOnUid - Two Level Format', () => {
     });
 
     test('should correctly set splitter_uid', () => {
-        const sectionUid = 'mn1';
-        const sectionNumber = '1.2';
+        const sectionUid = 'dn1';
+        const sectionNumber = '0.1';
         const [integerPart, decimalPart] = sectionNumber.split('.');
         const splitPointNumber = parseInt(decimalPart);
         const expectedUid = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
 
-        expect(expectedUid).toBe('mn1:1.3');
+        expect(expectedUid).toBe('dn1:0.2');
     });
 
     test('should insert new paragraph at split point', () => {
-        const uid = 'mn1:1.2';
+        const uid = 'dn1:0.1';
         const [sectionUid, sectionNumber] = uid.split(':');
         const [integerPart, decimalPart] = sectionNumber.split('.');
         const splitPointNumber = parseInt(decimalPart);
@@ -70,7 +70,7 @@ describe('splitBasedOnUid - Two Level Format', () => {
                 } else if (keyDecimalNumber === splitPointNumber) {
                     newObj[key] = translation.data[key];
                     const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-                    newObj[newKey] = translation.muid.includes('html') ? "{}" : "";
+                    newObj[newKey] = translation.muid.includes('html') ? '{}' : '';
                 } else {
                     const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
                     newObj[newKey] = translation.data[key];
@@ -80,18 +80,17 @@ describe('splitBasedOnUid - Two Level Format', () => {
         });
 
         const regularProject = mockTranslations[0];
-        expect(regularProject.data['mn1:1.1']).toBe('First paragraph');
-        expect(regularProject.data['mn1:1.2']).toBe('Second paragraph');
-        expect(regularProject.data['mn1:1.3']).toBe('');
-        expect(regularProject.data['mn1:1.4']).toBe('Third paragraph');
-        expect(regularProject.data['mn1:2.1']).toBe('Different section');
+        expect(regularProject.data['dn1:0.1']).toBe('Long Discourses 1 ');
+        expect(regularProject.data['dn1:0.2']).toBe('');
+        expect(regularProject.data['dn1:0.3']).toBe('The Divine Net ');
+        expect(regularProject.data['dn1:1.0']).toBe('1. Talk on Wanderers ');
 
         const htmlProject = mockTranslations[1];
-        expect(htmlProject.data['mn1:1.3']).toBe('{}');
+        expect(htmlProject.data['dn1:0.2']).toBe('{}');
     });
 
     test('should handle edge case - split first paragraph', () => {
-        const uid = 'mn1:1.1';
+        const uid = 'dn1:0.1';
         const [sectionUid, sectionNumber] = uid.split(':');
         const [integerPart, decimalPart] = sectionNumber.split('.');
         const splitPointNumber = parseInt(decimalPart);
@@ -114,21 +113,21 @@ describe('splitBasedOnUid - Two Level Format', () => {
             } else if (keyDecimalNumber === splitPointNumber) {
                 newObj[key] = translation.data[key];
                 const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-                newObj[newKey] = "";
+                newObj[newKey] = '';
             } else {
                 const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
                 newObj[newKey] = translation.data[key];
             }
         }
 
-        expect(newObj['mn1:1.1']).toBe('First paragraph');
-        expect(newObj['mn1:1.2']).toBe('');
-        expect(newObj['mn1:1.3']).toBe('Second paragraph');
-        expect(newObj['mn1:1.4']).toBe('Third paragraph');
+        expect(newObj['dn1:0.1']).toBe('Long Discourses 1 ');
+        expect(newObj['dn1:0.2']).toBe('');
+        expect(newObj['dn1:0.3']).toBe('The Divine Net ');
+        expect(newObj['dn1:1.0']).toBe('1. Talk on Wanderers ');
     });
 
     test('should maintain paragraph order', () => {
-        const uid = 'mn1:1.2';
+        const uid = 'dn1:0.1';
         const [sectionUid, sectionNumber] = uid.split(':');
         const [integerPart, decimalPart] = sectionNumber.split('.');
         const splitPointNumber = parseInt(decimalPart);
@@ -151,7 +150,7 @@ describe('splitBasedOnUid - Two Level Format', () => {
             } else if (keyDecimalNumber === splitPointNumber) {
                 newObj[key] = translation.data[key];
                 const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-                newObj[newKey] = "";
+                newObj[newKey] = '';
             } else {
                 const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
                 newObj[newKey] = translation.data[key];
@@ -159,16 +158,16 @@ describe('splitBasedOnUid - Two Level Format', () => {
         }
 
         const keys = Object.keys(newObj);
-        expect(keys).toEqual(['mn1:1.1', 'mn1:1.2', 'mn1:1.3', 'mn1:1.4', 'mn1:2.1']);
+        expect(keys).toEqual(['dn1:0.1', 'dn1:0.2', 'dn1:0.3', 'dn1:1.0', 'dn1:2.0']);
     });
 
     test('should not affect paragraphs in other sections', () => {
-        const uid = 'mn1:1.2';
+        const uid = 'dn1:0.1';
         const [sectionUid, sectionNumber] = uid.split(':');
         const [integerPart, decimalPart] = sectionNumber.split('.');
         const splitPointNumber = parseInt(decimalPart);
 
-        const originalSection2 = mockTranslations[0].data['mn1:2.1'];
+        const originalSection2 = mockTranslations[0].data['dn1:2.0'];
 
         mockTranslations.forEach(translation => {
             const newObj = {};
@@ -188,7 +187,7 @@ describe('splitBasedOnUid - Two Level Format', () => {
                 } else if (keyDecimalNumber === splitPointNumber) {
                     newObj[key] = translation.data[key];
                     const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-                    newObj[newKey] = "";
+                    newObj[newKey] = '';
                 } else {
                     const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
                     newObj[newKey] = translation.data[key];
@@ -197,11 +196,11 @@ describe('splitBasedOnUid - Two Level Format', () => {
             translation.data = newObj;
         });
 
-        expect(mockTranslations[0].data['mn1:2.1']).toBe(originalSection2);
+        expect(mockTranslations[0].data['dn1:2.0']).toBe(originalSection2);
     });
 
     test('should handle multiple translation objects', () => {
-        const uid = 'mn1:1.2';
+        const uid = 'dn1:0.1';
         const [sectionUid, sectionNumber] = uid.split(':');
         const [integerPart, decimalPart] = sectionNumber.split('.');
         const splitPointNumber = parseInt(decimalPart);
@@ -224,7 +223,7 @@ describe('splitBasedOnUid - Two Level Format', () => {
                 } else if (keyDecimalNumber === splitPointNumber) {
                     newObj[key] = translation.data[key];
                     const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-                    newObj[newKey] = translation.muid.includes('html') ? "{}" : "";
+                    newObj[newKey] = translation.muid.includes('html') ? '{}' : '';
                 } else {
                     const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
                     newObj[newKey] = translation.data[key];
@@ -234,8 +233,8 @@ describe('splitBasedOnUid - Two Level Format', () => {
         });
 
         expect(mockTranslations).toHaveLength(2);
-        expect(mockTranslations[0].data['mn1:1.3']).toBe('');
-        expect(mockTranslations[1].data['mn1:1.3']).toBe('{}');
+        expect(mockTranslations[0].data['dn1:0.2']).toBe('');
+        expect(mockTranslations[1].data['dn1:0.2']).toBe('{}');
     });
 });
 
@@ -255,10 +254,10 @@ describe('splitBasedOnUid - Three Level Format', () => {
             {
                 muid: 'test-project',
                 data: {
-                    'dn1:1.1.1': 'First sub-paragraph',
-                    'dn1:1.1.2': 'Second sub-paragraph',
-                    'dn1:1.1.3': 'Third sub-paragraph',
-                    'dn1:1.2.1': 'Different subsection',
+                    'dn1:1.1.1': 'So I have heard. ',
+                    'dn1:1.1.2': 'At one time the Buddha was traveling along the road between Rājagaha and Nāḷandā together with a large Saṅgha of five hundred mendicants. ',
+                    'dn1:1.1.3': 'The wanderer Suppiya was also traveling along the same road, together with his resident pupil, the student Brahmadatta. ',
+                    'dn1:1.2.1': 'Then the Buddha took up residence for the night in the royal rest-house in Ambalaṭṭhikā together with the Saṅgha of mendicants. ',
                     'dn1:2.1.1': 'Different section'
                 }
             },
@@ -335,7 +334,7 @@ describe('splitBasedOnUid - Three Level Format', () => {
                 } else if (keyLastPart === sectionLastPart) {
                     newObj[key] = translation.data[key];
                     const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-                    newObj[newKey] = translation.muid.includes('html') ? "{}" : "";
+                    newObj[newKey] = translation.muid.includes('html') ? '{}' : '';
                 } else {
                     const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
                     newObj[newKey] = translation.data[key];
@@ -345,12 +344,10 @@ describe('splitBasedOnUid - Three Level Format', () => {
         });
 
         const regularProject = mockTranslations[0];
-        expect(regularProject.data['dn1:1.1.1']).toBe('First sub-paragraph');
-        expect(regularProject.data['dn1:1.1.2']).toBe('Second sub-paragraph');
+        expect(regularProject.data['dn1:1.1.1']).toBe('So I have heard. ');
+        expect(regularProject.data['dn1:1.1.2']).toBe('At one time the Buddha was traveling along the road between Rājagaha and Nāḷandā together with a large Saṅgha of five hundred mendicants. ');
         expect(regularProject.data['dn1:1.1.3']).toBe('');
-        expect(regularProject.data['dn1:1.1.4']).toBe('Third sub-paragraph');
-        expect(regularProject.data['dn1:1.2.1']).toBe('Different subsection');
-        expect(regularProject.data['dn1:2.1.1']).toBe('Different section');
+        expect(regularProject.data['dn1:1.1.4']).toBe('The wanderer Suppiya was also traveling along the same road, together with his resident pupil, the student Brahmadatta. ');
 
         const htmlProject = mockTranslations[1];
         expect(htmlProject.data['dn1:1.1.3']).toBe('{}');
@@ -386,17 +383,16 @@ describe('splitBasedOnUid - Three Level Format', () => {
             } else if (keyLastPart === sectionLastPart) {
                 newObj[key] = translation.data[key];
                 const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-                newObj[newKey] = "";
+                newObj[newKey] = '';
             } else {
                 const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
                 newObj[newKey] = translation.data[key];
             }
         }
 
-        expect(newObj['dn1:1.1.1']).toBe('First sub-paragraph');
+        expect(newObj['dn1:1.1.1']).toBe('So I have heard. ');
         expect(newObj['dn1:1.1.2']).toBe('');
-        expect(newObj['dn1:1.1.3']).toBe('Second sub-paragraph');
-        expect(newObj['dn1:1.1.4']).toBe('Third sub-paragraph');
+        expect(newObj['dn1:1.1.3']).toBe('At one time the Buddha was traveling along the road between Rājagaha and Nāḷandā together with a large Saṅgha of five hundred mendicants. ');
     });
 
     test('should maintain three-level paragraph order', () => {
@@ -429,7 +425,7 @@ describe('splitBasedOnUid - Three Level Format', () => {
             } else if (keyLastPart === sectionLastPart) {
                 newObj[key] = translation.data[key];
                 const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-                newObj[newKey] = "";
+                newObj[newKey] = '';
             } else {
                 const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
                 newObj[newKey] = translation.data[key];
@@ -480,7 +476,7 @@ describe('splitBasedOnUid - Three Level Format', () => {
                 } else if (keyLastPart === sectionLastPart) {
                     newObj[key] = translation.data[key];
                     const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-                    newObj[newKey] = translation.muid.includes('html') ? "{}" : "";
+                    newObj[newKey] = translation.muid.includes('html') ? '{}' : '';
                 } else {
                     const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
                     newObj[newKey] = translation.data[key];
