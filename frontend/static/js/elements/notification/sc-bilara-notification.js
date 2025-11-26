@@ -10,6 +10,7 @@ import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/compone
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/skeleton/skeleton.js';
 
 import '../addons/sc-bilara-badge.js';
+import '../addons/sc-bilara-circle-badge.js';
 import "../../auth.js";
 import "../../utils.js";
 
@@ -163,7 +164,7 @@ class SCBilaraNotification extends LitElement {
       <div class="notification">
         <h2>
           <i class="bi-bell"></i>Notifications
-          <sl-badge variant="danger" pill>${this.notification.length}</sl-badge>
+          <sc-circle-badge variant="danger" content="${this.notification.length}"></sc-circle-badge>
         </h2>
         <div class="spinner">
           ${this.loadingData ? html`<sl-spinner style="font-size: 50px; --track-width: 6px;"></sl-spinner>` : ''}
@@ -186,7 +187,7 @@ class SCBilaraNotification extends LitElement {
             <ul>${notify.effected_files.map(file => html`
               <li class="effected-file">
                 <div>${file.file_name}<sc-bilara-badge text="${file.file_type}" color="badge-${file.file_type}"></sc-bilara-badge></div>
-                <sl-button href="${file.sc_url}" target="_blank" variant="primary">View in SuttaCentral</sl-button>
+                <sl-button href="${file.sc_url}" target="_blank" variant="primary" outline>View in SuttaCentral</sl-button>
               </li>
               <div>
                 <sl-alert variant="primary" open> ${file.file_name.includes('_html') ?  html`<pre>${file.change_detail}</pre>` : unsafeHTML(file.change_detail)} </sl-alert>
@@ -243,6 +244,7 @@ class SCBilaraNotification extends LitElement {
           throw new Error("Invalid data format from the API");
       }
       this.notification = data.git_recent_commits;
+      console.log(this.notification);
       this.requestUpdate();
     } catch (error) {
         throw new Error(error);
