@@ -154,14 +154,14 @@
                             <div x-data="{params: new URLSearchParams(window.location.search)}">
                                 <sl-button variant="success"  size="large" id="btn-publish-changes"
                                     x-show="translation.canEdit && !merging && !splitting"
-                                    @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
+                                    @click="await publishChanges(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                     Publish Changes
                                 </sl-button>
                             </div>
                             <div x-data="{params: new URLSearchParams(window.location.search)}">
                                 <sl-button variant="success"  size="large"  id="btn-publish-changes-split-merge"
-                                    x-show="translation.canEdit && isAdmin && isRoot && !merging && !splitting"
-                                    @click="await publishChangesHandlerForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
+                                    x-show="translation.canEdit && isAdmin && isRoot && !merging && !splitting && localStorage.getItem('displayButtonForSplitOrMerge') === 'true'"
+                                    @click="await publishChangesForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                     Publish Changes For Split Or Merge
                                 </sl-button>
                             </div>

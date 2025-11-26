@@ -68,7 +68,7 @@ describe('mergeBasedOnUid - Complete Merge Functionality', () => {
             htmlProject: mockTranslations[1],
             mergee_uid: null,
             merger_uid: null,
-            OriginalTranslations: null,
+            originalTranslations: null,
             mergeSectionByNextKey: jest.fn((key, translation, newObj) => {
                 const [keySectionUid, keySectionNumber] = key.split(':');
                 const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
@@ -85,14 +85,14 @@ describe('mergeBasedOnUid - Complete Merge Functionality', () => {
             const uid = 'mn1:1.2';
             const regex = /:([0-9]+(\.[0-9]+)?)$/;
             const isTwoLevel = regex.test(uid) && countChar(uid.split(':')[1], '.') === 1;
-            
+
             expect(isTwoLevel).toBe(true);
-            
+
             const [sectionUid, sectionNumber] = uid.split(':');
             const [integerPart, decimalPart] = sectionNumber.split('.');
             const decimalNumber = parseInt(decimalPart);
             const mergeeUid = `${sectionUid}:${integerPart}.${decimalNumber + 1}`;
-            
+
             expect(mergeeUid).toBe('mn1:1.3');
         });
 
