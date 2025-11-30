@@ -119,6 +119,7 @@
 }
 
 .project-container__content-body__textarea {
+    height: 48px;
     width: 100%;
     min-height: 24px;
     resize: none;
