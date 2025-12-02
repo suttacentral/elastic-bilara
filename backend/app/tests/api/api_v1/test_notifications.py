@@ -7,8 +7,7 @@ from app.api.api_v1.endpoints.notifications import (
     parse_git_show_details,
     get_change_detail,
     mark_notification_as_done,
-    get_unread_git_updates,
-    commit_id_exists_in_db
+    get_unread_git_updates
 )
 from app.services.notifications.models import GitCommitInfoOut
 

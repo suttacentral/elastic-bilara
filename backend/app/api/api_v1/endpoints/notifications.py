@@ -19,14 +19,15 @@ DEFAULT_AUTHOR = 'sujato'
 DEFAULT_LANG = 'en'
 GIT_LOG_DAYS = 360
 
+
 @router.get("/git", response_model=GitCommitInfoOut)
 def get_unread_git_updates(
   user: str = Depends(auth_utils.get_current_user)):
     recent_commits = []
     working_directory = settings.WORK_DIR
 
-    git_log_cmd = [
-        "git", "-c", f"safe.directory={working_directory}",
+    git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
+    git_log_cmd = git_base_cmd + [
         "log",
         "--oneline",
         "--abbrev-commit",
@@ -51,14 +52,15 @@ def get_unread_git_updates(
     if git_log_cmd_process.returncode == 0:
         all_done_commit_ids = get_all_commit_ids_in_db(user.github_id)
         git_commits = git_log_output.decode('utf-8').split("\n")
-        git_show_name_only_command = 'git show --name-only '
         for git_commit in git_commits:
             if not git_commit.strip():
                 continue
+
+            commit_hash = git_commit.split(" ")[0]
+            git_show_name_only_cmd = git_base_cmd + ["show", "--name-only", commit_hash]
             git_show_cmd_process = subprocess.Popen(
-                f'{git_show_name_only_command} ' + git_commit.split(" ")[0],
+                git_show_name_only_cmd,
                 cwd=working_directory,
-                shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -80,11 +82,10 @@ def get_unread_git_updates(
             if FILTER_AUTHOR not in author:
                 continue
 
-            git_show_cmd = "git show "
+            git_show_diff_cmd = git_base_cmd + ["show", commit_hash]
             git_show_cmd_process = subprocess.Popen(
-                f"{git_show_cmd} " + git_commit.split(" ")[0],
+                git_show_diff_cmd,
                 cwd=working_directory,
-                shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -254,4 +255,3 @@ async def mark_notification_as_done(
             ) from e
 
     return NotificationDoneOut(success=True)
-
