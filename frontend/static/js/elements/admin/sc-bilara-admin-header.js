@@ -15,35 +15,31 @@ export class SCBilaraAdminHeader extends LitElement {
 
   render() {
     return html`
-      <nav class="h-full admin-nav">
-          <ul class="flex items-center h-full">
-              <li class="mx-4 uppercase tracking-wide font-bold">
+      <nav class="admin-header-nav">
+          <ul class="admin-header-list">
+              <li class="admin-header-brand">
                   <a href="/nav">Bilara</a>
               </li>
-              <li>
-                  <details class="relative">
+              <li class="admin-header-howto">
+                  <details>
                       <summary>How to</summary>
-                      <div class="absolute"></div>
+                      <div class="admin-header-dropdown"></div>
                       <!-- Add this later-->
                   </details>
               </li>
-              <li class="ml-auto mr-2">
-                  <div class="flex items-center h-10 space-x-2" x-cloak x-show="!!username">
+              <li class="admin-header-user">
+                  <div class="admin-header-user-info" x-cloak x-show="!!username">
                       <img :src="avatarURL"
                           :alt="username + 's github profile picture'"
-                          class="h-full w-auto object-cover rounded-full border-2 border-amber-300"/>
+                          class="admin-header-avatar"/>
                       <span>Welcome, <strong x-text="username"></strong>!</span>
                   </div>
               </li>
-              <li :class="{'mr-2': isAdmin}" x-cloak x-show="isAdmin && isActive"><a
-                      class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
-                      href="/admin">Admin Area</a></li>
-              <li class="mr-4">
-                  <a
-                          class="rounded py-2 px-4 bg-zinc-100 hover:bg-green-50 border border-neutral-500 hover:cursor-pointer"
-                          @click.prevent="await logout()"
-                  >Logout
-                  </a>
+              <li class="admin-header-admin-link" x-cloak x-show="isAdmin && isActive">
+                  <a class="admin-header-btn" href="/admin">Admin Area</a>
+              </li>
+              <li class="admin-header-logout">
+                  <a class="admin-header-btn" @click.prevent="await logout()">Logout</a>
               </li>
           </ul>
       </nav>
