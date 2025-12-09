@@ -83,6 +83,20 @@ function displayMessage(element, message, type) {
     }, 15000);
 }
 
+function ensureStatusBadge(textarea, muid, uid, isSource) {
+    const badgeId = isSource ? `root-badge-${muid}-${uid}` : `translation-badge-${muid}-${uid}`;
+    if (document.getElementById(badgeId)) {
+        return;
+    }
+    const badge = document.createElement('sc-bilara-translation-edit-status');
+    badge.id = badgeId;
+    badge.className = 'translation-cell__status';
+    const wrapper = textarea.closest('.translation-cell__textarea-wrapper');
+    if (wrapper) {
+        wrapper.appendChild(badge);
+    }
+}
+
 function displayBadge(badgeId, status) {
     const badge = document.getElementById(badgeId);
     badge.status = status;

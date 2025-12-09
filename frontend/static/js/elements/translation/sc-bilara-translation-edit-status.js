@@ -16,10 +16,17 @@ export class SCBilaraTranslationEditStatus extends LitElement {
         };
     }
 
+    constructor() {
+        super();
+        this.status = "";
+    }
+
+    createRenderRoot() {
+        return this;
+    }
+
     render() {
         return html`
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
             ${this.badgeTemplate()}
         `;
     }

@@ -52,7 +52,7 @@ class SCBilaraNotification extends LitElement {
       border-radius: 5px;
       padding: 10px;
       margin: 10px 0;
-      font-family: 'Source Sans 3';
+      font-family: var(--font-serif);
       font-size: 14px;
       color: #333;
     }

@@ -15,21 +15,22 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
 
   render() {
     return html`
-      <div class="project-header">
-          <p class="project-header__message"></p>
+      <style>
+          .project-header__message {
+              font-size: 3rem;
+              font-weight: 600;
+              padding-left: 15px;
+          }
+      </style>
+      <div class="project-header" x-data="{prefix: new URLSearchParams(window.location.search).get('prefix')}">
+          <p class="project-header__message" x-text="prefix"></p>
           <nav class="project-header__nav">
               <ul class="project-header__nav-list">
                   <li class="project-header__nav-item">
-                      <button class="project-header__nav-button btn btn--related-projects"
-                              @click="$dispatch('toggle-detail-panel', {panel: 'related'}); adjustVisibleTextareas()">
-                          Related
-                      </button>
+                      <sl-button size="small" variant="warning" outline @click="$dispatch('toggle-detail-panel', {panel: 'related'});">Related</sl-button>
                   </li>
                   <li class="project-header__nav-item">
-                      <button class="project-header__nav-button btn btn--search"
-                              @click="$dispatch('toggle-detail-panel', {panel: 'search'}); adjustVisibleTextareas()">
-                          Search
-                      </button>
+                      <sl-button size="small" variant="primary" outline @click="$dispatch('toggle-detail-panel', {panel: 'search'});">Search</sl-button>
                   </li>
               </ul>
           </nav>
