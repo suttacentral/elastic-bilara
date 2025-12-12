@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bilara Admin Area</title>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.2/dist/cdn.min.js"></script>
     <script src="./static/js/utils.js"></script>
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/adminUsers.js"></script>
@@ -83,7 +83,7 @@
                                 <div class="admin-form-row">
                                     <div class="admin-form-group">
                                         <label for="githubId" class="admin-label">Github ID</label>
-                                        <input type="text" id="githubId" x-model="newUser.githubId" 
+                                        <input type="text" id="githubId" x-model="newUser.githubId"
                                                class="admin-input" placeholder="Enter GitHub ID">
                                     </div>
                                     <div class="admin-form-group">
@@ -98,19 +98,19 @@
                                 <div class="admin-form-row">
                                     <div class="admin-form-group">
                                         <label for="username" class="admin-label">Username</label>
-                                        <input type="text" id="username" x-model="newUser.username" 
+                                        <input type="text" id="username" x-model="newUser.username"
                                                class="admin-input" placeholder="Enter username">
                                     </div>
                                     <div class="admin-form-group">
                                         <label for="email" class="admin-label">Email</label>
-                                        <input type="email" id="email" x-model="newUser.email" 
+                                        <input type="email" id="email" x-model="newUser.email"
                                                class="admin-input" placeholder="Enter email">
                                     </div>
                                 </div>
                                 <div class="admin-form-row">
                                     <div class="admin-form-group">
                                         <label for="avatarUrl" class="admin-label">Avatar URL</label>
-                                        <input type="text" id="avatarUrl" x-model="newUser.avatarUrl" 
+                                        <input type="text" id="avatarUrl" x-model="newUser.avatarUrl"
                                                class="admin-input" placeholder="Enter avatar URL">
                                     </div>
                                     <div class="admin-form-group admin-form-actions">
@@ -131,7 +131,7 @@
                             <!-- User Header (Clickable) -->
                             <div class="admin-user-header" @click="user.showDetails = !user.showDetails">
                                 <div class="admin-user-info">
-                                    <img :src="user.avatar_url" :alt="`${user.username}'s profile`" 
+                                    <img :src="user.avatar_url" :alt="`${user.username}'s profile`"
                                          class="admin-user-avatar"/>
                                     <div>
                                         <p class="admin-user-name" x-text="user.username"></p>
@@ -139,8 +139,8 @@
                                     </div>
                                 </div>
                                 <div class="admin-user-badges">
-                                    <span class="admin-badge" 
-                                          :class="user.is_active ? 'admin-badge-active' : 'admin-badge-inactive'" 
+                                    <span class="admin-badge"
+                                          :class="user.is_active ? 'admin-badge-active' : 'admin-badge-inactive'"
                                           x-text="user.is_active ? 'Active' : 'Inactive'"></span>
                                     <span class="admin-badge admin-badge-role" x-text="user.role"></span>
                                     <i class="bi-chevron-down admin-user-chevron" :class="{'open': user.showDetails}"></i>
@@ -200,13 +200,13 @@
                                 </div>
                                 <!-- Delete Action -->
                                 <div class="admin-user-actions" x-data="{ modalShown: false, selectedUser: null }">
-                                    <button class="admin-btn admin-btn-danger" 
+                                    <button class="admin-btn admin-btn-danger"
                                             @click.prevent="selectedUser = user; modalShown = true">
                                         <i class="bi-trash"></i>
                                         Delete User
                                     </button>
                                     <!-- Delete Modal -->
-                                    <div x-cloak x-show="modalShown" class="admin-modal-overlay" 
+                                    <div x-cloak x-show="modalShown" class="admin-modal-overlay"
                                          @click="modalShown = false" aria-modal="true">
                                         <div class="admin-modal" @click.stop>
                                             <div class="admin-modal-header">
@@ -214,7 +214,7 @@
                                                     <i class="bi-exclamation-triangle"></i>
                                                 </div>
                                                 <div>
-                                                    <h2 class="admin-modal-title" 
+                                                    <h2 class="admin-modal-title"
                                                         x-text="selectedUser ? `Delete ${selectedUser.username}?` : ''"></h2>
                                                     <p class="admin-modal-subtitle">This action cannot be undone.</p>
                                                 </div>
@@ -292,7 +292,7 @@
                                         Language code must be 2 or 3 characters long.
                                     </div>
                                     <label class="admin-label" for="languageProjects">Language code:</label>
-                                    <input id="languageProjects" 
+                                    <input id="languageProjects"
                                            :class="{ 'admin-input-error': !validLanguageCode }"
                                            class="admin-input" type="text" x-model="languageCode"
                                            placeholder="en" x-on:input.debounce.500ms="checkLanguageCode">
@@ -405,7 +405,7 @@
                                 </div>
                                 <div class="admin-modal-footer">
                                     <button @click.prevent="modal = !modal" class="admin-btn admin-btn-secondary">No</button>
-                                    <button @click.prevent="await handleSubmit(false); modal = !modal" 
+                                    <button @click.prevent="await handleSubmit(false); modal = !modal"
                                             class="admin-btn admin-btn-danger">Yes, Delete</button>
                                 </div>
                             </div>
@@ -444,7 +444,7 @@
                             <template x-for="(data, index) in rootData" :key="index">
                                 <div class="admin-roots-row">
                                     <input class="admin-input" type="text" x-model="data.id"
-                                           @focus="addInputPair(index)" 
+                                           @focus="addInputPair(index)"
                                            placeholder="Segment ID"
                                            :style="index === (rootData.length - 1) ? 'cursor: pointer' : ''">
                                     <input class="admin-input" type="text" x-model="data.value"
@@ -515,7 +515,7 @@
                                         <li class="admin-tag" x-text="id" @click="removeSegment(id)"></li>
                                     </template>
                                 </ul>
-                                <button @click="await handleSubmit(true)" class="admin-btn admin-btn-primary" 
+                                <button @click="await handleSubmit(true)" class="admin-btn admin-btn-primary"
                                         :disabled="!selectedIDs.length > 0">
                                     <i class="bi-arrows-expand"></i> Shift
                                 </button>
@@ -597,7 +597,7 @@
                             </div>
                             <div class="admin-modal-footer">
                                 <button @click.prevent="modal = !modal" class="admin-btn admin-btn-secondary">No</button>
-                                <button @click.prevent="modal = !modal; await handleSubmit(false)" 
+                                <button @click.prevent="modal = !modal; await handleSubmit(false)"
                                         class="admin-btn admin-btn-danger">Yes, Apply</button>
                             </div>
                         </div>
