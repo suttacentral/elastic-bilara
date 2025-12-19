@@ -1,7 +1,5 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
-
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button/button.js';
-
 import '../notification/sc-bilara-notification-icon.js';
 
 export class SCBilaraNavMain extends LitElement {
@@ -41,6 +39,9 @@ export class SCBilaraNavMain extends LitElement {
               </div>
               <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
                 <a class="main-nav__item-link btn btn--admin" href="/admin">Admin Area</a>
+              </li>
+              <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
+                <a class="main-nav__item-link btn btn--admin" href="/git_status_panel" target="_blank" rel="noopener noreferrer">Unpublished Changes</a>
               </li>
               <li class="main-nav__item hide-mobile">
                   <a class="main-nav__item-link btn btn--main" @click.prevent="await logout()">Logout</a>
