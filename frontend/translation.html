@@ -275,7 +275,7 @@
                             </sl-button>
 
                             <!-- Publish Changes Button -->
-                            <sl-button variant="success" size="medium"
+                            <sl-button variant="success" size="medium" id="btn-publish-changes"
                                 x-show="translation.canEdit && !merging && !splitting"
                                 @click="await publishChanges(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
                                 <i class="bi-cloud-upload"></i>
