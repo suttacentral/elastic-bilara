@@ -1,9 +1,21 @@
+import contextlib
+import subprocess
+
 from collections import Counter
 from pathlib import Path
 
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.git.manager import GitManager
+from pygit2 import (
+    GIT_STATUS_INDEX_NEW,
+    GIT_STATUS_INDEX_MODIFIED,
+    GIT_STATUS_INDEX_DELETED,
+    GIT_STATUS_WT_MODIFIED,
+    GIT_STATUS_WT_NEW,
+    GIT_STATUS_WT_DELETED,
+)
+from pydantic import BaseModel
 
 
 def get_project_title(branch: str) -> str:
@@ -98,3 +110,66 @@ def find_mismatched_paths(file_paths: list[str] = None) -> tuple[bool, list[str]
     most_common_head, _ = Counter(project_heads).most_common(1)[0]
     mismatched_paths: list[str] = [f"/{path}" for path, head in zip(paths, project_heads) if head != most_common_head]
     return len(mismatched_paths) == 0, mismatched_paths
+
+
+def ensure_safe_directory(repo_path: Path) -> None:
+    repo_path_str = str(repo_path)
+    with contextlib.suppress(subprocess.CalledProcessError):
+        result = subprocess.run(
+            ["git", "config", "--global", "--get-all", "safe.directory"],
+            capture_output=True,
+            text=True
+        )
+
+        if repo_path_str in result.stdout.splitlines():
+            return
+
+        subprocess.run(
+            ["git", "config", "--global", "--add", "safe.directory", repo_path_str],
+            check=True,
+            capture_output=True
+        )
+
+
+class FileStatus(BaseModel):
+    path: str
+    status: str
+    status_code: int
+
+
+class GitStatusResponse(BaseModel):
+    files: list[FileStatus]
+    total: int
+
+
+class FileDiffResponse(BaseModel):
+    path: str
+    diff: str
+    status: str
+
+
+class DiscardRequest(BaseModel):
+    file_path: str
+
+
+class DiscardResponse(BaseModel):
+    success: bool
+    message: str
+    file_path: str
+
+
+def get_status_name(status_code: int) -> str:
+    """Convert pygit2 status codes into readable status names."""
+    status_map = {
+        GIT_STATUS_INDEX_NEW: "staged_new",
+        GIT_STATUS_INDEX_MODIFIED: "staged_modified",
+        GIT_STATUS_INDEX_DELETED: "staged_deleted",
+        GIT_STATUS_WT_NEW: "untracked",
+        GIT_STATUS_WT_MODIFIED: "modified",
+        GIT_STATUS_WT_DELETED: "deleted",
+    }
+
+    for code, name in status_map.items():
+        if status_code & code:
+            return name
+    return "unknown"

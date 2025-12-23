@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import subprocess
 import urllib.parse
 from pathlib import Path
 from typing import Annotated
@@ -25,42 +26,18 @@ from pygit2 import (
     GIT_DIFF_INCLUDE_UNTRACKED,
 )
 from pydantic import BaseModel
+from app.services.git.utils import (
+    ensure_safe_directory,
+    FileStatus,
+    GitStatusResponse,
+    FileDiffResponse,
+    DiscardRequest,
+    DiscardResponse,
+    get_status_name
+)
+
 
 router = APIRouter(prefix="/git")
-
-
-class FileStatus(BaseModel):
-    path: str
-    status: str
-    status_code: int
-
-
-class GitStatusResponse(BaseModel):
-    files: list[FileStatus]
-    total: int
-
-
-class FileDiffResponse(BaseModel):
-    path: str
-    diff: str
-    status: str
-
-
-def get_status_name(status_code: int) -> str:
-    """Convert pygit2 status codes into readable status names."""
-    status_map = {
-        GIT_STATUS_INDEX_NEW: "staged_new",
-        GIT_STATUS_INDEX_MODIFIED: "staged_modified",
-        GIT_STATUS_INDEX_DELETED: "staged_deleted",
-        GIT_STATUS_WT_NEW: "untracked",
-        GIT_STATUS_WT_MODIFIED: "modified",
-        GIT_STATUS_WT_DELETED: "deleted",
-    }
-
-    for code, name in status_map.items():
-        if status_code & code:
-            return name
-    return "unknown"
 
 
 @router.get(
@@ -71,8 +48,9 @@ def get_status_name(status_code: int) -> str:
 )
 async def get_git_status() -> GitStatusResponse:
     """Get the status of all modified files in the unpublished repository"""
+    repo_path = settings.WORK_DIR
+    ensure_safe_directory(repo_path)
     try:
-        repo_path = settings.WORK_DIR
         repo = Repository(str(repo_path))
 
         files = []
@@ -94,6 +72,16 @@ async def get_git_status() -> GitStatusResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Git error: {str(e)}"
+        )
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Permission denied: {str(e)}"
+        )
+    except OSError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"OS error: {str(e)}"
         )
 
 
@@ -171,16 +159,6 @@ async def get_file_diff(file_path: str) -> FileDiffResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Git error: {str(e)}"
         )
-
-
-class DiscardRequest(BaseModel):
-    file_path: str
-
-
-class DiscardResponse(BaseModel):
-    success: bool
-    message: str
-    file_path: str
 
 
 @router.post(
