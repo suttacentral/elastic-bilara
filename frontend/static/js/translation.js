@@ -70,10 +70,6 @@ function fetchTranslation() {
                 }
             }
 
-            if (localStorage.getItem('displayButtonForSplitOrMerge') === null) {
-                localStorage.setItem('displayButtonForSplitOrMerge', 'true');
-            }
-
             if (localStorage.getItem('enableSplitHintDialog') === null) {
                 localStorage.setItem('enableSplitHintDialog', 'true');
             }
@@ -92,22 +88,22 @@ function fetchTranslation() {
             }
 
             const [sectionUid, sectionNumber] = uid.split(':');
-            const isTwoLevelFormat = /^[0-9]+\.[0-9]+$/.test(sectionNumber);
-            const isThreeLevelFormat = /[0-9]+\.[0-9]+\.[0-9]+$/.test(sectionNumber);
+            const isTwoLevelFormat = /^\d+\.\d+$/.test(sectionNumber);
+            const isThreeLevelFormat = /^\d+\.\d+\.\d+$/.test(sectionNumber);
 
             // Processing two-level format: mn1:1.1
             if (isTwoLevelFormat) {
                 this._handleTwoLevelSplit(
-                    translations, 
-                    sectionUid, 
+                    translations,
+                    sectionUid,
                     sectionNumber
                 );
             }
             // Processing level 3 format: dn1:1.1.1
             else if (isThreeLevelFormat) {
                 this._handleThreeLevelSplit(
-                    translations, 
-                    sectionUid, 
+                    translations,
+                    sectionUid,
                     sectionNumber
                 );
             }
@@ -139,8 +135,8 @@ function fetchTranslation() {
                     } else if (keyDecimalNumber === splitPointNumber) {
                         newObj[key] = translation.data[key];
                         const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-                        newObj[newKey] = translation.muid.includes('html') 
-                            ? "{}" 
+                        newObj[newKey] = translation.muid.includes('html')
+                            ? "{}"
                             : "";
                     } else {
                         const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
@@ -179,8 +175,8 @@ function fetchTranslation() {
                     } else if (keyLastPart === sectionLastPart) {
                         newObj[key] = translation.data[key];
                         const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-                        newObj[newKey] = translation.muid.includes('html') 
-                            ? "{}" 
+                        newObj[newKey] = translation.muid.includes('html')
+                            ? "{}"
                             : "";
                     } else {
                         const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
@@ -192,7 +188,7 @@ function fetchTranslation() {
         },
         cancelSplit(translations) {
             this._restoreTranslations();
-            localStorage.setItem('displayButtonForSplitOrMerge', 'false');
+            // localStorage.setItem('displayButtonForSplitOrMerge', 'false');
         },
         mergeBasedOnUid(translations, uid, element) {
             if (!isMergeSplitConditionMet(uid)) {
@@ -213,10 +209,6 @@ function fetchTranslation() {
                 }
             }
 
-            if (localStorage.getItem('displayButtonForSplitOrMerge') === null) {
-                localStorage.setItem('displayButtonForSplitOrMerge', 'true');
-            }
-
             if (localStorage.getItem('enableMergeHintDialog') === null) {
                 localStorage.setItem('enableMergeHintDialog', true);
             }
@@ -226,18 +218,18 @@ function fetchTranslation() {
             }
 
             const [sectionUid, sectionNumber] = uid.split(':');
-            const regex = /:([0-9]+(\.[0-9]+)?)$/;
+            const isTwoLevelFormat = /^\d+\.\d+$/.test(sectionNumber);
+            const isThreeLevelFormat = /^\d+\.\d+\.\d+$/.test(sectionNumber);
+
             // Two-level format: mn1:1.1
-            if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
+            if (isTwoLevelFormat) {
                 this._handleTwoLevelMerge(translations, sectionUid, sectionNumber);
             }
             // Three-level format: dn1:1.1.1
-            else {
-                const sectionRegex = /^:[0-9]+\.[0-9]+\.[0-9]+$/;
-                if (sectionRegex.test(uid)) {
-                    this._handleThreeLevelMerge(translations, sectionUid, sectionNumber);
-                }
+            else if (isThreeLevelFormat) {
+                this._handleThreeLevelMerge(translations, sectionUid, sectionNumber);
             }
+
             return true;
         },
         /**
@@ -301,8 +293,8 @@ function fetchTranslation() {
                             const nextSectionIntegerPart = parseInt(integerPart) + 1;
                             const possibleNextKey1 = `${sectionUid}:${nextSectionIntegerPart}.0`;
                             const possibleNextKey2 = `${sectionUid}:${nextSectionIntegerPart}.1`;
-                            const crossSectionNextKey = translation.data[possibleNextKey1] 
-                                ? possibleNextKey1 
+                            const crossSectionNextKey = translation.data[possibleNextKey1]
+                                ? possibleNextKey1
                                 : possibleNextKey2;
 
                             if (translation.data[crossSectionNextKey]) {
@@ -437,7 +429,6 @@ function fetchTranslation() {
         },
         cancelMerge(translations) {
             this._restoreTranslations();
-            localStorage.setItem('displayButtonForSplitOrMerge', 'false');
         },
         redirectToHtml() {
             const params = new URLSearchParams(window.location.search);
@@ -493,28 +484,39 @@ function fetchTranslation() {
                 throw new Error(error);
             }
         },
-        async handleEnter(event, uid, segment, translation) {
+        async handleEnter(event, uid, segment, translation, originalValue = '') {
             if (translation.canEdit) {
                 if (event.shiftKey) {
                     event.target.value += "\n";
                     return;
                 }
-                const nextSection = event.target.parentElement.nextElementSibling;
-                if (nextSection) {
-                    const nextTextarea = nextSection.querySelector("textarea");
+                // Find the textarea in the next row of the same column.
+                const currentTextarea = event.target;
+                const currentCell = currentTextarea.closest('.translation-cell');
+                const currentRow = currentTextarea.closest('.translation-row');
+                const nextRow = currentRow?.nextElementSibling;
+                if (nextRow && currentCell) {
+                    const colIndex = Array.from(currentCell.parentElement.children).indexOf(currentCell);
+                    const nextTextarea = nextRow.querySelector('.translation-row__cells')?.children[colIndex]?.querySelector('textarea');
                     if (nextTextarea) {
                         nextTextarea.focus();
+                        // Move cursor to the end of the text
+                        const textLength = nextTextarea.value.length;
+                        nextTextarea.setSelectionRange(textLength, textLength);
                     }
                 }
-                try {
-                    const muid = translation.muid;
-                    await this.updateHandler(
-                        muid,
-                        { [uid]: segment },
-                        document.querySelector("p.project-header__message"),
-                    );
-                } catch (error) {
-                    throw new Error(error);
+
+                // Save only when content is modified.
+                if (segment !== originalValue) {
+                    try {
+                        await this.updateHandler(
+                            translation.muid,
+                            { [uid]: segment },
+                            document.querySelector("p.project-header__message"),
+                        );
+                    } catch (error) {
+                        throw new Error(error);
+                    }
                 }
             }
         },
@@ -522,11 +524,7 @@ function fetchTranslation() {
             const badgeId = `translation-badge-${muid}-${Object.keys(data)[0]}`;
             if (Object.keys(data).length === 1) {
                 hideBadge(badgeId);
-                insertSpinner(badgeId);
-            } else {
-                addLoadingAttribute(btnId);
             }
-            addLoadingAttribute(btnId);
             try {
                 const response = await requestWithTokenRetry(`projects/${muid}/${this.prefix}/`, {
                     credentials: "include",
@@ -549,14 +547,11 @@ function fetchTranslation() {
                     );
                 }
                 if (Object.keys(data).length === 1) {
-                    removeSpinner();
                     displayBadge(badgeId, BadgeStatus.COMMITTED);
                 }
             } catch (error) {
                 displayBadge(badgeId, BadgeStatus.ERROR);
                 throw new Error(error);
-            } finally {
-                removeLoadingAttribute(btnId);
             }
         },
         async updateHandlerForSplit(muid, prefix, element) {
@@ -580,8 +575,6 @@ function fetchTranslation() {
                         "failure",
                     );
                 }
-
-                localStorage.setItem('displayButtonForSplitOrMerge', 'true');
 
                 displayMessage(
                     element,
@@ -615,8 +608,6 @@ function fetchTranslation() {
                         "failure",
                     );
                 }
-
-                localStorage.setItem('displayButtonForSplitOrMerge', 'true');
 
                 displayMessage(
                     element,

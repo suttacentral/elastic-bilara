@@ -65,8 +65,8 @@
     </header>
 
     <main class="main-content"
-        x-data="{...fetchTranslation(), active: null, params: new URLSearchParams(window.location.search)}" 
-        x-cloak 
+        x-data="{...fetchTranslation(), active: null, params: new URLSearchParams(window.location.search)}"
+        x-cloak
         x-show="isActive"
         @toggle-detail-panel.window="active === $event.detail.panel ? active = null : active = $event.detail.panel">
 
@@ -145,7 +145,7 @@
                         <div class="translation-grid__header-cell"
                             :style="getColumnStyle(index)">
                             <span class="translation-grid__header-title" x-text="translation.muid"></span>
-                            <span class="translation-grid__header-badge" 
+                            <span class="translation-grid__header-badge"
                                   :class="'translation-grid__header-badge--' + (translation.muid || '').split('-')[0]"
                                   x-text="(translation.muid || '').split('-')[0]"></span>
 
@@ -161,7 +161,7 @@
 
                 <!-- Grid Body: Row-based layout for synchronized heights -->
                 <div class="translation-grid__body" x-ref="gridBody">
-                    <template 
+                    <template
                         x-for="(uid, rowIndex) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
                         :key="uid">
 
@@ -172,7 +172,7 @@
                                 <template x-for="(translation, colIndex) in translations" :key="'cell-' + colIndex + '-' + uid">
                                     <div class="translation-cell"
                                         :style="getColumnStyle(colIndex)"
-                                        :class="{ 
+                                        :class="{
                                             'translation-cell--source': translation.isSource,
                                             'translation-cell--editable': translation.canEdit
                                         }"
@@ -185,6 +185,7 @@
                                             muid: translation.muid,
                                             i: rowIndex,
                                             uid: uid,
+                                            originalValue: '',
                                             sourceMuid: new URLSearchParams(window.location.search).get('source'),
                                             get sourceValue() {
                                                 const sourceTranslation = translations.find(item => item.muid === this.sourceMuid);
@@ -206,6 +207,7 @@
                                                 x-bind:value="getValue(translation, uid)"
                                                 x-bind:readonly="!translation.canEdit"
                                                 x-on:focus="
+                                                    originalValue = getValue(translation, uid);
                                                     if (hints.length === 0 && muid.startsWith('translation')) {
                                                         hints = await getHints(uid, muid, sourceMuid, sourceValue);
                                                     }
@@ -215,18 +217,13 @@
                                                 x-on:click="hintClicked = false"
                                                 x-on:input="setValue(translation, uid, $event.target.value)"
                                                 x-on:keydown="ensureStatusBadge($event.target, muid, uid, isSource)"
-                                                x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)">
+                                                x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation, originalValue)">
                                             </textarea>
-                                            <!-- Edit status badge -->
-                                            <!-- <sc-bilara-translation-edit-status
-                                                class="translation-cell__status"
-                                                x-bind:id="isSource ? `root-badge-${muid}-${uid}` : `translation-badge-${muid}-${uid}`">
-                                            </sc-bilara-translation-edit-status> -->
                                         </div>
 
                                         <!-- Translation hints dropdown -->
-                                        <div class="translation-cell__hints" 
-                                            x-cloak 
+                                        <div class="translation-cell__hints"
+                                            x-cloak
                                             x-show="hints.length > 0 && showHints && !translation.isSource">
                                             <ul class="translation-cell__hints-list">
                                                 <template x-for="hint in hints.slice(0, 5)" :key="hint.uid">
@@ -257,56 +254,21 @@
                         </div>
                     </template>
                 </div>
-
-                <!-- Grid Footer: Action buttons for each translation project -->
-                <div class="translation-grid__footer">
-                    <template x-for="(translation, index) in translations" :key="'footer-' + index">
-                        <div class="translation-grid__footer-cell"
-                            :style="getColumnStyle(index)"
-                            x-data="{params: new URLSearchParams(window.location.search)}">
-
-                            <!-- Commit Changes Button -->
-                            <sl-button variant="primary" size="medium"
-                                x-bind:id="translation.isSource ? 'btn-root-commit' : 'btn-translation-commit'"
-                                x-show="translation.canEdit && !merging && !splitting"
-                                @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'), $event.target.id)">
-                                <i class="bi-save"></i>
-                                Commit
-                            </sl-button>
-
-                            <!-- Publish Changes Button -->
-                            <sl-button variant="success" size="medium" id="btn-publish-changes"
-                                x-show="translation.canEdit && !merging && !splitting"
-                                @click="await publishChanges(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
-                                <i class="bi-cloud-upload"></i>
-                                Publish
-                            </sl-button>
-
-                            <!-- Publish Changes For Split/Merge Button (Admin only) -->
-                            <sl-button variant="warning" size="medium"
-                                x-show="translation.canEdit && isAdmin && translation.isSource && !merging && !splitting && localStorage.getItem('displayButtonForSplitOrMerge') === 'true'"
-                                @click="await publishChangesForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
-                                <i class="bi-arrows-angle-expand"></i>
-                                Split/Merge
-                            </sl-button>
-                        </div>
-                    </template>
-                </div>
             </div>
 
-            <div class="project-container__detail-panel" 
+            <div class="project-container__detail-panel"
                 x-data="{ active: null }"
                 @toggle-detail-panel.window="active === $event.detail.panel ? active = 'none' : active = $event.detail.panel">
 
                 <!-- Related Projects Panel -->
-                <div class="project-container__detail-panel__related" 
-                    x-cloak 
+                <div class="project-container__detail-panel__related"
+                    x-cloak
                     x-show="active === 'related'"
-                    :class="{'active': active === 'related'}" 
+                    :class="{'active': active === 'related'}"
                     x-data="{selectedProjects: {}}">
                     <h3 class="detail-panel__title">Related Projects</h3>
                     <template x-for="project in relatedProjects" :key="project">
-                        <div x-text="project" 
+                        <div x-text="project"
                             class="project-container__detail-panel__related-item"
                             @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project);"
                             :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }">
@@ -314,10 +276,10 @@
                     </template>
                 </div>
 
-                <div class="project-container__detail-panel__search search" 
-                    x-cloak 
+                <div class="project-container__detail-panel__search search"
+                    x-cloak
                     x-show="active === 'search'"
-                    :class="{'active': active === 'search'}" 
+                    :class="{'active': active === 'search'}"
                     x-data="search()">
                     <div class="search__container">
                         <h3 class="detail-panel__title">Search</h3>

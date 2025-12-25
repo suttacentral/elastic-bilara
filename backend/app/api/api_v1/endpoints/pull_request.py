@@ -72,22 +72,3 @@ async def create_pull_request(
     """
     return _create_pr_task(user, paths, validate_paths=True)
 
-
-@router.post("/split-merge/", status_code=status.HTTP_201_CREATED)
-async def create_pull_request_for_split_merge(
-    user: Annotated[UserBase, Depends(utils.get_current_user)],
-    paths: PullRequestData,
-):
-    """
-    Create a pull request for split/merge operations.
-
-    Skips path consistency validation for flexibility.
-
-    Args:
-        user: Authenticated user
-        paths: File paths for the pull request
-
-    Returns:
-        dict: Task confirmation and ID
-    """
-    return _create_pr_task(user, paths, validate_paths=False)
