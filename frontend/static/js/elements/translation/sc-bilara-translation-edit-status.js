@@ -34,8 +34,8 @@ export class SCBilaraTranslationEditStatus extends LitElement {
     badgeTemplate() {
         return {
             error: html`<sc-circle-badge variant="danger" content="×" size="small"></sc-circle-badge>`,
-            modified: html`<sc-circle-badge variant="success" size="small"><i class="bi-exclamation-triangle"></i></sc-circle-badge>`,
-            pending: html`<sc-circle-badge variant="neutral" size="small"><i class="bi-check2"></i></sc-circle-badge>`,
+            modified: html`<sc-circle-badge variant="success" content="✓" size="small"></sc-circle-badge>`,
+            pending: html`<sc-circle-badge variant="pending" content="..." size="small"></sc-circle-badge>`,
             committed: html`<sc-circle-badge variant="success" content="✓" size="small"></sc-circle-badge>`,
         }[this.status] || html``;
     }

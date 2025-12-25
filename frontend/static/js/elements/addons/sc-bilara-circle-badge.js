@@ -107,6 +107,11 @@ export class SCCircleBadge extends LitElement {
             color: white;
         }
 
+        .badge--pending {
+            background-color: #fd7e14;
+            color: white;
+        }
+
         /* Pulse Animation */
         .badge--pulse::before {
             content: '';
@@ -217,9 +222,9 @@ export class SCCircleBadge extends LitElement {
     }
 
     updated(changedProperties) {
-        if (changedProperties.has('variant') || 
-            changedProperties.has('size') || 
-            changedProperties.has('pulse') || 
+        if (changedProperties.has('variant') ||
+            changedProperties.has('size') ||
+            changedProperties.has('pulse') ||
             changedProperties.has('dot')) {
             this.requestUpdate();
         }
