@@ -44,7 +44,7 @@ router = APIRouter(prefix="/git")
     "/status",
     response_model=GitStatusResponse,
     description="Get the git status of the unpublished repository",
-    dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
+    # dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
 )
 async def get_git_status() -> GitStatusResponse:
     """Get the status of all modified files in the unpublished repository"""
