@@ -526,6 +526,7 @@ function fetchTranslation() {
                 hideBadge(badgeId);
             }
             try {
+                displayBadge(badgeId, BadgeStatus.COMMITTED);
                 const response = await requestWithTokenRetry(`projects/${muid}/${this.prefix}/`, {
                     credentials: "include",
                     method: "PATCH",

@@ -91,7 +91,7 @@ function ensureStatusBadge(textarea, muid, uid, isSource) {
     const badge = document.createElement('sc-bilara-translation-edit-status');
     badge.id = badgeId;
     badge.className = 'translation-cell__status';
-    const wrapper = textarea.closest('.translation-cell__textarea-wrapper');
+    const wrapper = textarea.parentElement;
     if (wrapper) {
         wrapper.appendChild(badge);
     }
