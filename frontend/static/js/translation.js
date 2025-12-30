@@ -534,13 +534,13 @@ function fetchTranslation() {
                     body: JSON.stringify(data),
                 });
                 const { task_id: taskID } = await response.json();
-                if (!taskID) {
-                    displayMessage(
-                        element,
-                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
-                        "failure",
-                    );
-                }
+                // if (!taskID) {
+                //     displayMessage(
+                //         element,
+                //         "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
+                //         "failure",
+                //     );
+                // }
                 if (Object.keys(data).length > 1) {
                     displayMessage(
                         element,
