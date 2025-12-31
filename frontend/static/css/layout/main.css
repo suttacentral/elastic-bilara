@@ -1,5 +1,5 @@
 .main-content{
-    background-color: var(--bilara-primary-background-color);
+    background-color: var(--color-background);
     flex-grow: 1;
     overflow: hidden;
 }

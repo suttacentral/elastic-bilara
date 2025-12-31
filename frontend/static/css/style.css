@@ -2,7 +2,7 @@
     font-family: var(--font-sans);
     font-kerning: normal;
     line-height: var(--body-line-height);
-    color: var(--color-primary-text);
+    color: var(--color-text);
 }
 
 [x-cloak] {

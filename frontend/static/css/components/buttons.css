@@ -1,6 +1,7 @@
 .btn {
     padding: 0 var(--space-sm);
     border-radius: var(--radius-sm);
+    border: 2px solid transparent;
     font-size: var(--btn-font-size);
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
@@ -9,27 +10,18 @@
     letter-spacing: 0.05em;
     display: inline-block;
     vertical-align: middle;
-    height: var(--space-lg);
-    line-height: var(--space-lg);
 }
+
 .btn:hover {
-    box-shadow: var(--shadow-xs);
+    border: 2px solid var(--color-text-secondary);
+}
+
+.btn:active {
+    border: 2px dashed var(--color-text-secondary);
 }
 
 .btn--main, .btn--admin {
-    background-color: var(--color-primary-dark);
-    color: var(--color-white);
-
-}
-
-.btn--main:hover, .btn--admin:hover {
-    background-color: var(--color-primary-light);
-    color: var(--color-accent-dark);
-}
-
-.btn--main:active, .btn--admin:active {
-    background-color: var(--color-primary-lighter);
-    color: var(--color-black);
+    background-color: var(--color-background-secondary);
 }
 
 .main-nav-mobile__burger {
@@ -57,61 +49,27 @@
 }
 
 .btn--publish, .btn--project-publish {
-    background-color: var(--color-cta);
-    color: var(--color-secondary-lighter);
-}
 
-.btn--publish:hover, .btn--project-publish:hover {
-    background-color: var(--color-secondary-lighter);
-    color: var(--color-accent-dark);
 }
 
 .btn--commit {
-    background-color: var(--color-accent-dark);
-    color: var(--color-white);
-}
-.btn--commit:hover {
-    background-color: var(--color-accent-light);
-    color: var(--color-black);
+
 }
 
 .btn--related-projects {
-    background-color: var(--color-cta-dark);
-    color: var(--color-white);
+
 }
 .btn--search{
     background-color: var(--color-accent);
-    color: var(--color-white);
-}
 
-.btn--related-projects:hover {
-    background-color: var(--color-cta);
-    color: var(--color-secondary-lighter);
-}
-
-.btn--search:hover {
-    background-color: var(--color-accent-light);
-    color: var(--color-black);
 }
 
 .btn--previous {
-    background-color: var(--color-primary-light);
-    color: var(--color-accent-dark);
-
-}
-.btn--previous:hover {
     background-color: var(--color-primary);
-    color: var(--color-accent);
 }
 
 .btn--next {
-    background-color: var(--color-primary-light);
-    color: var(--color-accent-dark);
-}
-
-.btn--next:hover {
     background-color: var(--color-primary);
-    color: var(--color-accent);
 }
 
 .btn--split {
@@ -127,7 +85,6 @@
 }
 
 .btn--disabled {
-    /* background-color: var(--color-disabled); */
     cursor: not-allowed;
     background-color: light-dark(rgba(239, 239, 239, 0.3), rgba(19, 1, 1, 0.3));
     color: light-dark(rgba(16, 16, 16, 0.3), rgba(255, 255, 255, 0.3));
@@ -135,7 +92,7 @@
 }
 
 .btn--cancel {
-    background-color: var(--color-secondary-lighter);
+    background-color: var(--color-secondary);
     margin-left: var(--space-xs);
     margin-right: var(--space-xs);
     height: fit-content;

@@ -498,7 +498,7 @@ body {
 
 .publish-btn:hover {
     background: var(--color-success);
-    color: var(--color-white);
+
 }
 
 .publish-btn:disabled {
@@ -535,7 +535,7 @@ body {
 
 .discard-btn:hover {
     background: var(--color-error);
-    color: var(--color-white);
+
 }
 
 .discard-btn:disabled {
@@ -648,7 +648,7 @@ body {
 
 .modal-btn-danger {
     background: var(--color-error);
-    color: var(--color-white);
+
 }
 
 .modal-btn-danger:hover {
@@ -669,7 +669,7 @@ body {
     gap: var(--space-sm);
     padding: var(--space-md) var(--space-lg);
     background: var(--color-black);
-    color: var(--color-white);
+
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     z-index: 1001;
@@ -1052,7 +1052,7 @@ body {
 
 .batch-btn-publish {
     background: var(--color-success);
-    color: var(--color-white);
+
 }
 
 .batch-btn-publish:hover {

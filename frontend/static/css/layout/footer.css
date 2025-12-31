@@ -4,7 +4,7 @@
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-lg) var(--space-md);
-    background-color: var(--bilara-tertiary-background-color);
+    background-color: var(--color-background-tertiary);
 }
 
 
@@ -16,7 +16,7 @@
 
 
 .main-footer__list-item-link {
-    color: var(--color-accent-dark);
+    color: var(--color-accent);
     text-decoration: none;
 }
 
@@ -26,7 +26,7 @@
 }
 
 .main-footer__list-item-link:active {
-    color: var(--color-accent-light);
+    color: var(--color-accent);
 }
 
 @media (max-width: 1199px) {

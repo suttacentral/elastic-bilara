@@ -24,14 +24,14 @@
 .search__bar__input {
     width: 100%;
     border-radius: var(--radius-xxs);
-    border: 1px solid var(--color-primary-darker);
-    background-color: var(--color-primary-lighter);
+    border: var(--border);
+    background-color: var(--color-primary);
     padding: var(--space-xxs) var(--space-md);
-    color: var(--color-primary-text);
+    color: var(--color-text);
 
     &:hover, &:focus {
         outline: none;
-        border: 1px solid var(--color-accent-dark);
+        border: 1px solid var(--color-accent);
     }
 }
 
@@ -55,16 +55,13 @@
     max-width: 500px;
 
     &:hover {
-        background-color: var(--color-cta);
-        color: var(--color-white);
-        cursor: pointer;
         border-radius: var(--radius-sm);
     }
 }
 
 .search__suggestion-item--selected {
-    background-color: var(--color-primary-dark);
-    color: var(--color-white);
+    background-color: var(--color-primary);
+
     border-radius: var(--radius-sm);
 }
 
@@ -86,7 +83,7 @@
 
 .fields__label {
     cursor: pointer;
-    color: var(--color-secondary-text);
+    color: var(--color-text-secondary);
     font-size: var(--text-xs);
 }
 
@@ -104,8 +101,8 @@
     width: 100%;
     border-radius: var(--radius-xxs);
     border: 1px solid var(--color-primary);
-    background-color: var(--color-primary-lighter);
-    color: var(--color-primary-text);
+    background-color: var(--color-primary);
+    color: var(--color-text);
 
     &:hover, &:focus {
         outline: none;
@@ -147,7 +144,7 @@
 .search__results-key {
     width: fit-content;
     font-style: italic;
-    border: 1px solid var(--color-primary-darker);
+    border: var(--border);
     border-radius: var(--radius-xxs);
 }
 

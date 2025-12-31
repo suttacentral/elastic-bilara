@@ -17,7 +17,7 @@ import "../../utils.js";
 class SCBilaraNotification extends LitElement {
   static styles = css`
     :host {
-      background-color: var(--color-primary-lighter);
+      background-color: var(--color-primary);
       margin: 0;
       padding: 20px;
     }
@@ -36,18 +36,18 @@ class SCBilaraNotification extends LitElement {
     }
 
     .notification {
-      background-color: var(--color-primary-lighter);
+      background-color: var(--color-primary);
     }
 
     .notify-item:hover {
-      background-color: var(--color-primary-light);
+      background-color: var(--color-secondary);
     }
 
     .notify-item {
       display: flex;
       flex-direction: row;
       justify-content: space-between;
-      background-color: var(--color-primary-light);
+      background-color: var(--color-primary);
       border: 1px solid #ccc;
       border-radius: 5px;
       padding: 10px;

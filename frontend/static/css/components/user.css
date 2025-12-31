@@ -10,7 +10,7 @@
     height: 32px;
     border-radius: 50%;
     object-fit: cover;
-    border: 1px solid var(--color-primary-dark);
+    border: var(--border);
     box-shadow: var(--shadow-md);
 }
 
@@ -19,7 +19,7 @@
 }
 
  [x-text=username]{
-    color: var(--color-white);
+
     font-style: italic;
     font-size: var(--text-sm);
     font-weight: 600;

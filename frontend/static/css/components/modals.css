@@ -9,6 +9,6 @@
     align-items: center;
     z-index: 1000;
     background: var(--color-backdrop);
-    color: var(--color-white);
+
     backdrop-filter: blur(10px);
 }
