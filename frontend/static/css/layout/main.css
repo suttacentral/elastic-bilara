@@ -43,9 +43,16 @@
 
 #how-to-details  a{
     text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: .2em;
-    color: var(--color-accent);
+    text-underline-offset: 4px;
+    text-decoration-color: var(--color-primary);
+}
+
+#how-to-details  a:hover{
+text-decoration-style: wavy;
+}
+
+#how-to-details  a:active{
+text-decoration-style: wavy;
 }
 
 b{

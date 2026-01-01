@@ -1,6 +1,6 @@
 import { css } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
 
-export const defaultTheme = 'default';
+export const defaultTheme = 'aruna';
 
 const commonVariables = css`
     --bilara-footer-height: 108px;
@@ -10,7 +10,7 @@ const commonVariables = css`
 `;
 
 export const themes = {
-  'default': css`
+  'aruna': css`
       --color-primary: #D9B26F;
       --color-secondary: #FFC10A;
       --color-background: #fdf6e3;
@@ -19,18 +19,18 @@ export const themes = {
       --color-text: #657b83;
       --color-text-emphasized: #586e75;
       --color-text-secondary: #93a1a1;
-      --color-accent: var(--color-accent, rgba(255, 194, 2, 0.3));
+      --color-accent: rgba(255, 194, 2, 0.3);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
       --color-success: #859900;
       --color-info: #268bd2;
   `,
   'suriya': css`
-      --color-primary: #dc322f;
+      --color-primary: #d33682;
       --color-secondary: #6c71c4;
       --color-background: #fdf6e3;
-      --color-background-secondary: #eee8d5;
-      --color-background-tertiary: #BEB9AA;
+      --color-background-secondary: #fbeecb;
+      --color-background-tertiary: #f8df9c;
       --color-text: #657b83;
       --color-text-emphasized: #586e75;
       --color-text-secondary: #93a1a1;
@@ -46,9 +46,9 @@ export const themes = {
       --color-background: #002b36;
       --color-background-secondary: #073642;
       --color-background-tertiary: #094959;
-      --color-text: #839496;
-      --color-text-emphasized: #93a1a1;
-      --color-text-secondary: #586e75;
+      --color-text: #a1adad;
+      --color-text-emphasized: #bcc5c5;
+      --color-text-secondary: #788989;
       --color-accent: rgba(255, 194, 2, 0.1);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
@@ -104,10 +104,10 @@ export const themes = {
       --color-primary: #92a8d1;
       --color-secondary: #c5a1a0;
       --color-background: #7f7f7f;
-      --color-background-secondary:  rgba(0,0,0,0.3);
-      --color-background-tertiary: #727272;
-      --color-text: #f4f6fa;
-      --color-text-emphasized:  #e9edf5;
+      --color-background-secondary: #727272;
+      --color-background-tertiary: #666666;
+      --color-text: #e9edf5;
+      --color-text-emphasized:  #ffffff;
       --color-text-secondary: #dee4f1;
       --color-accent: rgba(228, 241, 222,0.1);
       --color-warning: #FF851B;

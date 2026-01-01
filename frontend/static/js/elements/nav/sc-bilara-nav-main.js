@@ -34,15 +34,15 @@ export class SCBilaraNavMain extends LitElement {
                   </figure>
                 </a>
               </li>
-              <div class="image-container">
-                <sc-bilara-notification-icon></sc-bilara-notification-icon>
-              </div>
               <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
-                <a class="main-nav__item-link btn btn--admin" href="/admin">Admin Area</a>
+                <a class="main-nav__item-link btn btn--admin" href="/admin">Admin</a>
               </li>
               <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
                 <a class="main-nav__item-link btn btn--admin" href="/git_status_panel" target="_blank" rel="noopener noreferrer">Unpublished Changes</a>
               </li>
+              <div class="image-container">
+                <sc-bilara-notification-icon></sc-bilara-notification-icon>
+              </div>
               <li class="main-nav__item hide-mobile">
                   <a class="main-nav__item-link btn btn--main" @click.prevent="await logout()">Logout</a>
               </li>
