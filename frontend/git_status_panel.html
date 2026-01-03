@@ -13,6 +13,7 @@
 
     <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
@@ -119,7 +120,7 @@
                             @click="batchPublish()"
                             :disabled="batchPublishing">
                         <i :class="batchPublishing ? 'bi-arrow-repeat' : 'bi-cloud-upload'"></i>
-                        <span x-text="batchPublishing ? 'Publishing...' : 'Publish Selected(Under construction)'"></span>
+                        <span x-text="batchPublishing ? 'Publishing...' : 'Publish Selected'"></span>
                     </button>
                 </div>
             </div>
@@ -327,7 +328,9 @@
             <i :class="toast.type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
             <span x-text="toast.message"></span>
         </div>
+
         </div>
     </main>
+    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
 </body>
 </html>
