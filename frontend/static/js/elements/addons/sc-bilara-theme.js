@@ -1,216 +1,179 @@
 import { css } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
 
-export const defaultTheme = 'default';
+export const defaultTheme = 'aruna';
 
 const commonVariables = css`
     --bilara-footer-height: 108px;
     --scrollbar-size: 8px;
     --scrollbar-minlength: 1.5rem;
+    --border: 1px solid var(--color-primary-color);
 `;
 
 export const themes = {
-  'default': css`
-      --bilara-primary-color: #D9B26F;
-      --bilara-secondary-color: #FFC10A;
-      --bilara-primary-background-color: #fdf6e3;
-      --bilara-secondary-background-color: #eee8d5;
-      --bilara-tertiary-background-color: #D9B26F;
-      --bilara-black: #D9B26F;
+  'aruna': css`
+      --color-primary: #D9B26F;
+      --color-secondary: #FFC10A;
+      --color-background: #fdf6e3;
+      --color-background-secondary: #fbeecb;
+      --color-background-tertiary: #f8df9c;
+      --color-text: #657b83;
+      --color-text-emphasized: #586e75;
+      --color-text-secondary: #93a1a1;
+      --color-accent: rgba(255, 194, 2, 0.3);
+      --color-warning: #cb4b16;
+      --color-error: #dc322f;
+      --color-success: #859900;
+      --color-info: #268bd2;
   `,
   'suriya': css`
-      --bilara-primary-color: #dc322f;
-      --bilara-secondary-color: #6c71c4;
-      --bilara-primary-background-color: #fdf6e3;
-      --bilara-secondary-background-color: #eee8d5;
-      --bilara-tertiary-background-color: #BEB9AA;
-      --bilara-primary-text-color: #657b83;
-      --bilara-emphasized-text-color: #586e75;
-      --bilara-secondary-text-color: #93a1a1;
-      --bilara-yellow: rgba(255, 194, 2, 0.3);
-      --bilara-orange: #cb4b16;
-      --bilara-red: #dc322f;
-      --bilara-magenta: #d33682;
-      --bilara-violet: #6c71c4;
-      --bilara-blue: #268bd2;
-      --bilara-cyan: #2aa198;
-      --bilara-green: #859900;
-      --bilara-black: #002b36;
-      --bilara-footer-height: 108px;
-      --scrollbar-size: 8px;
-      --scrollbar-minlength: 1.5rem;
-      color: var(--bilara-primary-text-color)
+      --color-primary: #d33682;
+      --color-secondary: #6c71c4;
+      --color-background: #fdf6e3;
+      --color-background-secondary: #fbeecb;
+      --color-background-tertiary: #f8df9c;
+      --color-text: #657b83;
+      --color-text-emphasized: #586e75;
+      --color-text-secondary: #93a1a1;
+      --color-accent: rgba(255, 194, 2, 0.3);
+      --color-warning: #cb4b16;
+      --color-error: #dc322f;
+      --color-success: #859900;
+      --color-info: #268bd2;
   `,
   'candima': css`
-      --bilara-primary-color: #dc322f;
-      --bilara-secondary-color: #6c71c4;
-      --bilara-primary-background-color: #002b36;
-      --bilara-secondary-background-color: #073642;
-      --bilara-tertiary-background-color: #073642;
-      --bilara-primary-text-color: #839496;
-      --bilara-emphasized-text-color: #93a1a1;
-      --bilara-secondary-text-color: #586e75;
-      --bilara-yellow: rgba(255, 194, 2, 0.1);
-      --bilara-orange: #cb4b16;
-      --bilara-red: #dc322f;
-      --bilara-magenta: #d33682;
-      --bilara-violet: #6c71c4;
-      --bilara-blue: #268bd2;
-      --bilara-cyan: #2aa198;
-      --bilara-green: #859900;
-      --bilara-black: #002b36;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: #dc322f;
+      --color-secondary: #6c71c4;
+      --color-background: #002b36;
+      --color-background-secondary: #073642;
+      --color-background-tertiary: #094959;
+      --color-text: #a1adad;
+      --color-text-emphasized: #bcc5c5;
+      --color-text-secondary: #788989;
+      --color-accent: rgba(255, 194, 2, 0.1);
+      --color-warning: #cb4b16;
+      --color-error: #dc322f;
+      --color-success: #859900;
+      --color-info: #268bd2;
   `,
   'manussa': css`
-      --bilara-primary-color: black;
-      --bilara-secondary-color: #757575;
-      --bilara-primary-background-color: white;
-      --bilara-secondary-background-color: #efefef;
-      --bilara-tertiary-background-color: #DDDDDD;
-      --bilara-primary-text-color: black;
-      --bilara-emphasized-text-color: black;
-      --bilara-secondary-text-color: #757575;
-      --bilara-yellow: rgba(255, 194, 2, 0.3);
-      --bilara-orange: #FF851B;
-      --bilara-red: #FF4136;
-      --bilara-magenta: #F012BE;
-      --bilara-violet: #B10DC9;
-      --bilara-blue: #0074D9;
-      --bilara-cyan: #39CCCC;
-      --bilara-green: #2ECC40;
-      --bilara-black: #111111;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: black;
+      --color-secondary: #757575;
+      --color-background: white;
+      --color-background-secondary: #efefef;
+      --color-background-tertiary: #DDDDDD;
+      --color-text: black;
+      --color-text-emphasized: black;
+      --color-text-secondary: #757575;
+      --color-accent: rgba(255, 194, 2, 0.3);
+      --color-warning: #FF851B;
+      --color-error: #FF4136;
+      --color-success: #2ECC40;
+      --color-info: #0074D9;
   `,
   'yakkha': css`
-      --bilara-primary-color: white;
-      --bilara-secondary-color: #85144b;
-      --bilara-primary-background-color: #111111;
-      --bilara-secondary-background-color: #001f3f;
-      --bilara-tertiary-background-color: #3D9970;
-      --bilara-primary-text-color: white;
-      --bilara-emphasized-text-color: white;
-      --bilara-secondary-text-color: #AAAAAA;
-      --bilara-yellow: rgba(255, 194, 2, 0.1);
-      --bilara-orange: #FF851B;
-      --bilara-red: #FF4136;
-      --bilara-magenta: #F012BE;
-      --bilara-violet: #B10DC9;
-      --bilara-blue: #0074D9;
-      --bilara-cyan: #39CCCC;
-      --bilara-green: #2ECC40;
-      --bilara-black: #001f3f;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: white;
+      --color-secondary: #85144b;
+      --color-background: #111111;
+      --color-background-secondary: #001f3f;
+      --color-background-tertiary: #3D9970;
+      --color-text: white;
+      --color-text-emphasized: white;
+      --color-text-secondary: #AAAAAA;
+      --color-accent: rgba(255, 194, 2, 0.1);
+      --color-warning: #FF851B;
+      --color-error: #FF4136;
+      --color-success: #2ECC40;
+      --color-info: #0074D9;
   `,
   'deva': css`
-      --bilara-primary-color: #92a8d1;
-      --bilara-secondary-color: #c5a1a0;
-      --bilara-primary-background-color: #f4f6fa;
-      --bilara-secondary-background-color: #e9edf5;
-      --bilara-tertiary-background-color: #dee4f1;
-      --bilara-primary-text-color: rgba(0,0,0,0.5);
-      --bilara-emphasized-text-color: rgba(0,0,0,0.7);
-      --bilara-secondary-text-color: rgba(0,0,0,0.3);
-      --bilara-yellow: #e4f1de;
-      --bilara-orange: #FF851B;
-      --bilara-red: #ed8986;
-      --bilara-magenta: #ed8986;
-      --bilara-violet: #B10DC9;
-      --bilara-blue: #0074D9;
-      --bilara-cyan: #c5a1a0;
-      --bilara-green:#70ea73;
-      --bilara-black: #DEE4F1;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: #92a8d1;
+      --color-secondary: #c5a1a0;
+      --color-background: #f4f6fa;
+      --color-background-secondary: #e9edf5;
+      --color-background-tertiary: #dee4f1;
+      --color-text: rgba(0,0,0,0.5);
+      --color-text-emphasized: rgba(0,0,0,0.7);
+      --color-text-secondary: rgba(0,0,0,0.3);
+      --color-accent: #e4f1de;
+      --color-warning: #FF851B;
+      --color-error: #ed8986;
+      --color-success:#70ea73;
+      --color-info: #0074D9;
   `,
   'asura': css`
-      --bilara-primary-color: #92a8d1;
-      --bilara-secondary-color: #c5a1a0;
-      --bilara-primary-background-color: #7f7f7f;
-      --bilara-secondary-background-color:  rgba(0,0,0,0.3);
-      --bilara-tertiary-background-color: #727272;
-      --bilara-primary-text-color: #f4f6fa;
-      --bilara-emphasized-text-color:  #e9edf5;
-      --bilara-secondary-text-color: #dee4f1;
-      --bilara-yellow: rgba(228, 241, 222,0.1);
-      --bilara-orange: #FF851B;
-      --bilara-red: #ed8986;
-      --bilara-magenta: #ed8986;
-      --bilara-violet: #B10DC9;
-      --bilara-blue: #0074D9;
-      --bilara-cyan: #c5a1a0;
-      --bilara-green: #2ECC40;
-      --bilara-black: #727272;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: #92a8d1;
+      --color-secondary: #c5a1a0;
+      --color-background: #7f7f7f;
+      --color-background-secondary: #727272;
+      --color-background-tertiary: #666666;
+      --color-text: #e9edf5;
+      --color-text-emphasized:  #ffffff;
+      --color-text-secondary: #dee4f1;
+      --color-accent: rgba(228, 241, 222,0.1);
+      --color-warning: #FF851B;
+      --color-error: #ed8986;
+      --color-success: #2ECC40;
+      --color-info: #0074D9;
   `,
   'gandhabba': css`
-      --bilara-primary-color: #92a8d1;
-      --bilara-secondary-color: #F661B1;
-      --bilara-primary-background-color: #1C1C1C;
-      --bilara-secondary-background-color:  #272727;
-      --bilara-tertiary-background-color: #25313E;
-      --bilara-primary-text-color: rgba(255,255,255,0.8);
-      --bilara-emphasized-text-color:  white;
-      --bilara-secondary-text-color: #D4D4D4;
-      --bilara-yellow: rgba(230, 219, 116,0.1);
-      --bilara-orange: #F39B35;
-      --bilara-red: #FC4384;
-      --bilara-magenta: #8059a2;
-      --bilara-violet: #FC4384;
-      --bilara-blue: #00A7AA;
-      --bilara-cyan: #c5a1a0;
-      --bilara-green: #98E342;
-      --bilara-black: #272727;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: #92a8d1;
+      --color-secondary: #F661B1;
+      --color-background: #1C1C1C;
+      --color-background-secondary:  #272727;
+      --color-background-tertiary: #25313E;
+      --color-text: rgba(255,255,255,0.8);
+      --color-text-emphasized:  white;
+      --color-text-secondary: #D4D4D4;
+      --color-accent: rgba(230, 219, 116,0.1);
+      --color-warning: #F39B35;
+      --color-error: #FC4384;
+      --color-success: #98E342;
+      --color-info: #00A7AA;
   `,
   'mara': css`
-      --bilara-primary-color: #6272a4;
-      --bilara-secondary-color: #6272a4;
-      --bilara-primary-background-color: #282a36;
-      --bilara-secondary-background-color:  #44475a;
-      --bilara-tertiary-background-color: #44475a;
-      --bilara-primary-text-color: #f8f8f2;
-      --bilara-emphasized-text-color:  white;
-      --bilara-secondary-text-color: #e8e8e2;
-      --bilara-yellow: #d36d00;
-      --bilara-orange: #ffb86c;
-      --bilara-red: #ff5555;
-      --bilara-magenta: #ff79c6;
-      --bilara-violet: #bd93f9;
-      --bilara-blue: #8be9fd;
-      --bilara-cyan: #8be9fd;
-      --bilara-green: #06c436;
-      --bilara-black: #282a36;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: #6272a4;
+      --color-secondary: #6272a4;
+      --color-background: #282a36;
+      --color-background-secondary:  #44475a;
+      --color-background-tertiary: #4f5269;
+      --color-text: #f8f8f2;
+      --color-text-emphasized:  white;
+      --color-text-secondary: #e8e8e2;
+      --color-accent: #d36d00;
+      --color-warning: #ffb86c;
+      --color-error: #ff5555;
+      --color-success: #06c436;
+      --color-info: #8be9fd;
   `,
   'niraya': css`
-      --bilara-primary-color: #666;
-      --bilara-secondary-color: firebrick;
-      --bilara-primary-background-color: darkred;
-      --bilara-secondary-background-color: red;
-      --bilara-tertiary-background-color: #666;
-      --bilara-primary-text-color: crimson;
-      --bilara-emphasized-text-color: maroon;
-      --bilara-secondary-text-color: maroon;
-      --bilara-yellow: orange;
-      --bilara-orange: orange;
-      --bilara-red: red;
-      --bilara-magenta: magenta;
-      --bilara-violet: fuschia;
-      --bilara-blue: blue;
-      --bilara-cyan: cyan;
-      --bilara-green: tomato;
-      --bilara-black: #666;
-      --bilara-footer-height: 108px;
-      color: var(--bilara-primary-text-color)
+      --color-primary: #666;
+      --color-secondary: firebrick;
+      --color-background: darkred;
+      --color-background-secondary: red;
+      --color-background-tertiary: #666;
+      --color-text: crimson;
+      --color-text-emphasized: maroon;
+      --color-text-secondary: maroon;
+      --color-accent: orange;
+      --color-warning: orange;
+      --color-error: red;
+      --color-success: tomato;
+      --color-info: blue;
   `,
   'suññatā': css`
-      --bilara-black: white;
-      --bilara-footer-height: 108px;
+      --color-primary: initial;
+      --color-secondary: initial;
+      --color-background: initial;
+      --color-background-secondary: initial;
+      --color-background-tertiary: initial;
+      --color-text: initial;
+      --color-text-emphasized: initial;
+      --color-text-secondary: initial;
+      --color-accent: initial;
+      --color-warning: initial;
+      --color-error: initial;
+      --color-success: initial;
+      --color-info: initial;
   `
 }
 

@@ -4,7 +4,7 @@
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-lg) var(--space-md);
-    background-color: var(--bilara-tertiary-background-color);
+    background-color: var(--color-background-tertiary);
 }
 
 
@@ -16,23 +16,17 @@
 
 
 .main-footer__list-item-link {
-    color: var(--color-accent-dark);
+    color: var(--color-text);
+    text-underline-offset: 4px;
     text-decoration: none;
 }
 
 .main-footer__list-item-link:hover {
-    text-decoration: underline;
-    color: var(--color-accent);
+    text-decoration-line: underline;
+    text-decoration-color: var(--color-primary);
 }
 
 .main-footer__list-item-link:active {
-    color: var(--color-accent-light);
+    color: var(--color-text-emphasized);
+    text-decoration-style: wavy;
 }
-
-@media (max-width: 1199px) {
-    .main-footer {
-        font-size: var(--text-md);
-    }
-}
-
-

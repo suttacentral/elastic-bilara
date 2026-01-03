@@ -1,4 +1,4 @@
-import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button/button.js';
 import '../notification/sc-bilara-notification-icon.js';
 
@@ -23,7 +23,7 @@ export class SCBilaraNavMain extends LitElement {
                   <a href="/nav" class="main-nav__item-link">Bilara</a>
               </li>
               <li class="main-nav__item main-nav__item--right hide-mobile">
-                <a href="https://github.com/username" class="username-link">
+                <a :href="'https://github.com/' + username" class="username-link">
                   <figure class="user-container" x-cloak x-show="!!username">
                       <img
                         :src="avatarURL"
@@ -38,7 +38,7 @@ export class SCBilaraNavMain extends LitElement {
                 <sc-bilara-notification-icon></sc-bilara-notification-icon>
               </div>
               <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
-                <a class="main-nav__item-link btn btn--admin" href="/admin">Admin Area</a>
+                <a class="main-nav__item-link btn btn--admin" href="/admin">Admin</a>
               </li>
               <li class="main-nav__item hide-mobile" x-cloak x-show="isAdmin && isActive">
                 <a class="main-nav__item-link btn btn--admin" href="/git_status_panel" target="_blank" rel="noopener noreferrer">Unpublished Changes</a>

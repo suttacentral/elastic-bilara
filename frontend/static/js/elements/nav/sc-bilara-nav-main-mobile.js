@@ -41,7 +41,7 @@ export class SCBilaraNavMainMobile extends LitElement {
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'" x-cloak
                   x-show="isAdmin && isActive">
-                  <a class="main-nav-mobile__item-link btn btn--admin" href="/admin">Admin Area</a>
+                  <a class="main-nav-mobile__item-link btn btn--admin" href="/admin">Admin</a>
               </li>
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
