@@ -542,10 +542,12 @@ function fetchTranslation() {
                 //     );
                 // }
                 if (Object.keys(data).length > 1) {
-                    displayMessage(
-                        element,
-                        "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
-                    );
+                    // displayMessage(
+                    //     element,
+                    //     "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
+                    // );
+                    const toast = document.querySelector('sc-bilara-toast');
+                    toast.show('Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.', 'success');
                 }
                 if (Object.keys(data).length === 1) {
                     displayBadge(badgeId, BadgeStatus.COMMITTED);

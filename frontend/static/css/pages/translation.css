@@ -1,20 +1,21 @@
 :root {
-    --translation-primary: #8b6914;
-    --translation-primary-light: #f5f0e1;
-    --translation-primary-lighter: #faf8f3;
-    --translation-accent: #2a6b6b;
-    --translation-accent-light: #e8f4f4;
+    --translation-primary: var(--bilara-primary-color, #8b6914);
+    --translation-primary-light: var(--bilara-secondary-background-color, #f5f0e1);
+    --translation-primary-lighter: var(--bilara-primary-background-color, #faf8f3);
 
-    --translation-text: #333;
-    --translation-text-secondary: #666;
-    --translation-text-muted: #999;
+    --translation-accent: var(--bilara-cyan, #2a6b6b);
+    --translation-accent-light: var(--bilara-yellow, #e8f4f4);
 
-    --translation-border: #e0dcd0;
-    --translation-border-light: #f0ede5;
+    --translation-text: var(--bilara-primary-text-color, #333);
+    --translation-text-secondary: var(--bilara-secondary-text-color, #666);
+    --translation-text-muted: var(--bilara-secondary-text-color, #999);
+
+    --translation-border: var(--bilara-tertiary-background-color, #e0dcd0);
+    --translation-border-light: var(--bilara-secondary-background-color, #f0ede5);
     --translation-shadow: rgba(0, 0, 0, 0.08);
 
-    --translation-success: #28a745;
-    --translation-warning: #ffc107;
+    --translation-success: var(--bilara-green, #28a745);
+    --translation-warning: var(--bilara-orange, #ffc107);
 
     --translation-radius: 6px;
     --translation-radius-lg: 10px;
@@ -24,12 +25,12 @@
     --translation-footer-height: 60px;
     --translation-uid-width: 120px;
 
-    --translation-badge-translation: #2a6b6b;
-    --translation-badge-comment: #6b4c9a;
-    --translation-badge-reference: #0d6efd;
-    --translation-badge-variant: #ff7a00;
-    --translation-badge-html: #d63384;
-    --translation-badge-root: #153e75;
+    --translation-badge-translation: var(--bilara-cyan, #2a6b6b);
+    --translation-badge-comment: var(--bilara-violet, #6b4c9a);
+    --translation-badge-reference: var(--bilara-blue, #0d6efd);
+    --translation-badge-variant: var(--bilara-orange, #ff7a00);
+    --translation-badge-html: var(--bilara-magenta, #d63384);
+    --translation-badge-root: var(--bilara-blue, #153e75);
 }
 
 .project-header {
@@ -209,7 +210,7 @@ sl-dialog::part(title) {
 
 .translation-grid__header {
     display: flex;
-    background: linear-gradient(135deg, var(--translation-primary) 0%, #6b5010 100%);
+    background: var(--translation-primary);
     /* background: var(--translation-primary); */
     min-height: var(--translation-header-height);
     position: sticky;
@@ -355,7 +356,11 @@ sl-dialog::part(title) {
 }
 
 .translation-cell--source {
-    background-color: rgba(139, 105, 20, 0.03);
+    background-color: var(--translation-primary-lighter);
+}
+
+.translation-cell--editable {
+    background-color: var(--translation-primary-lighter);
 }
 
 .translation-cell--editable:focus-within {
