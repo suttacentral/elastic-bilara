@@ -8,16 +8,19 @@ from app.core.config import settings
 from app.api.api_v1.endpoints.projects import get_paths_for_project
 from app.services.users import permissions
 from app.services.auth import utils as auth_utils
-from app.services.notifications.models import GitCommitInfoOut, NotificationDoneOut
+from app.services.notifications.models import (
+    GitCommitInfoOut,
+    NotificationDoneOut,
+)
 from app.db.models.notification import Notification
+from app.db.models.user_preference import UserPreference as UserPreferenceModel
+from app.db.schemas.user_preference import UserPreference, UserPreferenceUpdate
 
 
 router = APIRouter(prefix="/notifications")
 
-FILTER_AUTHOR = 'sujato'
 DEFAULT_AUTHOR = 'sujato'
 DEFAULT_LANG = 'en'
-GIT_LOG_DAYS = 360
 
 
 @router.get("/git", response_model=GitCommitInfoOut)
@@ -26,13 +29,32 @@ def get_unread_git_updates(
     recent_commits = []
     working_directory = settings.WORK_DIR
 
+    # Get user preferences from database
+    with get_sess() as sess:
+        preference = (
+            sess.query(UserPreferenceModel)
+            .filter(UserPreferenceModel.github_id == user.github_id)
+            .first()
+        )
+
+        if preference:
+            selected_authors = preference.notification_authors or ["sujato"]
+            selected_days = preference.notification_days or 360
+        else:
+            # Use default values
+            selected_authors = ["sujato"]
+            selected_days = 360
+
+    # Build author regex pattern for git log
+    author_pattern = "|".join(selected_authors)
+
     git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
     git_log_cmd = git_base_cmd + [
         "log",
         "--oneline",
         "--abbrev-commit",
         "--pretty=format:%h %s (%cr)",
-        f"--since={GIT_LOG_DAYS} days ago",
+        f"--since={selected_days} days ago",
         "--no-merges",
         "--name-only"
     ]
@@ -57,7 +79,9 @@ def get_unread_git_updates(
                 continue
 
             commit_hash = git_commit.split(" ")[0]
-            git_show_name_only_cmd = git_base_cmd + ["show", "--name-only", commit_hash]
+            git_show_name_only_cmd = git_base_cmd + [
+                "show", "--name-only", commit_hash
+            ]
             git_show_cmd_process = subprocess.Popen(
                 git_show_name_only_cmd,
                 cwd=working_directory,
@@ -79,7 +103,12 @@ def get_unread_git_updates(
             author = author_match[1] if author_match else None
             date = date_match[1] if date_match else None
 
-            if FILTER_AUTHOR not in author:
+            # Check if author is in selected authors list
+            author_match_found = any(
+                selected_author in author
+                for selected_author in selected_authors
+            )
+            if not author_match_found:
                 continue
 
             git_show_diff_cmd = git_base_cmd + ["show", commit_hash]
@@ -114,7 +143,9 @@ def get_unread_git_updates(
                 if not file_type:
                     file_type = file_name.split('_')[1].split('.')[0]
 
-                change_detail = get_change_detail(file_name, parsed_git_show_details)
+                change_detail = get_change_detail(
+                    file_name, parsed_git_show_details
+                )
 
                 formatted_json_files.append(
                     {
@@ -232,7 +263,10 @@ async def mark_notification_as_done(
     with get_sess() as sess:
         if (
             sess.query(Notification)
-            .filter(Notification.commit_id == commit_id, Notification.github_id == user.github_id)
+            .filter(
+                Notification.commit_id == commit_id,
+                Notification.github_id == user.github_id
+            )
             .first()
         ):
             raise HTTPException(
@@ -251,7 +285,123 @@ async def mark_notification_as_done(
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Error occurred while Notification {commit_id} adding to the database",
+                detail=(
+                    f"Error occurred while Notification {commit_id} "
+                    "adding to the database"
+                ),
             ) from e
 
     return NotificationDoneOut(success=True)
+
+
+@router.get("/authors")
+def get_all_authors(
+    user: str = Depends(auth_utils.get_current_user)
+):
+    """Get all unique authors from git log."""
+    working_directory = settings.WORK_DIR
+    git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
+    git_authors_cmd = git_base_cmd + [
+        "log",
+        "--all",
+        "--format=%an"
+    ]
+
+    try:
+        result = subprocess.run(
+            git_authors_cmd,
+            cwd=working_directory,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        if result.returncode == 0:
+            authors = result.stdout.strip().split("\n")
+            # Remove duplicates and sort
+            unique_authors = sorted(
+                set(author.strip() for author in authors if author.strip())
+            )
+            return {"authors": unique_authors}
+        else:
+            print(f"Git error: {result.stderr}")
+            return {"authors": []}
+    except Exception as e:
+        print(f"Error getting authors: {e}")
+        return {"authors": []}
+
+
+@router.get("/preferences", response_model=UserPreference)
+def get_user_preferences(
+    user: str = Depends(auth_utils.get_current_user)
+):
+    """Get user notification preferences. Returns default if not set."""
+    with get_sess() as sess:
+        preference = (
+            sess.query(UserPreferenceModel)
+            .filter(UserPreferenceModel.github_id == user.github_id)
+            .first()
+        )
+
+        if preference:
+            return UserPreference(
+                id=preference.id,
+                github_id=preference.github_id,
+                notification_authors=(
+                    preference.notification_authors or ["sujato"]
+                ),
+                notification_days=preference.notification_days or 360
+            )
+        else:
+            # Return default values without creating DB record
+            return UserPreference(
+                id=0,  # Dummy id for response
+                github_id=user.github_id,
+                notification_authors=["sujato"],
+                notification_days=360
+            )
+
+
+@router.put("/preferences", response_model=UserPreference)
+def update_user_preferences(
+    preferences: UserPreferenceUpdate,
+    user: str = Depends(auth_utils.get_current_user)
+):
+    """Create or update user notification preferences."""
+    with get_sess() as sess:
+        existing = (
+            sess.query(UserPreferenceModel)
+            .filter(UserPreferenceModel.github_id == user.github_id)
+            .first()
+        )
+
+        if existing:
+            # Update existing preference
+            existing.notification_authors = preferences.notification_authors
+            existing.notification_days = preferences.notification_days
+            sess.commit()
+            sess.refresh(existing)
+
+            return UserPreference(
+                id=existing.id,
+                github_id=existing.github_id,
+                notification_authors=existing.notification_authors,
+                notification_days=existing.notification_days
+            )
+        else:
+            # Create new preference
+            new_preference = UserPreferenceModel(
+                github_id=user.github_id,
+                notification_authors=preferences.notification_authors,
+                notification_days=preferences.notification_days
+            )
+            sess.add(new_preference)
+            sess.commit()
+            sess.refresh(new_preference)
+
+            return UserPreference(
+                id=new_preference.id,
+                github_id=new_preference.github_id,
+                notification_authors=new_preference.notification_authors,
+                notification_days=new_preference.notification_days
+            )

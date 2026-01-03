@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilara - Notifications</title>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.2/dist/cdn.min.js"></script>
+    <script src="./static/js/utils.js"></script>
+    <script src="./static/js/auth.js"></script>
+    <script src="./static/js/notifications_panel.js"></script>
+
+    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./static/css/main.css">
+    <link rel="stylesheet" href="./static/css/pages/notifications_panel.css">
+</head>
+<body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
+    <header>
+        <sc-bilara-nav-main></sc-bilara-nav-main>
+        <sc-bilara-nav-main-mobile></sc-bilara-nav-main-mobile>
+    </header>
+
+    <main class="main-content">
+        <div class="notifications-page" x-data="notificationsPanel()" x-init="init()">
+            <header class="page-header">
+                <div class="page-title">
+                    <i class="bi-bell"></i>
+                    <span>Notifications</span>
+                    <span class="subtitle">Recent Git Commits</span>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" @click="refresh()" :disabled="loading">
+                        <i class="bi-arrow-clockwise"></i>
+                        Refresh
+                    </button>
+                    <button class="header-btn" @click="openSettings()" :disabled="loading">
+                        <i class="bi-gear"></i>
+                        Settings
+                    </button>
+                </div>
+            </header>
+
+            <!-- Notifications List Panel -->
+            <div class="panel-card notification-list-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="bi-git"></i>
+                        <span>Commits</span>
+                        <span x-show="!loading && notifications.length > 0" class="badge" x-text="notifications.length"></span>
+                    </div>
+                    <div class="summary-stats" x-show="!loading && notifications.length > 0">
+                        <div class="stat-chip">
+                            <i class="bi-person"></i>
+                            <span x-text="uniqueAuthors + ' author(s)'"></span>
+                        </div>
+                        <div class="stat-chip">
+                            <i class="bi-file-earmark"></i>
+                            <span x-text="totalFiles + ' file(s)'"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-controls" x-show="!loading && notifications.length > 0">
+                    <div class="filter-left-section">
+                        <div class="search-box">
+                            <i class="bi-search"></i>
+                            <input type="text"
+                                   x-model="filterText"
+                                   @input="currentPage = 1"
+                                   placeholder="Filter by author or commit..."
+                                   class="filter-input">
+                            <button x-show="filterText"
+                                    @click="filterText = ''; currentPage = 1"
+                                    class="clear-btn"
+                                    title="Clear filter">
+                                <i class="bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="sort-controls">
+                        <button class="sort-btn"
+                                @click="toggleSortMode()"
+                                :class="{ active: sortMode === 'date' }"
+                                title="Sort by date (newest first)">
+                            <i class="bi-clock-history"></i>
+                            <span>Newest</span>
+                        </button>
+                        <button class="sort-btn"
+                                @click="toggleSortMode()"
+                                :class="{ active: sortMode === 'author' }"
+                                title="Sort by author">
+                            <i class="bi-person"></i>
+                            <span>Author</span>
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="panel-content">
+                    <!-- Loading State -->
+                    <div x-show="loading" class="skeleton-list">
+                        <template x-for="i in 5">
+                            <div class="skeleton-item">
+                                <div class="skeleton" style="width: 24px; height: 24px;"></div>
+                                <div class="skeleton" style="flex: 1; height: 20px;"></div>
+                                <div class="skeleton" style="width: 100px; height: 20px;"></div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div x-show="!loading && notifications.length === 0" class="empty-state">
+                        <i class="bi-bell-slash"></i>
+                        <div>
+                            <strong>No notifications</strong>
+                            <p style="font-size: 0.875rem; margin-top: 4px;">You're all caught up!</p>
+                        </div>
+                    </div>
+
+                    <!-- Notification List -->
+                    <div x-show="!loading && notifications.length > 0" class="notification-list">
+                        <!-- Filter Empty State -->
+                        <div x-show="filteredNotifications.length === 0 && filterText" class="empty-state">
+                            <i class="bi-search"></i>
+                            <div>
+                                <strong>No results found</strong>
+                                <p style="font-size: 0.875rem; margin-top: 4px;">No notifications match your filter criteria</p>
+                            </div>
+                        </div>
+
+                        <!-- Notification Items -->
+                        <template x-for="(notification, index) in paginatedNotifications" :key="notification.commit">
+                            <div class="notification-item"
+                                 :class="{ 'selected': selectedNotification === notification.commit }"
+                                 @click="selectNotification(notification)"
+                                 :style="{ animationDelay: (index * 30) + 'ms' }">
+                                <div class="notification-icon">
+                                    <i class="bi-git"></i>
+                                </div>
+                                <div class="notification-info">
+                                    <span class="notification-author" x-text="notification.author"></span>
+                                    <span class="notification-date" x-text="formatDate(notification.date)"></span>
+                                </div>
+                                <span class="notification-badge" x-text="notification.effected_files?.length + ' file(s)'"></span>
+                                <div class="notification-actions">
+                                    <button class="action-btn done-btn"
+                                            @click.stop="markAsDone(notification)"
+                                            :disabled="markingDone === notification.commit"
+                                            title="Mark as done">
+                                        <i :class="markingDone === notification.commit ? 'bi-arrow-repeat spinning' : 'bi-check-circle'"></i>
+                                        Done
+                                    </button>
+                                    <a class="action-btn github-btn"
+                                       :href="'https://github.com/ihongda/bilara-data/commit/' + notification.commit"
+                                       target="_blank"
+                                       @click.stop
+                                       title="View on GitHub">
+                                        <i class="bi-github"></i>
+                                        GitHub
+                                    </a>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-controls" x-show="!loading && totalPages > 1">
+                        <div class="pagination-info">
+                            <span x-text="`Showing ${startItem}-${endItem} of ${filteredNotifications.length} notifications`"></span>
+                        </div>
+                        <div class="pagination-buttons">
+                            <button class="page-btn"
+                                    @click="currentPage = 1"
+                                    :disabled="currentPage === 1"
+                                    title="First page">
+                                <i class="bi-chevron-bar-left"></i>
+                            </button>
+                            <button class="page-btn"
+                                    @click="currentPage--"
+                                    :disabled="currentPage === 1"
+                                    title="Previous page">
+                                <i class="bi-chevron-left"></i>
+                            </button>
+                            <span class="page-indicator" x-text="`Page ${currentPage} of ${totalPages}`"></span>
+                            <button class="page-btn"
+                                    @click="currentPage++"
+                                    :disabled="currentPage === totalPages"
+                                    title="Next page">
+                                <i class="bi-chevron-right"></i>
+                            </button>
+                            <button class="page-btn"
+                                    @click="currentPage = totalPages"
+                                    :disabled="currentPage === totalPages"
+                                    title="Last page">
+                                <i class="bi-chevron-bar-right"></i>
+                            </button>
+                        </div>
+                        <div class="page-size-selector">
+                            <label for="pageSize">Items per page:</label>
+                            <select id="pageSize" x-model.number="pageSize" @change="currentPage = 1">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Viewer Panel -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="bi-file-earmark-diff"></i>
+                        <span>Affected Files</span>
+                    </div>
+                    <span x-show="selectedNotification"
+                          style="font-size: 0.75rem; font-family: monospace; color: var(--color-text-secondary);"
+                          x-text="selectedNotification ? 'Commit: ' + selectedNotification.substring(0, 8) + '...' : ''">
+                    </span>
+                </div>
+                <div class="panel-content">
+                    <div class="detail-viewer">
+                        <!-- Loading State -->
+                        <div x-show="loadingDetail" class="loading-state">
+                            <div class="spinner"></div>
+                            <span>Loading details...</span>
+                        </div>
+
+                        <!-- No Selection State -->
+                        <div x-show="!selectedNotification && !loadingDetail" class="detail-empty">
+                            <i class="bi-file-earmark-code"></i>
+                            <div>
+                                <strong>Select a notification</strong>
+                                <p style="font-size: 0.875rem; margin-top: 4px;">Click on a notification to view affected files</p>
+                            </div>
+                        </div>
+
+                        <!-- Detail Content -->
+                        <div x-show="selectedNotification && !loadingDetail && selectedNotificationData" class="detail-content">
+                            <div class="commit-info">
+                                <div class="commit-meta">
+                                    <span class="meta-item">
+                                        <i class="bi-person"></i>
+                                        <strong x-text="selectedNotificationData?.author"></strong>
+                                    </span>
+                                    <span class="meta-item">
+                                        <i class="bi-calendar"></i>
+                                        <span x-text="selectedNotificationData?.date"></span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="files-list">
+                                <template x-for="(file, index) in selectedNotificationData?.effected_files || []" :key="index">
+                                    <div class="file-detail-item">
+                                        <div class="file-detail-header">
+                                            <div class="file-name-section">
+                                                <i class="bi-file-earmark"></i>
+                                                <span class="file-name" x-text="file.file_name"></span>
+                                                <span class="file-type-badge" :class="'badge-' + file.file_type" x-text="file.file_type"></span>
+                                            </div>
+                                            <a class="view-sc-btn"
+                                               :href="file.sc_url"
+                                               target="_blank"
+                                               title="View in SuttaCentral">
+                                                <i class="bi-box-arrow-up-right"></i>
+                                                SuttaCentral
+                                            </a>
+                                        </div>
+                                        <div class="change-detail">
+                                            <template x-if="file.file_name.includes('_html')">
+                                                <pre class="change-pre" x-text="file.change_detail"></pre>
+                                            </template>
+                                            <template x-if="!file.file_name.includes('_html')">
+                                                <div class="change-html" x-html="file.change_detail"></div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Error State -->
+                        <div x-show="selectedNotification && !loadingDetail && detailError" class="empty-state">
+                            <i class="bi-exclamation-triangle" style="color: var(--color-error);"></i>
+                            <div>
+                                <strong>Error loading details</strong>
+                                <p style="font-size: 0.875rem; margin-top: 4px;" x-text="detailError"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toast Notification -->
+            <div x-show="toast.show" x-cloak
+                 class="toast"
+                 :class="toast.type"
+                 x-transition>
+                <i :class="toast.type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+                <span x-text="toast.message"></span>
+            </div>
+
+            <!-- Settings Modal -->
+            <div x-show="showSettingsModal"
+                 x-cloak
+                 class="modal-backdrop"
+                 @click.self="showSettingsModal = false"
+                 x-transition>
+                <div class="modal-dialog settings-modal">
+                    <div class="modal-header">
+                        <i class="bi-gear-fill"></i>
+                        <h3>Notification Settings</h3>
+                        <button class="close-btn" @click="showSettingsModal = false">
+                            <i class="bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <!-- Authors Section -->
+                        <div class="settings-section">
+                            <label class="section-label">
+                                <i class="bi-people"></i>
+                                Filter by Authors
+                            </label>
+
+                            <!-- Search Box -->
+                            <div class="author-search-box">
+                                <i class="bi-search"></i>
+                                <input type="text"
+                                       x-model="authorSearchText"
+                                       placeholder="Search authors..."
+                                       class="search-input">
+                                <button x-show="authorSearchText"
+                                        @click="authorSearchText = ''"
+                                        class="clear-btn"
+                                        title="Clear search">
+                                    <i class="bi-x"></i>
+                                </button>
+                            </div>
+
+                            <!-- Author Controls -->
+                            <div class="author-controls">
+                                <button class="control-btn" @click="toggleAllAuthors(true)" type="button">
+                                    <i class="bi-check-square"></i>
+                                    Select All
+                                </button>
+                                <button class="control-btn" @click="toggleAllAuthors(false)" type="button">
+                                    <i class="bi-square"></i>
+                                    Deselect All
+                                </button>
+                            </div>
+
+                            <!-- Author List -->
+                            <div class="author-list" x-show="allAuthors.length > 0">
+                                <template x-for="author in filteredAuthors" :key="author">
+                                    <label class="author-item">
+                                        <input type="checkbox"
+                                               :value="author"
+                                               x-model="selectedAuthors">
+                                        <span x-text="author"></span>
+                                    </label>
+                                </template>
+                            </div>
+
+                            <!-- Empty State -->
+                            <div x-show="allAuthors.length === 0" class="empty-authors">
+                                <i class="bi-person-x"></i>
+                                <p>No authors available</p>
+                            </div>
+                        </div>
+
+                        <!-- Days Section -->
+                        <div class="settings-section">
+                            <label class="section-label" for="daysSelect">
+                                <i class="bi-calendar-range"></i>
+                                Show commits from last
+                            </label>
+                            <select id="daysSelect"
+                                    class="days-selector"
+                                    x-model.number="selectedDays">
+                                <option value="7">7 days</option>
+                                <option value="30">30 days</option>
+                                <option value="90">90 days</option>
+                                <option value="180">180 days</option>
+                                <option value="360">360 days</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="modal-btn modal-btn-cancel"
+                                @click="showSettingsModal = false"
+                                type="button">
+                            Cancel
+                        </button>
+                        <button class="modal-btn modal-btn-primary"
+                                @click="savePreferences()"
+                                :disabled="selectedAuthors.length === 0"
+                                type="button">
+                            <i class="bi-check-lg"></i>
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+</body>
+</html>

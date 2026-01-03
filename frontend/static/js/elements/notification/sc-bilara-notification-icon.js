@@ -32,16 +32,19 @@ class SCBilaraNotificationIcon extends LitElement {
     count: { type: Number },
   };
 
+  static POLL_INTERVAL = 30 * 60 * 1000;
+
   constructor() {
     super();
     this.count = 0;
+    this._pollIntervalId = null;
   }
 
   render() {
     return html`
       <div class="icon-wrapper">
         <div>
-          <a href="/notifications" target="_blank"><img src="./static/img/notification.svg" alt="notification"/></a>
+          <a href="/notifications_panel" target="_blank"><img src="./static/img/notification.svg" alt="notification"/></a>
           ${this.count > 0
             ? html`<div class="notification-count"><sc-circle-badge variant="danger" pulse content="${this.count}"size="small"></sc-circle-badge></div>`
             : ''}
@@ -63,10 +66,42 @@ class SCBilaraNotificationIcon extends LitElement {
     }
   }
 
-  firstUpdated() {
-    this.fetchNotification().then((data) => {
+  async _updateNotificationCount() {
+    try {
+      const data = await this.fetchNotification();
       this.count = data.length;
-    });
+    } catch (error) {
+      console.error('Failed to update notification count:', error);
+    }
+  }
+
+  _startPolling() {
+    this._stopPolling();
+    this._pollIntervalId = setInterval(
+      () => this._updateNotificationCount(),
+      SCBilaraNotificationIcon.POLL_INTERVAL
+    );
+  }
+
+  _stopPolling() {
+    if (this._pollIntervalId) {
+      clearInterval(this._pollIntervalId);
+      this._pollIntervalId = null;
+    }
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._startPolling();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._stopPolling();
+  }
+
+  firstUpdated() {
+    this._updateNotificationCount();
   }
 }
 
