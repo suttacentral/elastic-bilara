@@ -7,6 +7,7 @@
 @import "variables/shadows.css";
 @import "variables/buttons.css";
 @import "variables/typography.css";
+@import "variables/selects.css";
 
 @import "layout/body.css";
 @import "layout/header.css";

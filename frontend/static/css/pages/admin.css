@@ -1,31 +1,31 @@
 :root {
-    --admin-primary: #D9B26F;
-    --admin-primary-dark: #B28B5A;
-    --admin-primary-light: #E5CB9E;
-    --admin-primary-lighter: #F2E5CE;
+    --admin-primary: var(--color-primary, #D9B26F);
+    --admin-primary-dark: var(--color-primary-dark, #B28B5A);
+    --admin-primary-light: var(--color-primary-light, #E5CB9E);
+    --admin-primary-lighter: var(--color-primary-lighter, #F2E5CE);
 
-    --admin-accent: #008080;
-    --admin-accent-light: #5ABCB9;
+    --admin-accent: var(--color-accent, #008080);
+    --admin-accent-light: var(--color-accent-light, #5ABCB9);
 
-    --admin-danger: #dc322f;
+    --admin-danger: var(--color-error, #dc322f);
     --admin-danger-dark: #B23540;
-    --admin-danger-light: #f8d7da;
+    --admin-danger-light: var(--color-error-bg, #f8d7da);
 
-    --admin-success: #28a745;
-    --admin-success-light: #d4edda;
+    --admin-success: var(--color-success, #859900);
+    --admin-success-light: var(--color-success-bg, #d4edda);
 
-    --admin-warning: #ffc107;
-    --admin-warning-light: #fff3cd;
+    --admin-warning: var(--color-warning, #cb4b16);
+    --admin-warning-light: var(--color-warning-bg, #fff3cd);
 
-    --admin-bg: #fdf6e3;
-    --admin-bg-secondary: #eee8d5;
-    --admin-bg-tertiary: #BEB9AA;
+    --admin-bg: var(--color-background, #fdf6e3);
+    --admin-bg-secondary: var(--color-background-secondary, #eee8d5);
+    --admin-bg-tertiary: var(--color-background-tertiary, #BEB9AA);
 
-    --admin-text: #2C2B2B;
-    --admin-text-secondary: #657b83;
-    --admin-text-muted: #93a1a1;
+    --admin-text: var(--color-text-emphasized, #2C2B2B);
+    --admin-text-secondary: var(--color-text, #657b83);
+    --admin-text-muted: var(--color-text-secondary, #93a1a1);
 
-    --admin-border: #ddd8c4;
+    --admin-border: var(--color-background-tertiary, #ddd8c4);
     --admin-shadow: rgba(0, 0, 0, 0.08);
     --admin-shadow-hover: rgba(0, 0, 0, 0.12);
 
@@ -78,7 +78,7 @@
 }
 
 .admin-header-brand a {
-    color: white;
+    color: var(--color-white, white);
     text-decoration: none;
     font-size: 1.1rem;
 }
@@ -88,7 +88,7 @@
 }
 
 .admin-header-howto summary {
-    color: white;
+    color: var(--color-white, white);
     cursor: pointer;
     padding: 8px 12px;
     border-radius: var(--admin-radius);
@@ -103,7 +103,7 @@
     position: absolute;
     top: 100%;
     left: 0;
-    background: white;
+    background: var(--color-white, white);
     border-radius: var(--admin-radius);
     box-shadow: 0 4px 12px var(--admin-shadow);
     min-width: 200px;
@@ -120,7 +120,7 @@
     align-items: center;
     height: 40px;
     gap: 8px;
-    color: white;
+    color: var(--color-white, white);
 }
 
 .admin-header-avatar {
@@ -153,7 +153,7 @@
 }
 
 .admin-header-btn:hover {
-    background: white;
+    background: var(--color-white, white);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -294,7 +294,7 @@
 
 .admin-btn-primary {
     background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%);
-    color: white;
+    color: var(--color-white, white);
 }
 
 .admin-btn-primary:hover:not(:disabled) {
@@ -315,7 +315,7 @@
 
 .admin-btn-danger {
     background: linear-gradient(135deg, var(--admin-danger) 0%, var(--admin-danger-dark) 100%);
-    color: white;
+    color: var(--color-white, white);
 }
 
 .admin-btn-danger:hover:not(:disabled) {
@@ -325,7 +325,7 @@
 
 .admin-btn-success {
     background: linear-gradient(135deg, var(--admin-success) 0%, #218838 100%);
-    color: white;
+    color: var(--color-white, white);
 }
 
 .admin-btn-success:hover:not(:disabled) {
@@ -751,7 +751,7 @@
     width: 48px;
     height: 48px;
     border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
+    border-top-color: var(--color-white, white);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
