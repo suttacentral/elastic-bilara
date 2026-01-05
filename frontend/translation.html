@@ -33,6 +33,7 @@
     <script src="./static/js/elements/translation/sc-bilara-translation-project-actions.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-toast.js"></script>
+    <script src="./static/js/elements/addons/sc-bilara-how-to.js" type="module"></script>
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
@@ -70,6 +71,7 @@
         x-cloak
         x-show="isActive"
         @toggle-detail-panel.window="active === $event.detail.panel ? active = null : active = $event.detail.panel">
+        <sc-bilara-how-to></sc-bilara-how-to>
 
         <sc-bilara-translation-project-header></sc-bilara-translation-project-header>
 

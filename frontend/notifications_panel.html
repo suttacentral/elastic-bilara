@@ -45,7 +45,6 @@
                 </div>
             </header>
 
-            <!-- Notifications List Panel -->
             <div class="panel-card notification-list-panel">
                 <div class="panel-header">
                     <div class="panel-title">
@@ -65,7 +64,6 @@
                     </div>
                 </div>
 
-                <!-- Filter Controls -->
                 <div class="filter-controls" x-show="!loading && notifications.length > 0">
                     <div class="filter-left-section">
                         <div class="search-box">
@@ -103,7 +101,6 @@
 
 
                 <div class="panel-content">
-                    <!-- Loading State -->
                     <div x-show="loading" class="skeleton-list">
                         <template x-for="i in 5">
                             <div class="skeleton-item">
@@ -114,7 +111,6 @@
                         </template>
                     </div>
 
-                    <!-- Empty State -->
                     <div x-show="!loading && notifications.length === 0" class="empty-state">
                         <i class="bi-bell-slash"></i>
                         <div>
@@ -123,9 +119,7 @@
                         </div>
                     </div>
 
-                    <!-- Notification List -->
                     <div x-show="!loading && notifications.length > 0" class="notification-list">
-                        <!-- Filter Empty State -->
                         <div x-show="filteredNotifications.length === 0 && filterText" class="empty-state">
                             <i class="bi-search"></i>
                             <div>
@@ -134,7 +128,6 @@
                             </div>
                         </div>
 
-                        <!-- Notification Items -->
                         <template x-for="(notification, index) in paginatedNotifications" :key="notification.commit">
                             <div class="notification-item"
                                  :class="{ 'selected': selectedNotification === notification.commit }"
@@ -169,7 +162,6 @@
                         </template>
                     </div>
 
-                    <!-- Pagination -->
                     <div class="pagination-controls" x-show="!loading && totalPages > 1">
                         <div class="pagination-info">
                             <span x-text="`Showing ${startItem}-${endItem} of ${filteredNotifications.length} notifications`"></span>
@@ -214,7 +206,6 @@
                 </div>
             </div>
 
-            <!-- Detail Viewer Panel -->
             <div class="panel-card">
                 <div class="panel-header">
                     <div class="panel-title">
@@ -228,13 +219,11 @@
                 </div>
                 <div class="panel-content">
                     <div class="detail-viewer">
-                        <!-- Loading State -->
                         <div x-show="loadingDetail" class="loading-state">
                             <div class="spinner"></div>
                             <span>Loading details...</span>
                         </div>
 
-                        <!-- No Selection State -->
                         <div x-show="!selectedNotification && !loadingDetail" class="detail-empty">
                             <i class="bi-file-earmark-code"></i>
                             <div>
@@ -243,7 +232,6 @@
                             </div>
                         </div>
 
-                        <!-- Detail Content -->
                         <div x-show="selectedNotification && !loadingDetail && selectedNotificationData" class="detail-content">
                             <div class="commit-info">
                                 <div class="commit-meta">
@@ -300,7 +288,6 @@
                 </div>
             </div>
 
-            <!-- Toast Notification -->
             <div x-show="toast.show" x-cloak
                  class="toast"
                  :class="toast.type"
@@ -309,7 +296,6 @@
                 <span x-text="toast.message"></span>
             </div>
 
-            <!-- Settings Modal -->
             <div x-show="showSettingsModal"
                  x-cloak
                  class="modal-backdrop"
@@ -325,14 +311,12 @@
                     </div>
 
                     <div class="modal-body">
-                        <!-- Authors Section -->
                         <div class="settings-section">
                             <label class="section-label">
                                 <i class="bi-people"></i>
                                 Filter by Authors
                             </label>
 
-                            <!-- Search Box -->
                             <div class="author-search-box">
                                 <i class="bi-search"></i>
                                 <input type="text"
@@ -347,7 +331,6 @@
                                 </button>
                             </div>
 
-                            <!-- Author Controls -->
                             <div class="author-controls">
                                 <button class="control-btn" @click="toggleAllAuthors(true)" type="button">
                                     <i class="bi-check-square"></i>
@@ -359,7 +342,6 @@
                                 </button>
                             </div>
 
-                            <!-- Author List -->
                             <div class="author-list" x-show="allAuthors.length > 0">
                                 <template x-for="author in filteredAuthors" :key="author">
                                     <label class="author-item">
@@ -371,14 +353,12 @@
                                 </template>
                             </div>
 
-                            <!-- Empty State -->
                             <div x-show="allAuthors.length === 0" class="empty-authors">
                                 <i class="bi-person-x"></i>
                                 <p>No authors available</p>
                             </div>
                         </div>
 
-                        <!-- Days Section -->
                         <div class="settings-section">
                             <label class="section-label" for="daysSelect">
                                 <i class="bi-calendar-range"></i>

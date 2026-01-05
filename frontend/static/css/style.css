@@ -94,6 +94,45 @@
     transform: rotate(180deg);
 }
 
+sl-dropdown::part(panel) {
+    background-color: var(--color-background);
+    border: 1px solid var(--color-text-secondary);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--color-shadow, rgba(0, 0, 0, 0.15));
+}
+
 sl-menu {
     max-width: 200px;
+    background-color: var(--color-background);
+    border: none;
+}
+
+sl-menu::part(base) {
+    background-color: var(--color-background);
+    padding: 4px 0;
+}
+
+sl-menu-item::part(base) {
+    color: var(--color-text);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+sl-menu-item::part(base):hover {
+    background-color: var(--color-background-secondary);
+    color: var(--color-text-emphasized);
+}
+
+sl-menu-item::part(checked-icon),
+sl-menu-item::part(submenu-icon) {
+    color: var(--color-text);
+}
+
+sl-menu-item::part(label) {
+    color: inherit;
+}
+
+sl-divider {
+    --color: var(--color-text-secondary);
+    border-top: 1px solid var(--color-text-secondary);
+    opacity: 0.5;
 }

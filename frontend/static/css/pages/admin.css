@@ -46,14 +46,14 @@
     font-family: var(--font-serif);
 }
 
-.admin-header {
-    background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%);
+/* .admin-header {
+    background: var(--admin-primary);
     height: 56px;
     box-shadow: 0 2px 10px var(--admin-shadow);
     position: sticky;
     top: 0;
     z-index: 100;
-}
+} */
 
 /* Header Navigation Component */
 .admin-header-nav {
@@ -175,7 +175,6 @@
 }
 
 .admin-nav {
-    background: white;
     border-radius: var(--admin-radius-lg);
     box-shadow: 0 2px 8px var(--admin-shadow);
     padding: 20px 16px;
@@ -200,20 +199,37 @@
     background: transparent;
 }
 
+.admin-nav sl-menu::part(base) {
+    background-color: transparent;
+    padding: 4px 0;
+}
+
 .admin-nav sl-menu-item {
     margin: 4px 0;
     border-radius: var(--admin-radius);
     transition: var(--admin-transition);
 }
 
-.admin-nav sl-menu-item:hover {
-    background: var(--admin-primary-lighter);
-}
-
 .admin-nav sl-menu-item::part(base) {
     padding: 12px 16px;
     font-weight: 500;
     font-size: 0.95rem;
+    color: var(--color-text);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.admin-nav sl-menu-item::part(base):hover {
+    background-color: var(--color-background-secondary);
+    color: var(--color-text-emphasized);
+}
+
+.admin-nav sl-menu-item::part(checked-icon),
+.admin-nav sl-menu-item::part(submenu-icon) {
+    color: var(--color-text);
+}
+
+.admin-nav sl-menu-item::part(label) {
+    color: inherit;
 }
 
 .admin-nav sl-menu-item i {
@@ -293,7 +309,7 @@
 }
 
 .admin-btn-primary {
-    background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%);
+    background: var(--admin-primary);
     color: var(--color-white, white);
 }
 
@@ -314,7 +330,7 @@
 }
 
 .admin-btn-danger {
-    background: linear-gradient(135deg, var(--admin-danger) 0%, var(--admin-danger-dark) 100%);
+    background: var(--admin-danger);
     color: var(--color-white, white);
 }
 
@@ -324,7 +340,7 @@
 }
 
 .admin-btn-success {
-    background: linear-gradient(135deg, var(--admin-success) 0%, #218838 100%);
+    background: var(--admin-success);
     color: var(--color-white, white);
 }
 

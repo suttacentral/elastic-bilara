@@ -66,3 +66,9 @@ kbd{
     border-radius: 4px;
     background-color: #ccc;
 }
+
+.menu-item-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}

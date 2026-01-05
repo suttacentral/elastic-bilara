@@ -1,21 +1,21 @@
 :root {
-    --translation-primary: var(--bilara-primary-color, #8b6914);
-    --translation-primary-light: var(--bilara-secondary-background-color, #f5f0e1);
-    --translation-primary-lighter: var(--bilara-primary-background-color, #faf8f3);
+    --translation-primary: var(--color-primary, #8b6914);
+    --translation-primary-light: var(--color-background-secondary, #f5f0e1);
+    --translation-primary-lighter: var(--color-background, #faf8f3);
 
-    --translation-accent: var(--bilara-cyan, #2a6b6b);
-    --translation-accent-light: var(--bilara-yellow, #e8f4f4);
+    --translation-accent: var(--color-accent, rgba(255, 194, 2, 0.3));
+    --translation-accent-light: var(--color-background-secondary, #e8f4f4);
 
-    --translation-text: var(--bilara-primary-text-color, #333);
-    --translation-text-secondary: var(--bilara-secondary-text-color, #666);
-    --translation-text-muted: var(--bilara-secondary-text-color, #999);
+    --translation-text: var(--color-text, #333);
+    --translation-text-secondary: var(--color-text-secondary, #666);
+    --translation-text-muted: var(--color-text-secondary, #999);
 
-    --translation-border: var(--bilara-tertiary-background-color, #e0dcd0);
-    --translation-border-light: var(--bilara-secondary-background-color, #f0ede5);
+    --translation-border: var(--color-background-tertiary, #e0dcd0);
+    --translation-border-light: var(--color-background-secondary, #f0ede5);
     --translation-shadow: rgba(0, 0, 0, 0.08);
 
-    --translation-success: var(--bilara-green, #28a745);
-    --translation-warning: var(--bilara-orange, #ffc107);
+    --translation-success: var(--color-success, #28a745);
+    --translation-warning: var(--color-warning, #ffc107);
 
     --translation-radius: 6px;
     --translation-radius-lg: 10px;
@@ -25,12 +25,12 @@
     --translation-footer-height: 60px;
     --translation-uid-width: 120px;
 
-    --translation-badge-translation: var(--bilara-cyan, #2a6b6b);
-    --translation-badge-comment: var(--bilara-violet, #6b4c9a);
-    --translation-badge-reference: var(--bilara-blue, #0d6efd);
-    --translation-badge-variant: var(--bilara-orange, #ff7a00);
-    --translation-badge-html: var(--bilara-magenta, #d63384);
-    --translation-badge-root: var(--bilara-blue, #153e75);
+    --translation-badge-translation: #2a6b6b;
+    --translation-badge-comment: #6b4c9a;
+    --translation-badge-reference: #0d6efd;
+    --translation-badge-variant: #ff7a00;
+    --translation-badge-html: #d63384;
+    --translation-badge-root: #153e75;
 }
 
 .project-header {
@@ -98,7 +98,6 @@
     gap: var(--space-sm);
     padding: var(--space-xs) var(--space-sm);
     max-width: 100vw;
-    color: var(--bilara-secondary-background-color);
 }
 
 .project-header__nav-button {
@@ -199,7 +198,7 @@ sl-dialog::part(title) {
     flex-direction: column;
     flex: 1;
     min-width: 0;
-    background: white;
+    background: var(--color-background, var(--bilara-primary-background-color, white));
     border-radius: var(--translation-radius-lg);
     box-shadow: 0 2px 12px var(--translation-shadow);
     overflow: hidden;
@@ -211,12 +210,10 @@ sl-dialog::part(title) {
 .translation-grid__header {
     display: flex;
     background: var(--translation-primary);
-    /* background: var(--translation-primary); */
     min-height: var(--translation-header-height);
     position: sticky;
     top: 0;
     z-index: 20;
-    /* margin-left: var(--translation-uid-width); */
 }
 
 .translation-grid__header-cell {
@@ -284,9 +281,6 @@ sl-dialog::part(title) {
     overflow-x: hidden;
 }
 
-/* ==========================================
-   Translation Row - Key for height sync
-   ========================================== */
 .translation-row {
     display: flex;
     border-bottom: 1px solid var(--translation-border-light);
@@ -330,10 +324,6 @@ sl-dialog::part(title) {
     padding-top: 10px;
 }
 
-/* ==========================================
-   Translation Cells Container
-   Use Flexbox to support draggable column width adjustment
-   ========================================== */
 .translation-row__cells {
     flex: 1;
     display: flex;
@@ -367,11 +357,7 @@ sl-dialog::part(title) {
     background-color: var(--translation-accent-light);
 }
 
-/* Action buttons positioning */
 .translation-cell__actions {
-    /* position: absolute;
-    top: 4px;
-    right: 8px; */
     z-index: 10;
     opacity: 1;
     transition: opacity 0.2s ease;
@@ -382,9 +368,6 @@ sl-dialog::part(title) {
     opacity: 1;
 }
 
-/* ==========================================
-   Split/Merge Action Buttons
-   ========================================== */
 .project-container__content-body__action {
     display: flex;
     flex-direction: row;
@@ -395,7 +378,6 @@ sl-dialog::part(title) {
 
 .project-container__content-body__text-uid {
     font-family: var(--font-serif);
-    /* font-size: 0.7rem; */
     color: var(--translation-text-muted);
     font-size: var(--text-xs);
     padding-left: 2px;
@@ -408,20 +390,14 @@ sl-dialog::part(title) {
 .project-header__nav-button {
     font-size: 0.65rem;
     padding: 2px 8px;
-    /* border: 1px solid var(--translation-border); */
     border-radius: var(--translation-radius);
     cursor: pointer;
     transition: var(--translation-transition);
     white-space: nowrap;
 }
 
-/* .project-header__nav-button:hover {
-    border-color: var(--translation-primary);
-} */
-
 .btn--split {
     color: var(--translation-accent);
-    /* border-color: var(--translation-accent); */
 }
 
 .btn--split:hover {
@@ -455,7 +431,7 @@ sl-dialog::part(title) {
 
 .translation-cell__textarea-wrapper {
     display: flex;
-    /* flex-direction: column-reverse; */
+
     flex: 1;
     position: relative;
     min-height: fit-content;
@@ -489,7 +465,7 @@ sl-dialog::part(title) {
 .translation-cell__textarea:focus {
     outline: none;
     border-color: var(--translation-accent);
-    background-color: white;
+    background-color: var(--color-background, var(--bilara-primary-background-color, white));
     box-shadow: 0 0 0 3px rgba(42, 107, 107, 0.15);
 }
 
@@ -503,16 +479,12 @@ sl-dialog::part(title) {
     box-shadow: none;
 }
 
-/* Edit status badge */
 .translation-cell__status {
     position: absolute;
     bottom: 4px;
     right: 8px;
 }
 
-/* ==========================================
-   Translation Hints Dropdown
-   ========================================== */
 .translation-cell__hints {
     position: absolute;
     top: calc(100% + 4px);
@@ -520,6 +492,20 @@ sl-dialog::part(title) {
     right: 8px;
     z-index: 100;
     background: white;
+    border: 1px solid var(--translation-border);
+    border-radius: var(--translation-radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    max-height: 280px;
+    overflow-y: auto;
+} 
+
+.translation-cell__hints {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 8px;
+    right: 8px;
+    z-index: 100;
+    background: var(--color-background, var(--bilara-primary-background-color, white));
     border: 1px solid var(--translation-border);
     border-radius: var(--translation-radius);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -754,7 +740,6 @@ sl-dialog::part(title) {
     opacity: 1;
 }
 
-/* Disable text selection and pointer events during drag and drop */
 .translation-grid--resizing {
     user-select: none;
     cursor: col-resize !important;
@@ -764,7 +749,6 @@ sl-dialog::part(title) {
     cursor: col-resize !important;
 }
 
-/* header separator */
 .translation-grid__header-resizer {
     position: absolute;
     right: -3px;
@@ -784,7 +768,6 @@ sl-dialog::part(title) {
     background: white;
 }
 
-/* Ensure header cell can position resizer */
 .translation-grid__header-cell {
     position: relative;
 }

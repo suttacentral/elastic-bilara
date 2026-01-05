@@ -6,6 +6,12 @@ export class SCBilaraNavMainMobile extends LitElement {
       :host {
         display: block;
       }
+
+      nav {
+        border-bottom: 1px solid var(--color-disabled, #e0e0e0);
+        box-shadow: 0 2px 4px var(--color-shadow, rgba(0, 0, 0, 0.1));
+        background-color: var(--color-background-tertiary, #BEB9AA);
+      }
     `
   ];
 
@@ -27,7 +33,7 @@ export class SCBilaraNavMainMobile extends LitElement {
               </li>
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
-                <a href="https://github.com/username" class="username-link">
+                <a :href="'https://github.com/' + username" class="username-link">
                   <figure class="user-container" x-cloak x-show="!!username">
                       <img
                         :src="avatarURL"
