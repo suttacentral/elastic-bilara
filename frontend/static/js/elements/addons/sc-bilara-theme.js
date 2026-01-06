@@ -1,4 +1,4 @@
-import { css } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+import { css } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 
 export const defaultTheme = 'aruna';
 
