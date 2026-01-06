@@ -13,12 +13,6 @@
     --modal-backdrop: rgba(0, 0, 0, 0.5);
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
 body {
     font-family: var(--font-serif);
     background-color: var(--color-background);

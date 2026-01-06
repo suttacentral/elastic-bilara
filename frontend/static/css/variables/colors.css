@@ -1,6 +1,6 @@
 :root {
-     --color-primary-text: #2C2B2B;
-     --color-secondary-text: #7a7777;
+    --color-primary-text: #2C2B2B;
+    --color-secondary-text: #7a7777;
 
     --color-primary: #D9B26F;
     --color-primary-dark: #B28B5A;
@@ -32,9 +32,7 @@
     --color-warning: #E5CB9E;
 
     --color-disabled: #E0E0E0;
-}
 
-:root {
     --color-primary: var(--bilara-primary-color, #D9B26F);
     --color-secondary: var(--bilara-secondary-color, #FFC10A);
     --color-background: var(--bilara-primary-background-color, #fdf6e3);
