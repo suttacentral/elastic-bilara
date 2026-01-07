@@ -51,18 +51,18 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    font-size: 1.5rem;
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--color-black);
 }
 
 .page-title i {
-    font-size: 1.75rem;
+    font-size: var(--text-xl);
     color: var(--color-primary-darker);
 }
 
 .page-title .subtitle {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-primary-darker);
     font-weight: 400;
 }
@@ -81,16 +81,11 @@ body {
     color: var(--color-black);
     border: none;
     border-radius: var(--radius-md);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
-}
-
-.header-btn:hover {
-    background: var(--color-primary-lighter);
-    transform: translateY(-1px);
 }
 
 .header-btn:disabled {
@@ -122,7 +117,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-size: 1rem;
+    font-size: var(--text-md);
     font-weight: 600;
     color: var(--color-text-emphasized);
 }
@@ -136,7 +131,7 @@ body {
     color: var(--color-black);
     padding: 2px 8px;
     border-radius: var(--radius-xl);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
 }
 
@@ -178,7 +173,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
+    font-size: var(--text-md);
 }
 
 .file-icon.modified { color: var(--color-warning); }
@@ -188,7 +183,7 @@ body {
 
 .file-path {
     flex: 1;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-family: var(--font-serif);
     color: var(--color-text-emphasized);
     overflow: hidden;
@@ -334,7 +329,7 @@ body {
 }
 
 .stat-chip i {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
 }
 
 .stat-chip.modified i { color: var(--color-warning); }
@@ -447,7 +442,7 @@ body {
     color: var(--color-success);
     border: 1px solid var(--color-success);
     border-radius: var(--radius-sm);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -480,7 +475,7 @@ body {
     color: var(--color-error);
     border: 1px solid var(--color-error);
     border-radius: var(--radius-sm);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -544,14 +539,16 @@ body {
 }
 
 .modal-header i {
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
     color: var(--color-error);
 }
 
 .modal-header h3 {
-    font-size: 1rem;
+    flex: 1;
+    margin: 0;
+    font-size: var(--text-lg);
     font-weight: 600;
-    color: var(--color-text-emphasized);
+    color: var(--color-black);
 }
 
 .modal-body {
@@ -565,7 +562,7 @@ body {
 
 .modal-body .file-name {
     font-family: var(--font-serif);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     background: var(--color-background);
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-sm);
@@ -586,7 +583,7 @@ body {
 .modal-btn {
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -691,7 +688,7 @@ body {
     border-radius: var(--radius-md);
     background: var(--color-white);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     transition: all 0.2s ease;
 }
 
@@ -735,7 +732,7 @@ body {
     color: var(--color-text);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-md);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -752,7 +749,7 @@ body {
 }
 
 .sort-btn i {
-    font-size: 1rem;
+    font-size: var(--text-md);
 }
 
 .role-filter-indicator {
@@ -774,7 +771,7 @@ body {
 }
 
 .role-filter-indicator i {
-    font-size: 1rem;
+    font-size: var(--text-md);
 }
 
 .role-filter-indicator strong {
@@ -793,7 +790,7 @@ body {
 }
 
 .pagination-info {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text-secondary);
 }
 
@@ -813,7 +810,7 @@ body {
     color: var(--color-text);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-sm);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -830,7 +827,7 @@ body {
 
 .page-indicator {
     padding: 0 var(--space-md);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text);
     font-weight: 500;
 }
@@ -839,7 +836,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text);
 }
 
@@ -853,7 +850,7 @@ body {
     border-radius: var(--radius-sm);
     background: var(--color-white);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -940,7 +937,7 @@ body {
 }
 
 .select-all-label {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text-secondary);
     font-weight: 500;
 }
@@ -972,11 +969,11 @@ body {
     gap: var(--space-sm);
     color: var(--color-primary-darker);
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
 }
 
 .batch-info i {
-    font-size: 1.125rem;
+    font-size: var(--text-lg);
 }
 
 .batch-buttons {
@@ -990,7 +987,7 @@ body {
     gap: var(--space-xs);
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;

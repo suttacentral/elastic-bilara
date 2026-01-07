@@ -14,7 +14,7 @@
 }
 
 body {
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
     background-color: var(--color-background);
     color: var(--color-text);
     line-height: 1.5;
@@ -42,55 +42,34 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: var(--space-md) var(--space-lg);
-    background: var(--color-primary);
+    background: var(--color-background);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
+    line-height: 1.2;
 }
 
 .page-title {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--color-black);
+}
+
+.page-title h1{
+    font-size: var(--text-md);
 }
 
 .page-title i {
-    font-size: 1.75rem;
-    color: var(--color-primary-darker);
+    font-size: var(--text-lg);
 }
 
 .page-title .subtitle {
-    font-size: 0.875rem;
-    color: var(--color-primary-darker);
     font-weight: 400;
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
 }
 
 .header-actions {
     display: flex;
     gap: var(--space-sm);
-}
-
-.header-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-md);
-    background: var(--color-white);
-    color: var(--color-black);
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-}
-
-.header-btn:hover {
-    background: var(--color-primary-lighter);
-    transform: translateY(-1px);
 }
 
 .header-btn:disabled {
@@ -100,13 +79,13 @@ body {
 }
 
 .panel-card {
-    background: var(--color-white);
+    background: var(--color-background);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
+
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-accent);
 }
 
 .panel-header {
@@ -115,14 +94,13 @@ body {
     justify-content: space-between;
     padding: var(--space-md) var(--space-lg);
     background: var(--color-background-secondary);
-    border-bottom: 1px solid var(--color-background-tertiary);
+    border-bottom: 1px solid var(--color-accent);
 }
 
 .panel-title {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-size: 1rem;
     font-weight: 600;
     color: var(--color-text-emphasized);
 }
@@ -133,17 +111,17 @@ body {
 
 .panel-title .badge {
     background: var(--color-primary);
-    color: var(--color-black);
+    color: var(--color-white);
     padding: 2px 8px;
     border-radius: var(--radius-xl);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
 }
 
 .panel-content {
     flex: 1;
     overflow-y: auto;
-    padding: var(--space-md);
+    padding: var(--space-sm);
 }
 
 /* Notification List */
@@ -184,7 +162,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.125rem;
+    font-size: var(--text-lg);
     color: var(--color-info);
     background: var(--color-info-bg);
     border-radius: var(--radius-sm);
@@ -199,13 +177,13 @@ body {
 }
 
 .notification-author {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--color-text-emphasized);
 }
 
 .notification-date {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     color: var(--color-text-secondary);
 }
 
@@ -238,7 +216,7 @@ body {
     background: transparent;
     border: 1px solid;
     border-radius: var(--radius-sm);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -319,7 +297,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text);
 }
 
@@ -365,7 +343,7 @@ body {
 }
 
 .file-name {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--color-text-emphasized);
     overflow: hidden;
@@ -421,7 +399,7 @@ body {
     color: var(--color-black);
     border: none;
     border-radius: var(--radius-sm);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -512,14 +490,12 @@ body {
     align-items: center;
     gap: var(--space-xs);
     padding: var(--space-xs) var(--space-sm);
-    background: var(--color-background);
-    border-radius: var(--radius-xl);
-    font-size: 0.8125rem;
-    border: 1px solid var(--color-background-tertiary);
+    font-size: var(--text-xs);
+    font-weight: 600;
 }
 
 .stat-chip i {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-primary-dark);
 }
 
@@ -608,9 +584,9 @@ body {
     padding: var(--space-sm) var(--space-md) var(--space-sm) 2.5rem;
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-md);
-    background: var(--color-white);
+    background-color: var(--color-background-tertiary);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     transition: all 0.2s ease;
 }
 
@@ -646,33 +622,17 @@ body {
 }
 
 .sort-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-md);
-    background: var(--color-white);
-    color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
 
-.sort-btn:hover {
-    background: var(--color-background);
+background: var(--color-background-tertiary);
+
 }
 
 .sort-btn.active {
     background: var(--color-primary);
-    color: var(--color-black);
-    border-color: var(--color-primary);
+    color: var(--color-white);
 }
 
-.sort-btn i {
-    font-size: 1rem;
-}
+
 
 /* Checkbox */
 .checkbox-wrapper {
@@ -748,7 +708,7 @@ body {
 }
 
 .select-all-label {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text-secondary);
     font-weight: 500;
 }
@@ -781,11 +741,11 @@ body {
     gap: var(--space-sm);
     color: var(--color-primary-darker);
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
 }
 
 .batch-info i {
-    font-size: 1.125rem;
+    font-size: var(--text-lg);
 }
 
 .batch-buttons {
@@ -799,7 +759,7 @@ body {
     gap: var(--space-xs);
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -839,7 +799,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
     background: var(--color-background-secondary);
     border-top: 1px solid var(--color-background-tertiary);
     flex-wrap: wrap;
@@ -847,7 +807,7 @@ body {
 }
 
 .pagination-info {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text-secondary);
 }
 
@@ -863,17 +823,17 @@ body {
     justify-content: center;
     width: 32px;
     height: 32px;
-    background: var(--color-white);
+    background: var(--color-background);
     color: var(--color-text);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-sm);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .page-btn:hover:not(:disabled) {
-    background: var(--color-primary-lighter);
+    background: var(--color-primary);
     border-color: var(--color-primary);
 }
 
@@ -882,9 +842,13 @@ body {
     cursor: not-allowed;
 }
 
+.page-btn i{
+    color: var(--color-text-emphasized);
+}
+
 .page-indicator {
     padding: 0 var(--space-md);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text);
     font-weight: 500;
 }
@@ -893,7 +857,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text);
 }
 
@@ -905,9 +869,9 @@ body {
     padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-sm);
-    background: var(--color-white);
+    background: var(--color-background);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -973,7 +937,7 @@ body {
 }
 
 .modal-dialog {
-    background: var(--color-white);
+    background-color: var(--color-background-secondary);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     max-width: 600px;
@@ -1000,22 +964,19 @@ body {
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-lg);
-    background: var(--color-primary);
+    background: var(--color-background-secondary);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    border-bottom: 1px solid var(--color-primary-dark);
 }
 
 .modal-header i:first-child {
-    font-size: 1.5rem;
-    color: var(--color-primary-darker);
+    font-size: var(--text-xl);
 }
 
 .modal-header h3 {
     flex: 1;
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
     font-weight: 600;
-    color: var(--color-black);
 }
 
 .close-btn {
@@ -1026,7 +987,6 @@ body {
     height: 32px;
     background: transparent;
     border: none;
-    color: var(--color-black);
     cursor: pointer;
     border-radius: var(--radius-sm);
     transition: all 0.2s ease;
@@ -1058,22 +1018,11 @@ body {
 }
 
 .modal-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-lg);
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: none;
+color: var(--color-white);
 }
 
 .modal-btn-cancel {
-    background: var(--color-white);
-    color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    background-color: var(--color-error);
 }
 
 .modal-btn-cancel:hover {
@@ -1081,8 +1030,8 @@ body {
 }
 
 .modal-btn-primary {
-    background: var(--color-primary);
-    color: var(--color-black);
+    background-color: var(--color-success);
+    
 }
 
 .modal-btn-primary:hover {
@@ -1110,7 +1059,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--color-text-emphasized);
     margin-bottom: var(--space-xs);
@@ -1138,9 +1087,9 @@ body {
     padding: var(--space-sm) var(--space-md) var(--space-sm) 2.5rem;
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-md);
-    background: var(--color-white);
+    background-color: var(--color-background);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     transition: all 0.2s ease;
 }
 
@@ -1160,7 +1109,7 @@ body {
     align-items: center;
     gap: var(--space-xs);
     padding: var(--space-xs) var(--space-sm);
-    background: var(--color-white);
+    background-color: var(--color-background);
     color: var(--color-text);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-md);
@@ -1176,7 +1125,7 @@ body {
 }
 
 .control-btn i {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
 }
 
 .author-list {
@@ -1185,7 +1134,7 @@ body {
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-md);
     padding: var(--space-sm);  /* 从 var(--space-xs) 改为 var(--space-sm) */
-    background: var(--color-white);
+    background-color: var(--color-background);
     /* 添加以下 grid 布局属性 */
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1233,7 +1182,7 @@ body {
 }
 
 .author-item span {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     color: var(--color-text);
 }
 
@@ -1256,7 +1205,7 @@ body {
 
 .empty-authors p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
 }
 
 .days-selector {
@@ -1264,9 +1213,9 @@ body {
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-md);
-    background: var(--color-white);
+    background-color: var(--color-background);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     cursor: pointer;
     transition: all 0.2s ease;
 }

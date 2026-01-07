@@ -18,16 +18,20 @@ class SCBilaraNotificationIcon extends LitElement {
       width: 32px;
       vertical-align: middle;
       fill: var(--color-text, #2C2B2B);
-      transition: fill 0.3s ease;
+      transition: border 0.3s ease;
+      border: 2px solid transparent;
+      border-radius: 50%;
     }
 
-    .notification-icon:hover {
-      fill: var(--color-accent, #008080);
+    .notification-icon:hover,
+    .user-container:hover {
+      border: 2px solid var(--color-primary);
+      border-radius: 50%;
     }
 
     .notification-count {
       position: absolute;
-      top: -6px;
+      top: -2px;
       right: -6px;
       width: 24px;
       height: 24px;

@@ -1,5 +1,6 @@
 :root {
     font-family: var(--font-sans);
+    font-size: var(--text-base-size);
     font-kerning: normal;
     line-height: var(--body-line-height);
     color: var(--color-primary-text);

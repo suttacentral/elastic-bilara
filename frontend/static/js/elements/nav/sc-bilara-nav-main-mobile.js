@@ -40,7 +40,6 @@ export class SCBilaraNavMainMobile extends LitElement {
                         x-bind:alt="username + 's github profile picture'"
                         class="user-avatar"
                         title="profile picture"/>
-                      <figcaption x-text="username"></figcaption>
                   </figure>
                 </a>
               </li>

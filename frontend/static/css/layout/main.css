@@ -45,6 +45,7 @@
     text-decoration: underline;
     text-underline-offset: 4px;
     text-decoration-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 #how-to-details  a:hover {

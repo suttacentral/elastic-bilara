@@ -232,7 +232,7 @@ sl-dialog::part(title) {
 }
 
 .translation-grid__header-title {
-    font-size: 0.95rem;
+    font-size: var(--text-sm);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -316,7 +316,7 @@ sl-dialog::part(title) {
 
 .translation-row__uid-text {
     font-family: var(--font-serif);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     color: var(--translation-text-secondary);
     word-break: break-all;
     text-align: right;
@@ -446,7 +446,7 @@ sl-dialog::part(title) {
     border-radius: var(--translation-radius);
     background-color: var(--translation-primary-lighter);
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: var(--text-sm);
     line-height: 1.5;
     color: var(--translation-text);
     transition: var(--translation-transition);
@@ -549,7 +549,7 @@ sl-dialog::part(title) {
 }
 
 .translation-cell__hints-source {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     color: var(--translation-text-secondary);
     margin: 0;
     line-height: 1.4;
@@ -563,7 +563,7 @@ sl-dialog::part(title) {
 }
 
 .translation-cell__hints-text {
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     color: var(--translation-text);
     line-height: 1.4;
 }
@@ -608,7 +608,7 @@ sl-dialog::part(title) {
 }
 
 .detail-panel__title {
-    font-size: 1rem;
+    font-size: var(--text-md);
     font-weight: 600;
     color: var(--translation-primary);
     margin: 0 0 16px 0;

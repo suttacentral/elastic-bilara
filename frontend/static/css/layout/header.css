@@ -23,6 +23,7 @@
 
 .main-nav__item {
     color: var(--bilara-secondary-text-color);
+    display: flex;
 }
 
 .mobile-show {

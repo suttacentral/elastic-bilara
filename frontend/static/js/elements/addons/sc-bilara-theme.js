@@ -71,7 +71,7 @@ export const themes = {
       --color-info: #0074D9;
   `,
   'yakkha': css`
-      --color-primary: white;
+      --color-primary: crimson;
       --color-secondary: #85144b;
       --color-background: #111111;
       --color-background-secondary: #001f3f;
