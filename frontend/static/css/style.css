@@ -4,6 +4,7 @@
     font-kerning: normal;
     line-height: var(--body-line-height);
     color: var(--color-primary-text);
+    background-color: var(--color-background);
 }
 
 [x-cloak] {

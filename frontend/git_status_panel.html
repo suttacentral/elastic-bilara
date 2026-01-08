@@ -34,11 +34,11 @@
             <header class="page-header">
                 <div class="page-title">
                     <i class="bi-git"></i>
-                    <span>Unpublished Changes</span>
-                    <span class="subtitle">/backend/checkouts/unpublished</span>
+                    <h1>Unpublished Changes</h1>
+                    <span class="subtitle">here you can review your unpublished changes</span>
                 </div>
                 <div class="header-actions">
-                    <button class="header-btn" @click="refresh()" :disabled="loading">
+                    <button class="btn header-btn" @click="refresh()" :disabled="loading">
                         <i class="bi-arrow-clockwise"></i>
                         Refresh
                     </button>
@@ -84,21 +84,21 @@
                                class="filter-input">
                         <button x-show="filterText"
                                 @click="filterText = ''; currentPage = 1"
-                                class="clear-btn"
+                                class="btn clear-btn"
                                 title="Clear filter">
                             <i class="bi-x"></i>
                         </button>
                     </div>
                 </div>
                 <div class="sort-controls">
-                    <button class="sort-btn"
+                    <button class="btn sort-btn"
                             @click="toggleSortMode()"
                             :class="{ active: sortMode === 'default' }"
                             title="Sort by status">
                         <i class="bi-sort-alpha-down"></i>
                         <span>Default</span>
                     </button>
-                    <button class="sort-btn"
+                    <button class="btn sort-btn"
                             @click="toggleSortMode()"
                             :class="{ active: sortMode === 'date' }"
                             title="Sort by date">
@@ -114,11 +114,11 @@
                     <span x-text="`${selectedFiles.length} file(s) selected`"></span>
                 </div>
                 <div class="batch-buttons">
-                    <button class="batch-btn batch-btn-clear" @click="clearSelection()">
-                        <i class="bi-x-lg"></i>
+                    <button class="btn batch-btn batch-btn-clear" @click="clearSelection()">
+                        <i class="bi-x-circle"></i>
                         Clear Selection
                     </button>
-                    <button class="batch-btn batch-btn-publish"
+                    <button class="btn batch-btn batch-btn-publish"
                             :class="{ 'loading': batchPublishing }"
                             @click="batchPublish()"
                             :disabled="batchPublishing">
@@ -194,14 +194,6 @@
                                   :class="file.status"
                                   x-text="formatStatus(file.status)">
                             </span>
-                            <div class="file-actions">
-                                <button class="discard-btn"
-                                        @click.stop="showDiscardConfirm(file)"
-                                        title="Discard changes">
-                                    <i class="bi-x-circle"></i>
-                                    Discard
-                                </button>
-                            </div>
                         </div>
                     </template>
                 </div>
@@ -257,10 +249,26 @@
                     <i class="bi-file-diff"></i>
                     <span>Diff Viewer</span>
                 </div>
-                <span x-show="selectedFile"
-                      style="font-size: var(--text-xs); font-family: monospace; color: var(--color-text-secondary);"
-                      x-text="selectedFile">
-                </span>
+                               <div class="file-actions">
+                                <button class="btn publish-btn"
+                                        @click.stop="showDiscardConfirm(file)"
+                                        title="Discard changes">
+                                    <i class="bi-cloud-upload"></i>
+                                    Publish
+                                </button>
+                                <button class="btn edit-btn"
+                                        @click.stop="showDiscardConfirm(file)"
+                                        title="Discard changes">
+                                    <i class="bi-pencil"></i>
+                                    Edit
+                                </button>
+                                <button class="btn discard-btn"
+                                        @click.stop="showDiscardConfirm(file)"
+                                        title="Discard changes">
+                                    <i class="bi-x-circle"></i>
+                                    Discard
+                                </button>
+                            </div>
             </div>
             <div class="panel-content">
                 <div class="diff-viewer">
