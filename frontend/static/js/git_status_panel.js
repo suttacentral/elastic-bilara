@@ -37,6 +37,15 @@ function gitStatusPanel() {
         batchPublishing: false,
 
         async init() {
+            // Parse URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const filterParam = urlParams.get('filter');
+
+            // Set initial filter text from URL parameter if present
+            if (filterParam) {
+                this.filterText = decodeURIComponent(filterParam);
+            }
+
             await this.loadUserInfo();
             await this.fetchStatus();
         },
@@ -239,7 +248,7 @@ function gitStatusPanel() {
                 if (line.startsWith('+++') || line.startsWith('---') ||
                     line.startsWith('@@') || line.startsWith('diff ') ||
                     line.startsWith('index ')) {
-                    type = 'header';
+                    return { text: '', type: '' };
                 } else if (line.startsWith('+')) {
                     type = 'addition';
                 } else if (line.startsWith('-')) {
@@ -396,6 +405,12 @@ function gitStatusPanel() {
 
         async batchPublish() {
             return;
+        },
+        showToast(message, type = 'success') {
+            this.toast = { show: true, message, type };
+            setTimeout(() => {
+                this.toast.show = false;
+            }, 3000);
         }
     };
 }
