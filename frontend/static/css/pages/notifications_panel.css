@@ -99,7 +99,7 @@ body {
 
 .panel-title .badge {
     background-color: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     padding: 2px 8px;
     border-radius: var(--radius-xl);
     font-size: var(--text-xs);
@@ -218,7 +218,7 @@ body {
 
 .done-btn:hover {
     background-color: var(--color-success);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .done-btn:disabled {
@@ -233,7 +233,7 @@ body {
 
 .github-btn:hover {
     background-color: var(--color-black);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     border-color: var(--color-black);
 }
 
@@ -397,7 +397,7 @@ body {
 
 .view-sc-btn:hover {
     background-color: var(--color-primary-dark);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .change-detail {
@@ -411,7 +411,7 @@ body {
     white-space: pre-wrap;
     word-break: break-all;
     font-family: monospace;
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
     padding: var(--space-md);
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-background-tertiary);
@@ -615,7 +615,7 @@ background-color: var(--color-background-tertiary);
 
 .sort-btn.active {
     background-color: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 
@@ -640,7 +640,7 @@ background-color: var(--color-background-tertiary);
 .checkbox-wrapper .checkmark {
     width: 18px;
     height: 18px;
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
     border: 2px solid var(--color-background-tertiary);
     border-radius: var(--radius-sm);
     display: flex;
@@ -663,7 +663,7 @@ background-color: var(--color-background-tertiary);
     content: '';
     width: 5px;
     height: 9px;
-    border: solid var(--color-white);
+    border: solid var(--color-text-on-strong);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
     margin-bottom: 2px;
@@ -678,7 +678,7 @@ background-color: var(--color-background-tertiary);
     content: '';
     width: 8px;
     height: 2px;
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
 }
 
 .notification-list-header {
@@ -753,7 +753,7 @@ background-color: var(--color-background-tertiary);
 }
 
 .batch-btn-clear {
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
     color: var(--color-text);
     border: 1px solid var(--color-background-tertiary);
 }
@@ -764,7 +764,7 @@ background-color: var(--color-background-tertiary);
 
 .batch-btn-done {
     background-color: var(--color-success);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .batch-btn-done:hover {
@@ -876,7 +876,7 @@ background-color: var(--color-background-tertiary);
     gap: var(--space-sm);
     padding: var(--space-md) var(--space-lg);
     background-color: var(--color-black);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     z-index: 1001;
@@ -979,7 +979,7 @@ background-color: var(--color-background-tertiary);
 
 .close-btn:hover {
     background-color: var(--color-primary-dark);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .modal-body {
@@ -1003,7 +1003,7 @@ background-color: var(--color-background-tertiary);
 }
 
 .modal-btn {
-color: var(--color-white);
+color: var(--color-text-on-strong);
 }
 
 .modal-btn-cancel {
@@ -1021,7 +1021,7 @@ color: var(--color-white);
 
 .modal-btn-primary:hover {
     background-color: var(--color-primary-dark);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .modal-btn-primary:disabled {

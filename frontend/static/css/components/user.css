@@ -19,7 +19,7 @@
 }
 
  [x-text=username]{
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     font-style: italic;
     font-size: var(--text-sm);
     font-weight: 600;

@@ -116,14 +116,14 @@
     padding: var(--space-xs) var(--space-md);
     border-radius: var(--radius-sm);
     background-color: var(--color-cta);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     border: 1px solid var(--color-primary-darker);
     transition: 0.3s ease;
 }
 
 .pull-request-container__actions__publish-button:hover {
     background-color: var(--color-cta-dark);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .pull-request-message {
@@ -132,7 +132,7 @@
     border-radius: var(--radius-sm);
     margin: 0 var(--space-md);
     background-color: var(--color-success);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 @media (max-width: 575px) {

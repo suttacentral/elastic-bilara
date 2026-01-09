@@ -7,6 +7,7 @@ const commonVariables = css`
     --scrollbar-size: 8px;
     --scrollbar-minlength: 1.5rem;
     --border: 1px solid var(--color-primary-color);
+    --transition: all 0.2s ease;
 `;
 
 export const themes = {
@@ -19,6 +20,7 @@ export const themes = {
       --color-text: #657b83;
       --color-text-emphasized: #586e75;
       --color-text-secondary: #93a1a1;
+      --color-text-on-strong: #ffffff;
       --color-accent: rgba(255, 194, 2, 0.3);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
@@ -34,6 +36,7 @@ export const themes = {
       --color-text: #657b83;
       --color-text-emphasized: #586e75;
       --color-text-secondary: #93a1a1;
+      --color-text-on-strong: #ffffff;
       --color-accent: rgba(255, 194, 2, 0.3);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
@@ -49,6 +52,7 @@ export const themes = {
       --color-text: #a1adad;
       --color-text-emphasized: #bcc5c5;
       --color-text-secondary: #788989;
+      --color-text-on-strong: #ffffff;
       --color-accent: rgba(255, 194, 2, 0.1);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
@@ -64,6 +68,7 @@ export const themes = {
       --color-text: black;
       --color-text-emphasized: black;
       --color-text-secondary: #757575;
+      --color-text-on-strong: #ffffff;
       --color-accent: rgba(255, 194, 2, 0.3);
       --color-warning: #FF851B;
       --color-error: #FF4136;
@@ -79,6 +84,7 @@ export const themes = {
       --color-text: white;
       --color-text-emphasized: white;
       --color-text-secondary: #AAAAAA;
+      --color-text-on-strong: #ffffff;
       --color-accent: rgba(255, 194, 2, 0.1);
       --color-warning: #FF851B;
       --color-error: #FF4136;
@@ -94,6 +100,7 @@ export const themes = {
       --color-text: rgba(0,0,0,0.5);
       --color-text-emphasized: rgba(0,0,0,0.7);
       --color-text-secondary: rgba(0,0,0,0.3);
+      --color-text-on-strong: #ffffff;
       --color-accent: #e4f1de;
       --color-warning: #FF851B;
       --color-error: #ed8986;
@@ -109,6 +116,7 @@ export const themes = {
       --color-text: #e9edf5;
       --color-text-emphasized:  #ffffff;
       --color-text-secondary: #dee4f1;
+      --color-text-on-strong: #ffffff;
       --color-accent: rgba(228, 241, 222,0.1);
       --color-warning: #FF851B;
       --color-error: #ed8986;
@@ -124,6 +132,7 @@ export const themes = {
       --color-text: rgba(255,255,255,0.8);
       --color-text-emphasized:  white;
       --color-text-secondary: #D4D4D4;
+      --color-text-on-strong: #ffffff;
       --color-accent: rgba(230, 219, 116,0.1);
       --color-warning: #F39B35;
       --color-error: #FC4384;
@@ -139,6 +148,7 @@ export const themes = {
       --color-text: #f8f8f2;
       --color-text-emphasized:  white;
       --color-text-secondary: #e8e8e2;
+      --color-text-on-strong: #ffffff;
       --color-accent: #d36d00;
       --color-warning: #ffb86c;
       --color-error: #ff5555;
@@ -154,6 +164,7 @@ export const themes = {
       --color-text: crimson;
       --color-text-emphasized: maroon;
       --color-text-secondary: maroon;
+      --color-text-on-strong: #ffffff;
       --color-accent: orange;
       --color-warning: orange;
       --color-error: red;
@@ -169,6 +180,7 @@ export const themes = {
       --color-text: initial;
       --color-text-emphasized: initial;
       --color-text-secondary: initial;
+      --color-text-on-strong: #ffffff;
       --color-accent: initial;
       --color-warning: initial;
       --color-error: initial;

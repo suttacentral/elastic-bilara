@@ -50,7 +50,7 @@
     top: 0;
     z-index: 100;
     background-color: var(--color-success);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     text-align: center;
     padding: var(--space-md) var(--space-sm);
     border-radius: var(--radius-sm);
@@ -69,7 +69,7 @@
 
 .project-header__message--error {
     background-color: var(--color-error);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .project-header__message--success {
@@ -163,7 +163,7 @@
         }
 
         & .project-container__detail-panel__related-item:hover, & .project-container__detail-panel__related-item--selected {
-            color: var(--color-white);
+            color: var(--color-text-on-strong);
         }
     }
 }

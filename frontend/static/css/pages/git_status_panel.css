@@ -99,7 +99,7 @@ body {
 
 .panel-title .badge {
     background-color: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     padding: 2px 8px;
     border-radius: var(--radius-xl);
     font-size: var(--text-xs);
@@ -404,7 +404,7 @@ body {
 .publish-btn:hover {
     background-color: var(--color-success);
     border: 2px solid var(--color-success);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .publish-btn:disabled {
@@ -428,7 +428,7 @@ body {
 .discard-btn:hover {
     background-color: var(--color-error);
     border: 2px solid var(--color-error);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .discard-btn:disabled {
@@ -443,7 +443,7 @@ body {
 }
 .edit-btn:hover {
     background-color: var(--color-info);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .edit-btn:disabled {
@@ -465,7 +465,7 @@ body {
 }
 
 .modal-dialog {
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     width: 100%;
@@ -558,7 +558,7 @@ body {
 
 .modal-btn-danger {
     background-color: var(--color-error);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .modal-btn-danger:hover {
@@ -579,7 +579,7 @@ body {
     gap: var(--space-sm);
     padding: var(--space-md) var(--space-lg);
     background-color: var(--color-black);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     z-index: 1001;
@@ -689,7 +689,7 @@ body {
 
 .sort-btn.active {
     background-color: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .sort-btn i {
@@ -750,7 +750,7 @@ body {
     justify-content: center;
     width: 32px;
     height: 32px;
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
     color: var(--color-text);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-sm);
@@ -792,7 +792,7 @@ body {
     padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--color-background-tertiary);
     border-radius: var(--radius-sm);
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
     color: var(--color-text);
     font-size: var(--text-sm);
     cursor: pointer;
@@ -823,7 +823,7 @@ body {
 .checkbox-wrapper .checkmark {
     width: 18px;
     height: 18px;
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
     border: 2px solid var(--color-background-tertiary);
     border-radius: var(--radius-sm);
     display: flex;
@@ -846,7 +846,7 @@ body {
     content: '';
     width: 5px;
     height: 9px;
-    border: solid var(--color-white);
+    border: solid var(--color-text-on-strong);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
     margin-bottom: 2px;
@@ -861,7 +861,7 @@ body {
     content: '';
     width: 8px;
     height: 2px;
-    background-color: var(--color-white);
+    background-color: var(--color-text-on-strong);
 }
 
 .file-item.checked {
@@ -939,7 +939,7 @@ body {
 
 .batch-btn-publish {
     background-color: var(--color-success);
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
 }
 
 .batch-btn-publish:hover {

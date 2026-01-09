@@ -43,7 +43,7 @@ export class ScBilaraToast extends LitElement {
             gap: var(--space-sm);
             padding: var(--space-md) var(--space-lg);
             background: var(--color-black);
-            color: var(--color-white);
+            color: var(--color-text-on-strong);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
             z-index: 1001;
