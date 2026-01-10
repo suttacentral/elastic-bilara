@@ -40,6 +40,7 @@ body {
 
 .page-title h1{
     font-size: var(--text-md);
+    font-weight: var(--font-weight-bold)
 }
 
 .page-title i {
@@ -47,7 +48,7 @@ body {
 }
 
 .page-title .subtitle {
-    font-weight: 400;
+    font-weight: var(--font-weight-normal);
     color: var(--color-text-secondary);
     font-size: var(--text-sm);
 }
@@ -89,7 +90,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-emphasized);
 }
 
@@ -103,7 +104,7 @@ body {
     padding: 2px 8px;
     border-radius: var(--radius-xl);
     font-size: var(--text-xs);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
 }
 
 .panel-content {
@@ -165,7 +166,7 @@ body {
     font-size: 0.6875rem;
     padding: 2px 8px;
     border-radius: var(--radius-xl);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -503,7 +504,7 @@ body {
     flex: 1;
     margin: 0;
     font-size: var(--text-lg);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--color-black);
 }
 
@@ -540,7 +541,7 @@ body {
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     cursor: pointer;
     transition: all 0.2s ease;
     border: none;
@@ -719,7 +720,7 @@ body {
 }
 
 .role-filter-indicator strong {
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
 }
 
 .pagination-controls {
@@ -773,7 +774,7 @@ body {
     padding: 0 var(--space-md);
     font-size: var(--text-sm);
     color: var(--color-text);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
 }
 
 .page-size-selector {
@@ -883,7 +884,7 @@ body {
 .select-all-label {
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
 }
 
 .batch-actions-bar {
@@ -912,7 +913,7 @@ body {
     align-items: center;
     gap: var(--space-sm);
     color: var(--color-primary-darker);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     font-size: var(--text-sm);
 }
 

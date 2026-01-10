@@ -32,7 +32,7 @@ export class SCCircleBadge extends LitElement {
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            font-weight: 600;
+            font-weight: var(--font-weight-semibold);
             font-family: sans-serif;
             line-height: 1;
             box-sizing: border-box;

@@ -31,8 +31,8 @@
 
 .admin-nav-title {
     font-size: var(--text-md);
-    font-weight: 800;
-    padding: 0 0 var(--space-xs) 2var(--space-xs) ;
+    font-weight: var(--font-weight-bold);
+    padding: 0 0 8px 28px;
 }
 
 .admin-nav sl-menu {
@@ -50,7 +50,7 @@
     border-radius: var(--radius-lg);
     transition: var(--transition);
     padding: var(--space-xxs) var(--space-xs);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     font-size: var(--text-sm);
     font-family: var(--font-sans);
     color: var(--color-text);
@@ -88,7 +88,7 @@
 
 .admin-section-title {
     font-size: var(--text-xl);
-    font-weight: 300;
+    font-weight: var(--font-weight-light);
     margin: -9px 0 0 0 ;
     display: inline-block;
 }
@@ -113,7 +113,7 @@
 .admin-card-title {
     margin: 0;
     font-size: var(--text-md);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     
 }
 
@@ -167,7 +167,7 @@ width: 120px;
 
 .admin-label {
     display: block;
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     color: var(--text-secondary);
     margin-bottom: var(--space-xs);
     font-size: var(--text-sm);
@@ -222,8 +222,8 @@ width: 120px;
 }
 
 .admin-checkbox {
-    width: 1var(--space-xs);
-    height: 1var(--space-xs);
+    width: var(--space-xs);
+    height: var(--space-xs);
     accent-color: var(--color-primary);
 }
 
@@ -282,7 +282,7 @@ width: 120px;
 }
 
 .admin-user-name {
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     font-size: var(--text-md);
 }
 
@@ -296,14 +296,16 @@ width: 120px;
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+
 }
 
 .admin-badge {
-    padding: var(--space-xxs) var(--space-sm);
+    padding: 2px var(--space-xs);
     border-radius: var(--radius-md);
     font-size: var(--text-xs);
     color: var(--color-text-on-strong);
-    font-weight: 550;
+    font-weight: var(--font-weight-medium);
+    text-transform: lowercase;
 }
 
 .admin-badge-active {
@@ -355,11 +357,10 @@ width: 120px;
     display: block;
     font-size: var(--text-xs);
     color: var(--color-text-secondary);
-    margin-bottom: var(--space-xxs);
 }
 
 .admin-info-value {
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     
     font-size: var(--text-sm);
     word-break: break-all;
@@ -447,7 +448,7 @@ width: 120px;
 .admin-modal-title {
     margin: 0;
     font-size: var(--text-lg);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     
 }
 
@@ -508,13 +509,13 @@ width: 120px;
 
 .admin-table th,
 .admin-table td {
-    padding: 1var(--space-xxs) var(--space-md);
+    padding: var(--space-xxs) var(--space-md);
     text-align: left;
     border-bottom: 1px solid var(--color-accent);
 }
 
 .admin-table th {
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-secondary);
     font-size: var(--text-xs);
     text-transform: uppercase;
@@ -672,7 +673,7 @@ width: 120px;
 .admin-gap-2 { gap: var(--space-md); }
 .admin-gap-3 { gap: var(--space-lg); }
 
-@media (max-width: 10var(--space-lg)) {
+@media (max-width: 1var(--space-lg)) {
     .admin-main {
         flex-direction: column;
         padding: var(--space-md);
@@ -699,7 +700,7 @@ width: 120px;
     }
 }
 
-@media (max-width: 76var(--space-xs)) {
+@media (max-width: 7var(--space-xs)) {
     .admin-user-header {
         flex-direction: column;
         align-items: flex-start;
@@ -821,7 +822,7 @@ width: 120px;
 .admin-shift-segment label {
     display: block;
     font-size: var(--text-xs);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     color: var(--color-text-secondary);
     margin-bottom: var(--space-xxs);
 }
