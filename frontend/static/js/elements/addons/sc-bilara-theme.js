@@ -104,7 +104,7 @@ export const themes = {
       --color-accent: #e4f1de;
       --color-warning: #FF851B;
       --color-error: #ed8986;
-      --color-success:#70ea73;
+      --color-success: #70ea73;
       --color-info: #0074D9;
   `,
   'asura': css`
