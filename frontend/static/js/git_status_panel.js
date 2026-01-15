@@ -2,7 +2,9 @@ function gitStatusPanel() {
     return {
         files: [],
         selectedFile: null,
+        selectedFileData: null,
         loading: true,
+        publishing: false,
         loadingDiff: false,
         diffContent: '',
         diffError: null,
@@ -16,8 +18,16 @@ function gitStatusPanel() {
         showConfirmModal: false,
         fileToDiscard: null,
         discarding: false,
+        skipDiscardConfirm: false,
+        // Edit related state
+        showEditModal: false,
+        fileToEdit: null,
+        skipEditConfirm: false,
         // Publish related state
+        showPublishModal: false,
+        fileToPublish: null,
         publishingFile: null,
+        skipPublishConfirm: false,
         toast: {
             show: false,
             message: '',
@@ -126,9 +136,11 @@ function gitStatusPanel() {
             return Math.min(end, this.filteredFiles.length);
         },
 
-        toggleSortMode() {
-            this.sortMode = this.sortMode === 'default' ? 'date' : 'default';
-            this.currentPage = 1; // Reset to first page when sorting changes
+        setSortMode(mode) {
+            if (this.sortMode !== mode) {
+                this.sortMode = mode;
+                this.currentPage = 1; // Reset to first page when sorting changes
+            }
         },
 
         async refresh() {
@@ -183,6 +195,7 @@ function gitStatusPanel() {
             if (this.selectedFile === file.path) return;
 
             this.selectedFile = file.path;
+            this.selectedFileData = file;
             this.loadingDiff = true;
             this.diffContent = '';
             this.diffError = null;
@@ -261,16 +274,25 @@ function gitStatusPanel() {
 
         showDiscardConfirm(file) {
             this.fileToDiscard = file;
+            if (localStorage.getItem('skipDiscardConfirm') === 'true') {
+                this.confirmDiscard();
+                return;
+            }
             this.showConfirmModal = true;
         },
 
         closeConfirmModal() {
             this.showConfirmModal = false;
             this.fileToDiscard = null;
+            this.skipDiscardConfirm = false;
         },
 
         async confirmDiscard() {
             if (!this.fileToDiscard || this.discarding) return;
+
+            if (this.skipDiscardConfirm) {
+                localStorage.setItem('skipDiscardConfirm', 'true');
+            }
 
             this.discarding = true;
             try {
@@ -317,8 +339,115 @@ function gitStatusPanel() {
             }, 3000);
         },
 
+        showEditConfirm(file) {
+            this.fileToEdit = file;
+            if (localStorage.getItem('skipEditConfirm') === 'true') {
+                this.confirmEdit();
+                return;
+            }
+            this.showEditModal = true;
+        },
+
+        closeEditModal() {
+            this.showEditModal = false;
+            this.fileToEdit = null;
+            this.skipEditConfirm = false;
+        },
+
+        async confirmEdit() {
+            if (this.skipEditConfirm) {
+                localStorage.setItem('skipEditConfirm', 'true');
+            }
+
+            // if (!this.fileToEdit || !this.fileToEdit.path) return;
+            // console.log(`Navigating to edit file: ${this.fileToEdit.path}`);
+            // window.location.href = `/translation?path=${encodeURIComponent(this.fileToEdit.path)}`;
+
+            //this.fileToEdit.pathd的样例：translation/en/sujato/sutta/an/an1/an1.616-627_translation-en-sujato.json
+            // let elementFullName = this.fileToEdit.path || "";
+            // let elementMuid = elementFullName.split('/').pop().split('_')[1].split('.')[0] || "";
+            // let elementPrefix = elementFullName.split('/').pop().split('_')[0] || "";
+            // console.log(`Calculated values: ${elementFullName}, ${elementMuid}, ${elementPrefix}`);
+
+            // const response = await requestWithTokenRetry(`projects/${elementFullName}/source/`);
+            // const { muid: source } = await response.json();
+            // const muid = elementMuid === source ? "" : elementMuid;
+            // window.open(`/translation?prefix=${elementPrefix}&muid=${muid}&source=${source}`, '_blank');
+            // this.closeEditModal();
+
+            if (!this.fileToEdit || !this.fileToEdit.path) return;
+
+            try {
+                const elementFullName = this.fileToEdit.path;
+                const fileName = elementFullName.split('/').filter(Boolean).pop();
+
+                if (!fileName) {
+                    console.error('Invalid file path: unable to extract filename');
+                    this.showToast('Invalid file path', 'error');
+                    return;
+                }
+
+                const elementMuid = getMuid(elementFullName);
+                const elementPrefix = getPrefix(fileName);
+
+                if (!elementPrefix) {
+                    console.error('Invalid file name format: unable to extract prefix');
+                    this.showToast('Invalid file name format', 'error');
+                    return;
+                }
+
+                const response = await requestWithTokenRetry(`projects/${elementFullName}/source/`);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch source: ${response.status}`);
+                }
+
+                const { muid: source } = await response.json();
+                const muid = elementMuid === source ? "" : elementMuid;
+
+                window.open(`/translation?prefix=${elementPrefix}&muid=${muid}&source=${source}`, '_blank');
+                this.closeEditModal();
+            } catch (error) {
+                console.error('Error opening file for edit:', error);
+                this.showToast(`Failed to open file: ${error.message}`, 'error');
+            }
+        },
+
+        showPublishConfirm(file) {
+            this.fileToPublish = file;
+            if (localStorage.getItem('skipPublishConfirm') === 'true') {
+                this.confirmPublish();
+                return;
+            }
+            this.showPublishModal = true;
+        },
+
+        closePublishModal() {
+            this.showPublishModal = false;
+            this.fileToPublish = null;
+            this.skipPublishConfirm = false;
+        },
+
+        async confirmPublish() {
+            if (this.skipPublishConfirm) {
+                localStorage.setItem('skipPublishConfirm', 'true');
+            }
+
+            if (!this.fileToPublish) return;
+            await this.publishFile(this.fileToPublish);
+            this.closePublishModal();
+        },
+
+        editFile(file) {
+            if (!file || !file.path) return;
+            console.log(`Navigating to edit file: ${file.path}`);
+            // Navigate to the translation editor with the file path
+            // window.location.href = `/translation?path=${encodeURIComponent(file.path)}`;
+        },
+
         async publishFile(file) {
-            if (this.publishingFile) return;
+            if (this.publishing || this.publishingFile) return;
+            this.publishing = true;
 
             this.publishingFile = file.path;
             try {
@@ -350,6 +479,7 @@ function gitStatusPanel() {
                 this.showToast(error.message, 'error');
             } finally {
                 this.publishingFile = null;
+                this.publishing = false;
             }
         },
 
@@ -404,7 +534,56 @@ function gitStatusPanel() {
         },
 
         async batchPublish() {
-            return;
+            if (this.selectedFiles.length === 0) {
+                this.showToast('Please select at least one file to publish', 'error');
+                return;
+            }
+
+            const selectedFilePaths = [...this.selectedFiles];
+
+            const fileCount = selectedFilePaths.length;
+            const commitMessage = `Batch commit: ${fileCount} file${fileCount > 1 ? 's' : ''} updated`;
+
+            this.batchPublishing = true;
+            try {
+                const response = await fetch('/api/v1/git/commit', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        file_paths: selectedFilePaths,
+                        message: commitMessage
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.showToast(
+                        `Successfully started publishing ${fileCount} file${fileCount > 1 ? 's' : ''}. Task ID: ${data.task_id}`,
+                        'success'
+                    );
+                    this.clearSelection();
+                    setTimeout(async () => {
+                        await this.fetchStatus();
+                    }, 2000);
+                } else {
+                    const errorData = await response.json();
+                    this.showToast(
+                        `Error: ${errorData.detail || 'Failed to publish files'}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                console.error('Error publishing files:', error);
+                this.showToast(
+                    `Error publishing files: ${error.message}`,
+                    'error'
+                );
+            } finally {
+                this.batchPublishing = false;
+            }
         },
         showToast(message, type = 'success') {
             this.toast = { show: true, message, type };

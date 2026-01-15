@@ -83,21 +83,21 @@
                             </button>
                         </div>
                     </div>
-                    <div class="sort-controls">
-                        <button class="sort-btn"
-                                @click="toggleSortMode()"
-                                :class="{ active: sortMode === 'date' }"
-                                title="Sort by date (newest first)">
+                    <div class="sort-switch-wrapper">
+                        <span class="sort-label" :class="{ active: sortMode === 'date' }">
                             <i class="bi-clock-history"></i>
-                            <span>Newest</span>
-                        </button>
-                        <button class="sort-btn"
-                                @click="toggleSortMode()"
-                                :class="{ active: sortMode === 'author' }"
-                                title="Sort by author">
+                            Newest
+                        </span>
+                        <label class="sort-switch">
+                            <input type="checkbox"
+                                   :checked="sortMode === 'author'"
+                                   @change="sortMode = $event.target.checked ? 'author' : 'date'; currentPage = 1">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="sort-label" :class="{ active: sortMode === 'author' }">
                             <i class="bi-person"></i>
-                            <span>Author</span>
-                        </button>
+                            Author
+                        </span>
                     </div>
                 </div>
 
