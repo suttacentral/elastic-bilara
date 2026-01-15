@@ -60,7 +60,7 @@ async def search_path_tree(
                 for item in current_path.iterdir():
                     if item.is_dir():
                         # Skip TextType directories at root level
-                        if (current_path == root_dir and 
+                        if (current_path == root_dir and
                             item.name in {text_type.value for text_type in TextType}):
                             recursive_search(item)
                             continue
@@ -202,20 +202,55 @@ async def get_root_content(user: Annotated[UserBase, Depends(get_current_user)])
 async def get_dir_content(
     user: Annotated[UserBase, Depends(get_current_user)], target_path: Path = Depends(utils.validate_dir_path)
 ):
+    from app.db.database import get_sess
+    from app.db.models.translation_progress import TranslationProgress
+
     base = str(target_path.relative_to(settings.WORK_DIR)) + "/"
     directories = []
     files = []
+    files_with_progress = []
+
+    is_translation_dir = base.startswith("translation/")
+
+    progress_cache = {}
+    if is_translation_dir:
+        with get_sess() as db:
+            # Query all progress records for files in this directory
+            like_pattern = base + "%"
+            cached_records = db.query(TranslationProgress).filter(
+                TranslationProgress.file_path.like(like_pattern)
+            ).all()
+            for record in cached_records:
+                file_name = Path(record.file_path).name
+                progress_cache[file_name] = {
+                    "name": file_name,
+                    "progress": record.progress,
+                    "total_keys": record.total_keys,
+                    "translated_keys": record.translated_keys,
+                }
 
     for p in target_path.iterdir():
         if p.is_dir() and p.name not in {item.value for item in TextType}:
             dir_path = str(p.relative_to(settings.WORK_DIR)) + "/"
             directories.append(dir_path.replace(base, "", 1))
         elif p.is_file() and str(target_path) != str(settings.WORK_DIR):
+            file_name = p.name
             file_path = str(p.relative_to(settings.WORK_DIR))
             files.append(file_path.replace(base, "", 1))
+
+            if is_translation_dir:
+                if file_name in progress_cache:
+                    files_with_progress.append(progress_cache[file_name])
+                else:
+                    progress_info = utils.calculate_file_progress(p)
+                    files_with_progress.append(progress_info)
+
     directories.sort(key=lambda s: [int(c) if c.isdigit() else c for c in re.split('(\d+)', s)])
     files.sort(key=lambda s: [int(c) if c.isdigit() else c for c in re.split('(\d+)', s)])
-    return FilesAndDirsOut(base=base, directories=directories, files=files)
+    if files_with_progress:
+        files_with_progress.sort(key=lambda f: [int(c) if c.isdigit() else c for c in re.split('(\d+)', f["name"])])
+
+    return FilesAndDirsOut(base=base, directories=directories, files=files, files_with_progress=files_with_progress if is_translation_dir else None)
 
 
 @router.delete("/{path:path}/")

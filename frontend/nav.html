@@ -23,9 +23,10 @@
     <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
     <script src="./static/js/elements/addons/sc-bilara-how-to.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-toast.js"></script>
   </head>
 
-  <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
+  <body class="page-layout" x-data="getUserInfo()" x-init="await getRole(); if (!isActive) window.location.href = '/'">
     <header>
       <sc-bilara-nav-main></sc-bilara-nav-main>
       <sc-bilara-nav-main-mobile></sc-bilara-nav-main-mobile>
@@ -49,11 +50,48 @@
           <div x-cloak x-show="loading" class="modal">
             <div class="spinner"></div>
           </div>
-          <ul class="navigation-list" x-html="render()"></ul>
+          <ul class="navigation-list">
+            <template x-for="item in data" :key="item.fullName">
+              <li class="navigation-list__item" x-html="renderNode(item)"></li>
+            </template>
+          </ul>
+        </div>
+
+        <div x-show="showPublishModal" x-cloak class="modal-backdrop" @click.self="closePublishModal()">
+            <div class="modal-dialog">
+                <div class="modal-header modal-header-success">
+                    <i class="bi-cloud-upload-fill"></i>
+                    <h3>Publish File</h3>
+                </div>
+                <div class="modal-body">
+                    <p>This will request publication of <span class="file-name" x-text="publishingFile"></span></p>
+                    <p>A GitHub pull request will be automatically created to move the translations into the published branch.</p>
+                    <p>Click the accept button to proceed.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" @click="closePublishModal()">
+                        Cancel
+                    </button>
+                    <button class="modal-btn modal-btn-info" @click="reviewPublish()">
+                        Review
+                    </button>
+                    <button class="modal-btn modal-btn-success"
+                            @click="confirmPublish()"
+                            :disabled="isPublishing">
+                        <template x-if="isPublishing">
+                            <span>Publishing...</span>
+                        </template>
+                        <template x-if="!isPublishing">
+                            <span>Accept</span>
+                        </template>
+                    </button>
+                </div>
+            </div>
         </div>
       </div>
     </main>
 
     <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+    <sc-bilara-toast></sc-bilara-toast>
   </body>
 </html>

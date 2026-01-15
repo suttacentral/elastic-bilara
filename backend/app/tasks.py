@@ -72,7 +72,7 @@ def commit(user: dict, file_paths: list[str], message: str, add: bool = True) ->
     user_data = UserBase(**user)
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
     git_operation = GitManager.add if add else GitManager.remove
-    
+
     if not (
         git_operation(manager.unpublished, paths)
         and GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
@@ -124,3 +124,135 @@ def push(user_data: dict, branch_name: str, remote_name: str = "origin") -> None
     branch = manager.get_branch(branch_name)
 
     manager.push(branch, remote_name, branch_name)
+
+
+@app.task(name="update_all_translation_progress", queue="commit_queue")
+def update_all_translation_progress() -> dict:
+    from pathlib import Path
+    from datetime import datetime
+    from app.db.database import get_sess
+    from app.db.models.translation_progress import TranslationProgress
+    from search.utils import find_root_path, get_json_data, get_muid, get_prefix
+
+    translation_dir = settings.WORK_DIR / "translation"
+    if not translation_dir.exists():
+        return {"status": "error", "message": "Translation directory not found"}
+
+    updated_count = 0
+    error_count = 0
+
+    with get_sess() as db:
+        for file_path in translation_dir.rglob("*.json"):
+            try:
+                source_path = find_root_path(file_path)
+                if not source_path:
+                    continue
+
+                translation_data = get_json_data(file_path)
+                source_data = get_json_data(source_path)
+
+                total_keys = len(source_data)
+                translated_keys = sum(
+                    1 for key in source_data
+                    if key in translation_data and translation_data[key] and str(translation_data[key]).strip()
+                )
+                progress = (translated_keys / total_keys * 100) if total_keys > 0 else 0.0
+
+                relative_path = str(file_path.relative_to(settings.WORK_DIR))
+
+                existing = db.query(TranslationProgress).filter(
+                    TranslationProgress.file_path == relative_path
+                ).first()
+
+                if existing:
+                    existing.progress = round(progress, 2)
+                    existing.total_keys = total_keys
+                    existing.translated_keys = translated_keys
+                    existing.updated_at = datetime.utcnow()
+                else:
+                    new_record = TranslationProgress(
+                        file_path=relative_path,
+                        prefix=get_prefix(file_path),
+                        muid=get_muid(file_path),
+                        progress=round(progress, 2),
+                        total_keys=total_keys,
+                        translated_keys=translated_keys,
+                    )
+                    db.add(new_record)
+
+                updated_count += 1
+
+            except Exception as e:
+                error_count += 1
+                print(f"Error processing {file_path}: {e}")
+
+        db.commit()
+
+    return {
+        "status": "success",
+        "updated_count": updated_count,
+        "error_count": error_count,
+    }
+
+
+@app.task(name="update_file_translation_progress", queue="commit_queue")
+def update_file_translation_progress(file_path: str) -> dict:
+    from pathlib import Path
+    from datetime import datetime
+    from app.db.database import get_sess
+    from app.db.models.translation_progress import TranslationProgress
+    from search.utils import find_root_path, get_json_data, get_muid, get_prefix
+
+    path = Path(file_path) if Path(file_path).is_absolute() else settings.WORK_DIR / file_path
+
+    if not path.exists() or not path.suffix == ".json":
+        return {"status": "error", "message": f"File not found: {file_path}"}
+
+    try:
+        source_path = find_root_path(path)
+        if not source_path:
+            return {"status": "error", "message": "Source file not found"}
+
+        translation_data = get_json_data(path)
+        source_data = get_json_data(source_path)
+
+        total_keys = len(source_data)
+        translated_keys = sum(
+            1 for key in source_data
+            if key in translation_data and translation_data[key] and str(translation_data[key]).strip()
+        )
+        progress = (translated_keys / total_keys * 100) if total_keys > 0 else 0.0
+
+        relative_path = str(path.relative_to(settings.WORK_DIR))
+
+        with get_sess() as db:
+            existing = db.query(TranslationProgress).filter(
+                TranslationProgress.file_path == relative_path
+            ).first()
+
+            if existing:
+                existing.progress = round(progress, 2)
+                existing.total_keys = total_keys
+                existing.translated_keys = translated_keys
+                existing.updated_at = datetime.utcnow()
+            else:
+                new_record = TranslationProgress(
+                    file_path=relative_path,
+                    prefix=get_prefix(path),
+                    muid=get_muid(path),
+                    progress=round(progress, 2),
+                    total_keys=total_keys,
+                    translated_keys=translated_keys,
+                )
+                db.add(new_record)
+
+            db.commit()
+
+        return {
+            "status": "success",
+            "file_path": relative_path,
+            "progress": round(progress, 2),
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

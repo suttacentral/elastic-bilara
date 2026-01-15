@@ -123,7 +123,7 @@ export class SCCircleBadge extends LitElement {
             border-radius: 50%;
             background-color: inherit;
             opacity: 0.6;
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) 2;
         }
 
         @keyframes pulse {
