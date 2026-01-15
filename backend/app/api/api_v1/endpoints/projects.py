@@ -259,6 +259,12 @@ async def update_json_data_for_prefix_in_project(
         if isinstance(error, KeyError):
             code = status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=code, detail=str(error).strip("'"))
+
+    # Trigger async progress update
+    from app.tasks import update_file_translation_progress
+    relative_path = str(path).replace(str(settings.WORK_DIR), "").lstrip("/")
+    update_file_translation_progress.delay(relative_path)
+
     return JSONDataOut(can_edit=True, data=data, task_id=task_id)
 
 
@@ -267,6 +273,101 @@ async def get_source_muid(user: Annotated[UserBase, Depends(utils.get_current_us
     target_path = validate_path(str(path))
     source = find_root_path(target_path)
     return {"muid": get_muid(source), "path": str(source).replace(str(settings.WORK_DIR), "")}
+
+
+@router.get("/{path:path}/translation-progress/")
+async def get_translation_progress(
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    path: Path
+):
+    """
+    Get translation progress for a given file path.
+    Reads from cache if available, otherwise calculates and caches.
+
+    Returns:
+        - total_keys: Total number of keys in the root/source file
+        - translated_keys: Number of non-empty translations
+        - progress: Percentage of completion (0-100)
+    """
+    from app.db.database import get_sess
+    from app.db.models.translation_progress import TranslationProgress
+    from datetime import datetime, timedelta
+
+    target_path = validate_path(str(path))
+    relative_path = str(target_path.relative_to(settings.WORK_DIR))
+
+    # Try to get from cache first
+    with get_sess() as db:
+        cached = db.query(TranslationProgress).filter(
+            TranslationProgress.file_path == relative_path
+        ).first()
+
+        # Return cached data if exists and not too old (< 24 hours)
+        if cached and cached.updated_at > datetime.utcnow() - timedelta(hours=24):
+            return {
+                "total_keys": cached.total_keys,
+                "translated_keys": cached.translated_keys,
+                "progress": cached.progress,
+                "source_path": "",
+                "cached": True
+            }
+
+    # Calculate progress if no cache
+    source_path = find_root_path(target_path)
+    if not source_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Source file for '{path}' not found"
+        )
+
+    try:
+        translation_data = get_json_data(target_path)
+        source_data = get_json_data(source_path)
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File not found: {e}"
+        )
+
+    total_keys = len(source_data)
+    translated_keys = sum(
+        1 for key in source_data
+        if key in translation_data and translation_data[key] and str(translation_data[key]).strip()
+    )
+
+    progress = (translated_keys / total_keys * 100) if total_keys > 0 else 0.0
+    progress = round(progress, 2)
+
+    # Update cache
+    with get_sess() as db:
+        cached = db.query(TranslationProgress).filter(
+            TranslationProgress.file_path == relative_path
+        ).first()
+
+        if cached:
+            cached.progress = progress
+            cached.total_keys = total_keys
+            cached.translated_keys = translated_keys
+            cached.updated_at = datetime.utcnow()
+        else:
+            new_record = TranslationProgress(
+                file_path=relative_path,
+                prefix=get_prefix(target_path),
+                muid=get_muid(target_path),
+                progress=progress,
+                total_keys=total_keys,
+                translated_keys=translated_keys,
+            )
+            db.add(new_record)
+        db.commit()
+
+    return {
+        "total_keys": total_keys,
+        "translated_keys": translated_keys,
+        "progress": progress,
+        "source_path": str(source_path).replace(str(settings.WORK_DIR), ""),
+        "cached": False
+    }
 
 
 @router.post(

@@ -12,7 +12,7 @@ from app.services.auth import utils
 from app.services.git.manager import GitManager
 from app.services.users import permissions
 from app.services.users.utils import get_user
-from app.tasks import pull, push
+from app.tasks import commit, pull, push
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pygit2 import (
     GitError,
@@ -44,7 +44,7 @@ router = APIRouter(prefix="/git")
     "/status",
     response_model=GitStatusResponse,
     description="Get the git status of the unpublished repository",
-    # dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
+    dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
 )
 async def get_git_status() -> GitStatusResponse:
     """Get the status of all modified files in the unpublished repository"""
@@ -71,18 +71,18 @@ async def get_git_status() -> GitStatusResponse:
     except GitError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Git error: {str(e)}"
-        )
+            detail=f"Git error: {str(e)}",
+        ) from e
     except PermissionError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Permission denied: {str(e)}"
-        )
+            detail=f"Permission denied: {str(e)}",
+        ) from e
     except OSError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"OS error: {str(e)}"
-        )
+            detail=f"OS error: {str(e)}",
+        ) from e
 
 
 def fileFilter(filepath: Path) -> bool:
@@ -345,3 +345,46 @@ def parse_payload(payload: str) -> dict:
     payload_json_str = payload_query_str.split("=", 1)[1]
     payload_dict = json.loads(payload_json_str)
     return payload_dict
+
+
+class CommitRequest(BaseModel):
+    file_paths: list[str]
+    message: str
+
+
+class CommitResponse(BaseModel):
+    task_id: str
+    detail: str
+
+
+@router.post(
+    "/commit",
+    response_model=CommitResponse,
+    status_code=status.HTTP_201_CREATED,
+    description="Commit and push selected files to the unpublished repository",
+    dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
+)
+async def commit_files(
+    request: CommitRequest,
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+) -> CommitResponse:
+    """Commit and push selected files to the unpublished repository"""
+    if not request.file_paths:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="file_paths cannot be empty"
+        )
+
+    if not request.message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="commit message cannot be empty"
+        )
+
+    user_data = get_user(int(user.github_id))
+    result = commit.delay(user_data.model_dump(), request.file_paths, request.message, add=True)
+
+    return CommitResponse(
+        task_id=result.id,
+        detail=f"Commit task has been triggered for {len(request.file_paths)} file(s)"
+    )

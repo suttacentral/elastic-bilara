@@ -19,9 +19,6 @@ from app.db.schemas.user_preference import UserPreference, UserPreferenceUpdate
 
 router = APIRouter(prefix="/notifications")
 
-DEFAULT_AUTHOR = 'sujato'
-DEFAULT_LANG = 'en'
-
 
 @router.get("/git", response_model=GitCommitInfoOut)
 def get_unread_git_updates(
@@ -38,7 +35,7 @@ def get_unread_git_updates(
         )
 
         if preference:
-            selected_authors = preference.notification_authors or ["sujato"]
+            selected_authors = preference.notification_authors
             selected_days = preference.notification_days or 360
         else:
             # Use default values
@@ -152,12 +149,12 @@ def get_unread_git_updates(
                         'file_name': file_name,
                         'file_type': file_type,
                         'uid': uid,
-                        'author': author_id or DEFAULT_AUTHOR,
-                        'lang': lang or DEFAULT_LANG,
+                        'author': author_id,
+                        'lang': lang,
                         'sc_url': build_suttacentral_url(
                             uid,
-                            lang or DEFAULT_LANG,
-                            author_id or DEFAULT_AUTHOR
+                            lang,
+                            author_id
                         ),
                         'change_detail': format_diff_as_html(
                             change_detail,
@@ -348,7 +345,7 @@ def get_user_preferences(
                 id=preference.id,
                 github_id=preference.github_id,
                 notification_authors=(
-                    preference.notification_authors or ["sujato"]
+                    preference.notification_authors
                 ),
                 notification_days=preference.notification_days or 360
             )
