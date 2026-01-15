@@ -18,7 +18,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
       <style>
           .project-header__message {
               font-size: 3rem;
-              font-weight: 600;
+              font-weight: var(--font-weight-semibold);
               padding-left: 15px;
           }
       </style>

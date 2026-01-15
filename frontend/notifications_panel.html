@@ -32,15 +32,15 @@
             <header class="page-header">
                 <div class="page-title">
                     <i class="bi-bell"></i>
-                    <span>Notifications</span>
-                    <span class="subtitle">Recent Git Commits</span>
+                    <h1>Translation changes</h1>
+                    <span class="subtitle">when you have subscribed to other translators, their changes will appear here</span>
                 </div>
                 <div class="header-actions">
-                    <button class="header-btn" @click="refresh()" :disabled="loading">
+                    <button class="btn header-btn" @click="refresh()" :disabled="loading">
                         <i class="bi-arrow-clockwise"></i>
                         Refresh
                     </button>
-                    <button class="header-btn" @click="openSettings()" :disabled="loading">
+                    <button class="btn header-btn" @click="openSettings()" :disabled="loading">
                         <i class="bi-gear"></i>
                         Settings
                     </button>
@@ -77,7 +77,7 @@
                                    class="filter-input">
                             <button x-show="filterText"
                                     @click="filterText = ''; currentPage = 1"
-                                    class="clear-btn"
+                                    class="btn clear-btn"
                                     title="Clear filter">
                                 <i class="bi-x"></i>
                             </button>
@@ -117,7 +117,7 @@
                         <i class="bi-bell-slash"></i>
                         <div>
                             <strong>No notifications</strong>
-                            <p style="font-size: 0.875rem; margin-top: 4px;">You're all caught up!</p>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;">You're all caught up!</p>
                         </div>
                     </div>
 
@@ -126,7 +126,7 @@
                             <i class="bi-search"></i>
                             <div>
                                 <strong>No results found</strong>
-                                <p style="font-size: 0.875rem; margin-top: 4px;">No notifications match your filter criteria</p>
+                                <p style="font-size: var(--text-sm); margin-top: 4px;">No notifications match your filter criteria</p>
                             </div>
                         </div>
 
@@ -215,7 +215,7 @@
                         <span>Affected Files</span>
                     </div>
                     <span x-show="selectedNotification"
-                          style="font-size: 0.75rem; font-family: monospace; color: var(--color-text-secondary);"
+                          style="font-size: var(--text-xs); font-family: monospace; color: var(--color-text-secondary);"
                           x-text="selectedNotification ? 'Commit: ' + selectedNotification.substring(0, 8) + '...' : ''">
                     </span>
                 </div>
@@ -230,7 +230,7 @@
                             <i class="bi-file-earmark-code"></i>
                             <div>
                                 <strong>Select a notification</strong>
-                                <p style="font-size: 0.875rem; margin-top: 4px;">Click on a notification to view affected files</p>
+                                <p style="font-size: var(--text-sm); margin-top: 4px;">Click on a notification to view affected files</p>
                             </div>
                         </div>
 
@@ -283,7 +283,7 @@
                             <i class="bi-exclamation-triangle" style="color: var(--color-error);"></i>
                             <div>
                                 <strong>Error loading details</strong>
-                                <p style="font-size: 0.875rem; margin-top: 4px;" x-text="detailError"></p>
+                                <p style="font-size: var(--text-sm); margin-top: 4px;" x-text="detailError"></p>
                             </div>
                         </div>
                     </div>
@@ -379,12 +379,12 @@
                     </div>
 
                     <div class="modal-footer">
-                        <button class="modal-btn modal-btn-cancel"
+                        <button class="btn modal-btn modal-btn-cancel"
                                 @click="showSettingsModal = false"
                                 type="button">
                             Cancel
                         </button>
-                        <button class="modal-btn modal-btn-primary"
+                        <button class="btn modal-btn modal-btn-primary"
                                 @click="savePreferences()"
                                 :disabled="selectedAuthors.length === 0"
                                 type="button">

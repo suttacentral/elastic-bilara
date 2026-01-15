@@ -44,7 +44,6 @@ export class SCBilaraNavMain extends LitElement {
                         x-bind:alt="username + 's github profile picture'"
                         class="user-avatar"
                         title="profile picture"/>
-                      <figcaption x-text="username"></figcaption>
                   </div>
                   <sl-menu>
                     <sl-menu-item>

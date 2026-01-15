@@ -1,15 +1,16 @@
 .btn {
-    padding: 0 var(--space-sm);
+    padding: var(--space-xxs) var(--space-sm);
     border-radius: var(--radius-sm);
     border: 2px solid transparent;
     font-size: var(--btn-font-size);
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease, border 0.3s ease;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    display: inline-block;
-    vertical-align: middle;
+    font-weight: var(--font-weight-medium);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    line-height: 1;
+    height: var(--text-xxl);
 }
 
 .btn:hover {
@@ -17,11 +18,16 @@
 }
 
 .btn:active {
-    border: 2px dashed var(--color-text-accent);
+    border: 2px dashed var(--color-secondary);
 }
 
 .btn--main, .btn--admin {
     background-color: var(--color-background-secondary);
+}
+
+.btn i {
+    font-size: var(--text-md);
+    line-height: 0;
 }
 
 .main-nav-mobile__burger {

@@ -19,10 +19,10 @@
 }
 
  [x-text=username]{
-    color: var(--color-white);
+    color: var(--color-text-on-strong);
     font-style: italic;
     font-size: var(--text-sm);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     margin-top: -8px;
     text-shadow: var(--shadow-md);
 }

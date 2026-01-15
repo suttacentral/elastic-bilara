@@ -26,7 +26,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="./static/css/components/tooltip.css"/>
     <link rel="stylesheet" href="./static/css/components/modals.css"/>
-    <link rel="stylesheet" href="./static/css/variables/colors.css"/>
     <link rel="stylesheet" href="./static/css/style.css"/>
     <link rel="stylesheet" href="./static/css/pages/admin.css"/>
     <link rel="stylesheet" href="./static/css/main.css">
@@ -67,67 +66,7 @@
                 <div class="admin-section-header">
                     <h1 class="admin-section-title">User Management</h1>
                 </div>
-                <!-- Add User Form -->
-                <div x-data="{open: false, newUser: {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}}">
-                    <!-- Toggle Button -->
-                    <div class="admin-toolbar">
-                        <div></div>
-                        <button class="admin-btn admin-btn-secondary" @click="open = !open">
-                            <i :class="open ? 'bi-dash-circle' : 'bi-plus-circle'"></i>
-                            <span x-text="open ? 'Cancel' : 'Add User'"></span>
-                        </button>
-                    </div>
-                    <!-- Add User Form Card -->
-                    <div x-cloak x-show="open" class="admin-card admin-mb-3">
-                        <div class="admin-card-header">
-                            <h3 class="admin-card-title">Add New User</h3>
-                        </div>
-                        <div class="admin-card-body">
-                            <form @submit.prevent="await createUser(newUser); await getUsers(); open=!open; newUser = {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}">
-                                <div class="admin-form-row">
-                                    <div class="admin-form-group">
-                                        <label for="githubId" class="admin-label">Github ID</label>
-                                        <input type="text" id="githubId" x-model="newUser.githubId"
-                                               class="admin-input" placeholder="Enter GitHub ID">
-                                    </div>
-                                    <div class="admin-form-group">
-                                        <label for="role" class="admin-label">Role</label>
-                                        <select name="role" id="role" x-model="newUser.role" class="admin-select">
-                                            <template x-for="role in ROLES">
-                                                <option x-text="role" :value="role" :selected="role === 'writer'"></option>
-                                            </template>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="admin-form-row">
-                                    <div class="admin-form-group">
-                                        <label for="username" class="admin-label">Username</label>
-                                        <input type="text" id="username" x-model="newUser.username"
-                                               class="admin-input" placeholder="Enter username">
-                                    </div>
-                                    <div class="admin-form-group">
-                                        <label for="email" class="admin-label">Email</label>
-                                        <input type="email" id="email" x-model="newUser.email"
-                                               class="admin-input" placeholder="Enter email">
-                                    </div>
-                                </div>
-                                <div class="admin-form-row">
-                                    <div class="admin-form-group">
-                                        <label for="avatarUrl" class="admin-label">Avatar URL</label>
-                                        <input type="text" id="avatarUrl" x-model="newUser.avatarUrl"
-                                               class="admin-input" placeholder="Enter avatar URL">
-                                    </div>
-                                    <div class="admin-form-group admin-form-actions">
-                                        <button type="submit" class="admin-btn admin-btn-primary">
-                                            <i class="bi-plus-circle"></i>
-                                            Create User
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                
 
                 <ul class="admin-user-list">
                     <template x-for="(user, key) in users" :key="user.id">
@@ -204,7 +143,7 @@
                                 </div>
                                 <!-- Delete Action -->
                                 <div class="admin-user-actions" x-data="{ modalShown: false, selectedUser: null }">
-                                    <button class="admin-btn admin-btn-danger"
+                                    <button class="btn admin-btn admin-btn-danger"
                                             @click.prevent="selectedUser = user; modalShown = true">
                                         <i class="bi-trash"></i>
                                         Delete User
@@ -224,11 +163,11 @@
                                                 </div>
                                             </div>
                                             <div class="admin-modal-footer">
-                                                <button @click="modalShown = false" class="admin-btn admin-btn-secondary">
+                                                <button @click="modalShown = false" class="btn admin-btn admin-btn-secondary">
                                                     Cancel
                                                 </button>
                                                 <button @click.prevent="await deleteUser(selectedUser.github_id); await getUsers(); modalShown = false; selectedUser = null"
-                                                        class="admin-btn admin-btn-danger">
+                                                        class="btn admin-btn admin-btn-danger">
                                                     Delete
                                                 </button>
                                             </div>
@@ -239,6 +178,67 @@
                         </li>
                     </template>
                 </ul>
+                <!-- Add User Form -->
+                <div x-data="{open: false, newUser: {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}}">
+                    <!-- Toggle Button -->
+                    <div class="admin-toolbar">
+                        <div></div>
+                        <button class="btn admin-btn admin-btn-secondary" @click="open = !open">
+                            <i :class="open ? 'bi-dash-circle' : 'bi-plus-circle'"></i>
+                            <span x-text="open ? 'Cancel' : 'Add User'"></span>
+                        </button>
+                    </div>
+                    <!-- Add User Form Card -->
+                    <div x-cloak x-show="open" class="admin-card admin-mb-3">
+                        <div class="admin-card-header">
+                            <h3 class="admin-card-title">Add New User</h3>
+                        </div>
+                        <div class="admin-card-body">
+                            <form @submit.prevent="await createUser(newUser); await getUsers(); open=!open; newUser = {githubId: '', username: '', email: '', avatarUrl: '', role: 'writer'}">
+                                <div class="admin-form-row">
+                                    <div class="admin-form-group">
+                                        <label for="githubId" class="admin-label">Github ID</label>
+                                        <input type="text" id="githubId" x-model="newUser.githubId"
+                                               class="admin-input" placeholder="Enter GitHub ID">
+                                    </div>
+                                    <div class="admin-form-group">
+                                        <label for="role" class="admin-label">Role</label>
+                                        <select name="role" id="role" x-model="newUser.role" class="admin-select">
+                                            <template x-for="role in ROLES">
+                                                <option x-text="role" :value="role" :selected="role === 'writer'"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="admin-form-row">
+                                    <div class="admin-form-group">
+                                        <label for="username" class="admin-label">Username</label>
+                                        <input type="text" id="username" x-model="newUser.username"
+                                               class="admin-input" placeholder="Enter username">
+                                    </div>
+                                    <div class="admin-form-group">
+                                        <label for="email" class="admin-label">Email</label>
+                                        <input type="email" id="email" x-model="newUser.email"
+                                               class="admin-input" placeholder="Enter email">
+                                    </div>
+                                </div>
+                                <div class="admin-form-row">
+                                    <div class="admin-form-group">
+                                        <label for="avatarUrl" class="admin-label">Avatar URL</label>
+                                        <input type="text" id="avatarUrl" x-model="newUser.avatarUrl"
+                                               class="admin-input" placeholder="Enter avatar URL">
+                                    </div>
+                                    <div class="admin-form-group admin-form-actions">
+                                        <button type="submit" class="btn admin-btn admin-btn-primary">
+                                            <i class="bi-plus-circle"></i>
+                                            Create User
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
             <!-- ==================== PROJECTS SECTION ==================== -->
             <div x-cloak x-show="dataTypes.projects.isVisible" x-data="dataTypes.projects">
@@ -247,10 +247,10 @@
                 </div>
                 <!-- Toggle Buttons -->
                 <div class="admin-projects-toggle">
-                    <button x-on:click="toggleAdd()" class="admin-btn admin-btn-primary">
+                    <button x-on:click="toggleAdd()" class="btn admin-btn admin-btn-primary">
                         <i class="bi-plus-circle"></i> Add Project
                     </button>
-                    <button x-on:click="toggleRemove()" class="admin-btn admin-btn-danger">
+                    <button x-on:click="toggleRemove()" class="btn admin-btn admin-btn-danger">
                         <i class="bi-trash"></i> Remove Project
                     </button>
                 </div>
@@ -302,7 +302,7 @@
                                            placeholder="en" x-on:input.debounce.500ms="checkLanguageCode">
                                 </div>
                                 <div class="admin-form-actions">
-                                    <button @click.prevent="await handleSubmit()" class="admin-btn admin-btn-primary">
+                                    <button @click.prevent="await handleSubmit()" class="btn admin-btn admin-btn-primary">
                                         <i class="bi-plus-circle"></i> Create
                                     </button>
                                 </div>
@@ -349,7 +349,7 @@
                                 </div>
                                 <div class="admin-form-actions">
                                     <button @click.prevent="await handleSubmit(true)"
-                                            class="admin-btn admin-btn-danger" x-bind:disabled="!validPath">
+                                            class="btn admin-btn admin-btn-danger" x-bind:disabled="!validPath">
                                         <i class="bi-trash"></i> Delete
                                     </button>
                                 </div>
@@ -389,7 +389,7 @@
                                     </template>
                                 </ul>
                                 <div class="admin-form-actions admin-mt-2">
-                                    <button @click.prevent="modal = !modal" class="admin-btn admin-btn-danger">
+                                    <button @click.prevent="modal = !modal" class="btn admin-btn admin-btn-danger">
                                         <i class="bi-trash"></i> Confirm Delete
                                     </button>
                                 </div>
@@ -408,9 +408,9 @@
                                     </div>
                                 </div>
                                 <div class="admin-modal-footer">
-                                    <button @click.prevent="modal = !modal" class="admin-btn admin-btn-secondary">No</button>
+                                    <button @click.prevent="modal = !modal" class="btn admin-btn admin-btn-secondary">No</button>
                                     <button @click.prevent="await handleSubmit(false); modal = !modal"
-                                            class="admin-btn admin-btn-danger">Yes, Delete</button>
+                                            class="btn admin-btn admin-btn-danger">Yes, Delete</button>
                                 </div>
                             </div>
                         </div>
@@ -439,7 +439,7 @@
                                     <option x-bind:value="file"></option>
                                 </template>
                             </datalist>
-                            <button @click.prevent="await create()" class="admin-btn admin-btn-primary">
+                            <button @click.prevent="await create()" class="btn admin-btn admin-btn-primary">
                                 <i class="bi-plus-circle"></i> Create
                             </button>
                             <div id="loadingContainer"></div>
@@ -519,7 +519,7 @@
                                         <li class="admin-tag" x-text="id" @click="removeSegment(id)"></li>
                                     </template>
                                 </ul>
-                                <button @click="await handleSubmit(true)" class="admin-btn admin-btn-primary"
+                                <button @click="await handleSubmit(true)" class="btn admin-btn admin-btn-primary"
                                         :disabled="!selectedIDs.length > 0">
                                     <i class="bi-arrows-expand"></i> Shift
                                 </button>
@@ -583,7 +583,7 @@
                         </template>
                     </div>
                     <div class="admin-form-actions admin-mt-2">
-                        <button @click.prevent="modal = !modal" class="admin-btn admin-btn-danger">
+                        <button @click.prevent="modal = !modal" class="btn admin-btn admin-btn-danger">
                             <i class="bi-arrows-expand"></i> Apply Shift
                         </button>
                     </div>
@@ -600,9 +600,9 @@
                                 </div>
                             </div>
                             <div class="admin-modal-footer">
-                                <button @click.prevent="modal = !modal" class="admin-btn admin-btn-secondary">No</button>
+                                <button @click.prevent="modal = !modal" class="btn admin-btn admin-btn-secondary">No</button>
                                 <button @click.prevent="modal = !modal; await handleSubmit(false)"
-                                        class="admin-btn admin-btn-danger">Yes, Apply</button>
+                                        class="btn admin-btn admin-btn-danger">Yes, Apply</button>
                             </div>
                         </div>
                     </div>

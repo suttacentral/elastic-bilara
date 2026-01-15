@@ -43,13 +43,13 @@ export class ScBilaraToast extends LitElement {
             gap: var(--space-sm);
             padding: var(--space-md) var(--space-lg);
             background: var(--color-black);
-            color: var(--color-white);
+            color: var(--color-text-on-strong);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
             z-index: 1001;
             animation: toastIn 0.3s ease;
             font-family: inherit;
-            font-size: 0.875rem;
+            font-size: var(--text-sm);
             max-width: 400px;
         }
 
@@ -66,7 +66,7 @@ export class ScBilaraToast extends LitElement {
         }
 
         .toast i {
-            font-size: 1.25rem;
+            font-size: var(--text-lg);
             flex-shrink: 0;
         }
 

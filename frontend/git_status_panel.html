@@ -34,11 +34,11 @@
             <header class="page-header">
                 <div class="page-title">
                     <i class="bi-git"></i>
-                    <span>Unpublished Changes</span>
-                    <span class="subtitle">/backend/checkouts/unpublished</span>
+                    <h1>Unpublished Changes</h1>
+                    <span class="subtitle">here you can review your unpublished changes</span>
                 </div>
                 <div class="header-actions">
-                    <button class="header-btn" @click="refresh()" :disabled="loading">
+                    <button class="btn header-btn" @click="refresh()" :disabled="loading">
                         <i class="bi-arrow-clockwise"></i>
                         Refresh
                     </button>
@@ -84,7 +84,7 @@
                                class="filter-input">
                         <button x-show="filterText"
                                 @click="filterText = ''; currentPage = 1"
-                                class="clear-btn"
+                                class="btn clear-btn"
                                 title="Clear filter">
                             <i class="bi-x"></i>
                         </button>
@@ -114,11 +114,11 @@
                     <span x-text="`${selectedFiles.length} file(s) selected`"></span>
                 </div>
                 <div class="batch-buttons">
-                    <button class="batch-btn batch-btn-clear" @click="clearSelection()">
-                        <i class="bi-x-lg"></i>
+                    <button class="btn batch-btn batch-btn-clear" @click="clearSelection()">
+                        <i class="bi-x-circle"></i>
                         Clear Selection
                     </button>
-                    <button class="batch-btn batch-btn-publish"
+                    <button class="btn batch-btn batch-btn-publish"
                             :class="{ 'loading': batchPublishing }"
                             @click="batchPublish()"
                             :disabled="batchPublishing">
@@ -143,7 +143,7 @@
                     <i class="bi-check-circle"></i>
                     <div>
                         <strong>Working directory clean</strong>
-                        <p style="font-size: 0.875rem; margin-top: 4px;">No uncommitted changes detected</p>
+                        <p style="font-size: var(--text-sm); margin-top: 4px;">No uncommitted changes detected</p>
                     </div>
                 </div>
 
@@ -164,7 +164,7 @@
                         <i class="bi-inbox"></i>
                         <div>
                             <strong>No files for your user</strong>
-                            <p style="font-size: 0.875rem; margin-top: 4px;">There are no uncommitted changes in directories related to <strong x-text="username"></strong></p>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;">There are no uncommitted changes in directories related to <strong x-text="username"></strong></p>
                         </div>
                     </div>
 
@@ -172,7 +172,7 @@
                         <i class="bi-search"></i>
                         <div>
                             <strong>No files found</strong>
-                            <p style="font-size: 0.875rem; margin-top: 4px;">No files match your filter criteria</p>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;">No files match your filter criteria</p>
                         </div>
                     </div>
                     <template x-for="(file, index) in paginatedFiles" :key="file.path">
@@ -287,7 +287,7 @@
                         <i class="bi-file-earmark-code"></i>
                         <div>
                             <strong>Select a file</strong>
-                            <p style="font-size: 0.875rem; margin-top: 4px;">Click on a file to view its changes</p>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;">Click on a file to view its changes</p>
                         </div>
                     </div>
 
@@ -302,7 +302,7 @@
                         <i class="bi-exclamation-triangle" style="color: var(--color-error);"></i>
                         <div>
                             <strong>Error loading diff</strong>
-                            <p style="font-size: 0.875rem; margin-top: 4px;" x-text="diffError"></p>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;" x-text="diffError"></p>
                         </div>
                     </div>
                 </div>

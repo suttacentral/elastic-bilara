@@ -9,7 +9,7 @@
 }
 
 #how-to-details summary{
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     font-style: italic;
     font-family: var(--font-serif);
 }
@@ -45,6 +45,7 @@
     text-decoration: underline;
     text-underline-offset: 4px;
     text-decoration-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 #how-to-details  a:hover {
