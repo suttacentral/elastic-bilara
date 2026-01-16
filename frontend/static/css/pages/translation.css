@@ -1,29 +1,4 @@
 :root {
-    --translation-primary: var(--color-primary, #8b6914);
-    --translation-primary-light: var(--color-background-secondary, #f5f0e1);
-    --translation-primary-lighter: var(--color-background, #faf8f3);
-
-    --translation-accent: var(--color-accent, rgba(255, 194, 2, 0.3));
-    --translation-accent-light: var(--color-background-secondary, #e8f4f4);
-
-    --translation-text: var(--color-text, #333);
-    --translation-text-secondary: var(--color-text-secondary, #666);
-    --translation-text-muted: var(--color-text-secondary, #999);
-
-    --translation-border: var(--color-background-tertiary, #e0dcd0);
-    --translation-border-light: var(--color-background-secondary, #f0ede5);
-    --translation-shadow: rgba(0, 0, 0, 0.08);
-
-    --translation-success: var(--color-success, #28a745);
-    --translation-warning: var(--color-warning, #ffc107);
-
-    --translation-radius: 6px;
-    --translation-radius-lg: 10px;
-    --translation-transition: all 0.2s ease;
-
-    --translation-header-height: 48px;
-    --translation-footer-height: 60px;
-    --translation-uid-width: 120px;
 
     --translation-badge-translation: #2a6b6b;
     --translation-badge-comment: #6b4c9a;
@@ -31,6 +6,7 @@
     --translation-badge-variant: #ff7a00;
     --translation-badge-html: #d63384;
     --translation-badge-root: #153e75;
+    
 }
 
 .project-header {
@@ -77,7 +53,7 @@
 }
 
 .project-header__message--error, .project-header__message--success {
-    border: 1px solid var(--color-primary-darker);
+    border: 1px solid var(--color-primary);
 }
 
 .project-header__nav {
@@ -159,7 +135,7 @@
         }
 
         & .project-container__detail-panel__related-item--selected {
-            background-color: var(--color-primary-dark);
+            background-color: var(--color-primary);
         }
 
         & .project-container__detail-panel__related-item:hover, & .project-container__detail-panel__related-item--selected {
@@ -178,7 +154,7 @@ sl-dialog::part(panel) {
 
 sl-dialog::part(header) {
     background-color: var(--color-primary-lighter);
-    border-bottom: 1px solid var(--color-primary-dark);
+    border-bottom: 1px solid var(--color-primary);
 }
 
 sl-dialog::part(title) {
@@ -199,8 +175,7 @@ sl-dialog::part(title) {
     flex: 1;
     min-width: 0;
     background: var(--color-background, var(--bilara-primary-background-color, white));
-    border-radius: var(--translation-radius-lg);
-    box-shadow: 0 2px 12px var(--translation-shadow);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     position: relative;
     --column-width: 50%;
@@ -209,8 +184,8 @@ sl-dialog::part(title) {
 
 .translation-grid__header {
     display: flex;
-    background: var(--translation-primary);
-    min-height: var(--translation-header-height);
+    background: var(--color-primary);
+    min-height: 48px;
     position: sticky;
     top: 0;
     z-index: 20;
@@ -283,12 +258,12 @@ sl-dialog::part(title) {
 
 .translation-row {
     display: flex;
-    border-bottom: 1px solid var(--translation-border-light);
+    border-bottom: 1px solid var(--color-background-secondary);
     transition: background-color 0.15s ease;
 }
 
 .translation-row:hover {
-    background-color: var(--translation-primary-lighter);
+    background-color: var(--color-background);
 }
 
 .translation-row:nth-child(even) {
@@ -296,16 +271,16 @@ sl-dialog::part(title) {
 }
 
 .translation-row:nth-child(even):hover {
-    background-color: var(--translation-primary-lighter);
+    background-color: var(--color-background);
 }
 
 /* UID Label Column */
 .translation-row__uid {
-    width: var(--translation-uid-width);
-    min-width: var(--translation-uid-width);
+    width: 120px;
+    min-width: 120px;
     padding: 8px 12px;
-    background: var(--translation-primary-light);
-    border-right: 2px solid var(--translation-border);
+    background: var(--color-background-secondary);
+    border-right: 2px solid var(--color-accent);
     display: flex;
     align-items: flex-start;
     justify-content: flex-end;
@@ -317,7 +292,7 @@ sl-dialog::part(title) {
 .translation-row__uid-text {
     font-family: var(--font-serif);
     font-size: var(--text-xs);
-    color: var(--translation-text-secondary);
+    color: var(--color-text-secondary);
     word-break: break-all;
     text-align: right;
     line-height: 1.4;
@@ -334,7 +309,7 @@ sl-dialog::part(title) {
 .translation-cell {
     position: relative;
     padding: 8px 12px;
-    border-right: 1px solid var(--translation-border-light);
+    border-right: 1px solid var(--color-background-secondary);
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -346,15 +321,15 @@ sl-dialog::part(title) {
 }
 
 .translation-cell--source {
-    background-color: var(--translation-primary-lighter);
+    background-color: var(--color-background);
 }
 
 .translation-cell--editable {
-    background-color: var(--translation-primary-lighter);
+    background-color: var(--color-background);
 }
 
 .translation-cell--editable:focus-within {
-    background-color: var(--translation-accent-light);
+    background-color: var(--color-background-secondary);
 }
 
 .translation-cell__actions {
@@ -378,7 +353,7 @@ sl-dialog::part(title) {
 
 .project-container__content-body__text-uid {
     font-family: var(--font-serif);
-    color: var(--translation-text-muted);
+    color: var(--color-text-secondary);
     font-size: var(--text-xs);
     padding-left: 2px;
 }
@@ -390,18 +365,18 @@ sl-dialog::part(title) {
 .project-header__nav-button {
     font-size: 0.65rem;
     padding: 2px 8px;
-    border-radius: var(--translation-radius);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: var(--translation-transition);
+    transition: var(--transition);
     white-space: nowrap;
 }
 
 .btn--split {
-    color: var(--translation-accent);
+    color: var(--color-accent);
 }
 
 .btn--split:hover {
-    background: var(--translation-accent-light);
+    background: var(--color-background-secondary);
 }
 
 .btn--merge {
@@ -443,13 +418,13 @@ sl-dialog::part(title) {
     min-height: 1.6em;
     /* padding: 6px 12px; */
     border: 1px solid transparent;
-    border-radius: var(--translation-radius);
-    background-color: var(--translation-primary-lighter);
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
     font-family: inherit;
     font-size: var(--text-sm);
     line-height: 1.5;
-    color: var(--translation-text);
-    transition: var(--translation-transition);
+    color: var(--color-text);
+    transition: var(--transition);
 
     field-sizing: content;
     overflow-y: hidden;
@@ -464,7 +439,7 @@ sl-dialog::part(title) {
 
 .translation-cell__textarea:focus {
     outline: none;
-    border-color: var(--translation-accent);
+    border-color: var(--color-accent);
     background-color: var(--color-background, var(--bilara-primary-background-color, white));
     box-shadow: 0 0 0 3px rgba(42, 107, 107, 0.15);
 }
@@ -492,8 +467,8 @@ sl-dialog::part(title) {
     right: 8px;
     z-index: 100;
     background: white;
-    border: 1px solid var(--translation-border);
-    border-radius: var(--translation-radius);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     max-height: 280px;
     overflow-y: auto;
@@ -506,8 +481,8 @@ sl-dialog::part(title) {
     right: 8px;
     z-index: 100;
     background: var(--color-background, var(--bilara-primary-background-color, white));
-    border: 1px solid var(--translation-border);
-    border-radius: var(--translation-radius);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     max-height: 280px;
     overflow-y: auto;
@@ -522,12 +497,12 @@ sl-dialog::part(title) {
 .translation-cell__hints-item {
     padding: 12px 14px;
     cursor: pointer;
-    border-bottom: 1px solid var(--translation-border-light);
+    border-bottom: 1px solid var(--color-background-secondary);
     transition: background-color 0.15s ease;
 }
 
 .translation-cell__hints-item:hover {
-    background-color: var(--translation-accent-light);
+    background-color: var(--color-background-secondary);
 }
 
 .translation-cell__hints-item:last-child {
@@ -537,7 +512,7 @@ sl-dialog::part(title) {
 .translation-cell__hints-uid {
     display: block;
     font-size: 0.7rem;
-    color: var(--translation-text-muted);
+    color: var(--color-text-secondary);
     font-family: var(--font-serif);
     margin-bottom: 4px;
 }
@@ -550,7 +525,7 @@ sl-dialog::part(title) {
 
 .translation-cell__hints-source {
     font-size: var(--text-xs);
-    color: var(--translation-text-secondary);
+    color: var(--color-text-secondary);
     margin: 0;
     line-height: 1.4;
 }
@@ -564,22 +539,22 @@ sl-dialog::part(title) {
 
 .translation-cell__hints-text {
     font-size: var(--text-sm);
-    color: var(--translation-text);
+    color: var(--color-text);
     line-height: 1.4;
 }
 
 .translation-cell__hints-strength {
     font-size: 0.7rem;
-    color: var(--translation-accent);
+    color: var(--color-accent);
     white-space: nowrap;
     font-weight: var(--font-weight-semibold);
 }
 
 .translation-grid__footer {
     display: flex;
-    background: var(--translation-primary-light);
-    border-top: 2px solid var(--translation-border);
-    min-height: var(--translation-footer-height);
+    background: var(--color-background-secondary);
+    border-top: 2px solid var(--color-accent);
+    min-height: 60px;
     position: sticky;
     bottom: 0;
     z-index: 20;
@@ -592,7 +567,7 @@ sl-dialog::part(title) {
     justify-content: center;
     gap: 10px;
     padding: 10px 16px;
-    border-right: 1px solid var(--translation-border);
+    border-right: 1px solid var(--color-accent);
 }
 
 .translation-grid__footer-cell:last-child {
@@ -610,10 +585,10 @@ sl-dialog::part(title) {
 .detail-panel__title {
     font-size: var(--text-md);
     font-weight: var(--font-weight-semibold);
-    color: var(--translation-primary);
+    color: var(--color-primary);
     margin: 0 0 16px 0;
     padding-bottom: 8px;
-    border-bottom: 2px solid var(--translation-primary-light);
+    border-bottom: 2px solid var(--color-background-secondary);
 }
 
 @media (max-width: 1024px) {
@@ -647,7 +622,7 @@ sl-dialog::part(title) {
         padding: 6px 12px;
         justify-content: flex-start;
         border-right: none;
-        border-bottom: 1px solid var(--translation-border);
+        border-bottom: 1px solid var(--color-accent);
     }
 
     .translation-row__uid-text {
@@ -661,7 +636,7 @@ sl-dialog::part(title) {
 
     .translation-cell {
         border-right: none;
-        border-bottom: 1px solid var(--translation-border-light);
+        border-bottom: 1px solid var(--color-background-secondary);
     }
 
     .translation-cell:last-child {
@@ -681,7 +656,7 @@ sl-dialog::part(title) {
     }
 
     .translation-grid__footer-cell {
-        border-bottom: 1px solid var(--translation-border);
+        border-bottom: 1px solid var(--color-accent);
     }
 
     .translation-grid__header-cell:last-child,
@@ -730,13 +705,13 @@ sl-dialog::part(title) {
 }
 
 .translation-cell__resizer:hover {
-    background: var(--translation-accent);
+    background: var(--color-accent);
     opacity: 0.5;
 }
 
 .translation-cell__resizer--dragging,
 .translation-grid--resizing .translation-cell__resizer:hover {
-    background: var(--translation-accent);
+    background: var(--color-accent);
     opacity: 1;
 }
 

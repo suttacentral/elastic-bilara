@@ -17,13 +17,12 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
     return html`
       <style>
           .project-header__message {
-              font-size: 3rem;
               font-weight: var(--font-weight-semibold);
               padding-left: 15px;
           }
       </style>
       <div class="project-header" x-data="{prefix: new URLSearchParams(window.location.search).get('prefix')}">
-          <p class="project-header__message" x-text="prefix"></p>
+          <span class="project-header__message" x-text="prefix"></span>
           <nav class="project-header__nav">
               <ul class="project-header__nav-list">
                   <li class="project-header__nav-item">

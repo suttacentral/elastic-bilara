@@ -24,7 +24,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
               x-data="{ caption: 'split' }"
               x-text="caption"
               @click="
-                  if (splitBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
+                  if (splitBasedOnUid(translations, uid, document.querySelector('span.project-header__message'))) {
                       splitting = true;
                       merging = false;
                       splittingUid = uid;
@@ -37,7 +37,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
               x-data="{ caption: 'merge' }"
               x-text="caption"
               @click="
-                  if (mergeBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
+                  if (mergeBasedOnUid(translations, uid, document.querySelector('span.project-header__message'))) {
                       splitting = false;
                       merging=true;
                       mergingUid = uid;
@@ -66,7 +66,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
               x-show="translation.canEdit && isAdmin && splitting && isRoot && uid === splittingUid"
               @click="
                   splitting = false;
-                  await updateHandlerForSplit(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('p.project-header__message'));
+                  await updateHandlerForSplit(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('span.project-header__message'));
               "
           >
               Check Split, Then Confirm
@@ -78,7 +78,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
               x-show="translation.canEdit && isAdmin && merging && isRoot && uid === mergingUid"
               @click="
                   merging = false;
-                  await updateHandlerForMerge(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('p.project-header__message'));
+                  await updateHandlerForMerge(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('span.project-header__message'));
               "
           >
               Check Merge, Then Confirm

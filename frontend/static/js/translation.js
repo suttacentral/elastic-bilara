@@ -512,7 +512,7 @@ function fetchTranslation() {
                         await this.updateHandler(
                             translation.muid,
                             { [uid]: segment },
-                            document.querySelector("p.project-header__message"),
+                            document.querySelector("span.project-header__message"),
                         );
                     } catch (error) {
                         throw new Error(error);
