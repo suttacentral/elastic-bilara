@@ -90,21 +90,21 @@
                         </button>
                     </div>
                 </div>
-                <div class="sort-controls">
-                    <button class="btn sort-btn"
-                            @click="toggleSortMode()"
-                            :class="{ active: sortMode === 'default' }"
-                            title="Sort by status">
+                <div class="sort-switch-wrapper">
+                    <span class="sort-label" :class="{ active: sortMode === 'default' }">
                         <i class="bi-sort-alpha-down"></i>
-                        <span>Default</span>
-                    </button>
-                    <button class="btn sort-btn"
-                            @click="toggleSortMode()"
-                            :class="{ active: sortMode === 'date' }"
-                            title="Sort by date">
+                        Default
+                    </span>
+                    <label class="sort-switch">
+                        <input type="checkbox"
+                               :checked="sortMode === 'date'"
+                               @change="sortMode = $event.target.checked ? 'date' : 'default'; currentPage = 1">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="sort-label" :class="{ active: sortMode === 'date' }">
                         <i class="bi-clock-history"></i>
-                        <span>Date</span>
-                    </button>
+                        Date
+                    </span>
                 </div>
             </div>
 
@@ -244,31 +244,36 @@
 
         <!-- Diff Viewer Panel -->
         <div class="panel-card">
-            <div class="panel-header">
+            <div class="panel-header panel-header-diff">
                 <div class="panel-title">
                     <i class="bi-file-diff"></i>
                     <span>Diff Viewer</span>
                 </div>
-                               <div class="file-actions">
-                                <button class="btn publish-btn"
-                                        @click.stop="showDiscardConfirm(file)"
-                                        title="Discard changes">
-                                    <i class="bi-cloud-upload"></i>
-                                    Publish
-                                </button>
-                                <button class="btn edit-btn"
-                                        @click.stop="showDiscardConfirm(file)"
-                                        title="Discard changes">
-                                    <i class="bi-pencil"></i>
-                                    Edit
-                                </button>
-                                <button class="btn discard-btn"
-                                        @click.stop="showDiscardConfirm(file)"
-                                        title="Discard changes">
-                                    <i class="bi-x-circle"></i>
-                                    Discard
-                                </button>
-                            </div>
+                <!-- <span x-show="selectedFile"
+                      style="font-size: 0.75rem; font-family: monospace; color: var(--color-text-secondary);"
+                      x-text="selectedFile">
+                </span> -->
+                <div class="diff-header-actions" x-show="selectedFile">
+                    <button class="diff-action-btn edit-btn"
+                            @click="showEditConfirm(selectedFileData)"
+                            title="Edit file">
+                        <i class="bi-pencil"></i>
+                        Edit
+                    </button>
+                    <button class="diff-action-btn publish-btn"
+                            @click="showPublishConfirm(selectedFileData)"
+                            :disabled="publishing"
+                            title="Publish file">
+                        <i :class="publishing ? 'bi-arrow-repeat spin' : 'bi-cloud-upload'"></i>
+                        <span x-text="publishing ? 'Publishing...' : 'Publish'"></span>
+                    </button>
+                    <button class="diff-action-btn discard-btn"
+                            @click="showDiscardConfirm(selectedFileData)"
+                            title="Discard changes">
+                        <i class="bi-x-circle"></i>
+                        Discard
+                    </button>
+                </div>
             </div>
             <div class="panel-content">
                 <div class="diff-viewer">
@@ -306,13 +311,17 @@
 
         <div x-show="showConfirmModal" x-cloak class="modal-backdrop" @click.self="closeConfirmModal()">
             <div class="modal-dialog">
-                <div class="modal-header">
+                <div class="modal-header modal-header-danger">
                     <i class="bi-exclamation-triangle-fill"></i>
                     <h3>Discard Changes</h3>
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to discard changes to this file? This action cannot be undone.</p>
                     <div class="file-name" x-text="fileToDiscard?.path"></div>
+                    <label class="dont-show-again">
+                        <input type="checkbox" x-model="skipDiscardConfirm">
+                        <span>Do not show this dialog again</span>
+                    </label>
                 </div>
                 <div class="modal-footer">
                     <button class="modal-btn modal-btn-cancel" @click="closeConfirmModal()">
@@ -326,6 +335,63 @@
                         </template>
                         <template x-if="!discarding">
                             <span>Discard Changes</span>
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showEditModal" x-cloak class="modal-backdrop" @click.self="closeEditModal()">
+            <div class="modal-dialog">
+                <div class="modal-header modal-header-info">
+                    <i class="bi-pencil-fill"></i>
+                    <h3>Edit File</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Open the translation window in a new tab for editing. If you edit any texts, refresh this page when you return.</p>
+                    <div class="file-name" x-text="fileToEdit?.path"></div>
+                    <label class="dont-show-again">
+                        <input type="checkbox" x-model="skipEditConfirm">
+                        <span>Do not show this dialog again</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" @click="closeEditModal()">
+                        Cancel
+                    </button>
+                    <button class="modal-btn modal-btn-info" @click="confirmEdit(selectedFile)">
+                        Open Editor
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showPublishModal" x-cloak class="modal-backdrop" @click.self="closePublishModal()">
+            <div class="modal-dialog">
+                <div class="modal-header modal-header-success">
+                    <i class="bi-cloud-upload-fill"></i>
+                    <h3>Publish File</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Publish this text. If you change your mind, you can unpublish later.</p>
+                    <div class="file-name" x-text="fileToPublish?.path"></div>
+                    <label class="dont-show-again">
+                        <input type="checkbox" x-model="skipPublishConfirm">
+                        <span>Do not show this dialog again</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" @click="closePublishModal()">
+                        Cancel
+                    </button>
+                    <button class="modal-btn modal-btn-success"
+                            @click="confirmPublish()"
+                            :disabled="publishing">
+                        <template x-if="publishing">
+                            <span>Publishing...</span>
+                        </template>
+                        <template x-if="!publishing">
+                            <span>Publish</span>
                         </template>
                     </button>
                 </div>
