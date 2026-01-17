@@ -1,6 +1,7 @@
 .search__container {
     padding: var(--space-sm) var(--space-md);
     position: relative;
+    color: var(--color-text-secondary);
 }
 
 .search__bar {
@@ -21,19 +22,22 @@
     transform: translateY(-50%);
 }
 
-.search__bar__input {
+.search__container input {
     width: 100%;
+    height: 32px;
     border-radius: var(--radius-xxs);
-    border: 1px solid var(--color-primary-darker);
-    background-color: var(--color-primary-lighter);
-    padding: var(--space-xxs) var(--space-md);
-    color: var(--color-primary-text);
+    background-color: var(--color-background);
+    padding: var(--space-xs) var(--space-md);
+    color: var(--color-text);
+    border: 1px solid transparent;
 
     &:hover, &:focus {
         outline: none;
-        border: 1px solid var(--color-accent-dark);
+        border: 1px solid var(--color-accent);
     }
 }
+
+
 
 .search__bar__clear {
     position: absolute;
@@ -63,17 +67,9 @@
 }
 
 .search__suggestion-item--selected {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary);
     color: var(--color-text-on-strong);
     border-radius: var(--radius-sm);
-}
-
-.fields {
-    margin: var(--space-sm) 0;
-}
-
-.fields__item {
-    margin-bottom: var(--space-sm);
 }
 
 .fields__label__container {
@@ -101,8 +97,8 @@
     width: 100%;
     border-radius: var(--radius-xxs);
     border: 1px solid var(--color-primary);
-    background-color: var(--color-primary-lighter);
-    color: var(--color-primary-text);
+    background-color: var(--color-primary);
+    color: var(--color-text);
 
     &:hover, &:focus {
         outline: none;
@@ -111,7 +107,22 @@
 }
 
 .page-size, .search__navigation {
-    margin-bottom: var(--space-md);
+    margin: var(--space-md) 0;
+}
+
+.page-size {
+    font-size: var(--text-xs);
+}
+
+.page-size__select {
+  background-color: transparent;
+  border: none;
+  padding: 0 1ex 0 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: inherit;
+  line-height: inherit;
 }
 
 .fields, .search__results-container, .search__results-item, .search__results-list {
@@ -144,12 +155,12 @@
 .search__results-key {
     width: fit-content;
     font-style: italic;
-    border: 1px solid var(--color-primary-darker);
+    border: 1px solid var(--color-primary);
     border-radius: var(--radius-xxs);
 }
 
 @media (max-width: 1199px) {
-    .search__suggestion-item, .fields__label__container, .page-size {
+    .search__suggestion-item, .fields__label__container{
         font-size: var(--text-sm);
     }
 
