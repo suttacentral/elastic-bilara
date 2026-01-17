@@ -5,6 +5,7 @@
     --text-base-size: 1rem;
     --text-scale-ratio: 1.2;
 
+    --text-xxs: calc(1rem / (var(--text-scale-ratio) * var(--text-scale-ratio) * var(--text-scale-ratio)));
     --text-xs: calc(1rem / (var(--text-scale-ratio) * var(--text-scale-ratio)));
     --text-sm: calc(1rem / var(--text-scale-ratio));
     --text-md: calc(1rem * var(--text-scale-ratio));

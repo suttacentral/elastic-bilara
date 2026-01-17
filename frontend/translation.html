@@ -145,10 +145,10 @@
                     <template x-for="(translation, index) in translations" :key="'header-' + index">
                         <div class="translation-grid__header-cell"
                             :style="getColumnStyle(index)">
-                            <span class="translation-grid__header-title" x-text="translation.muid"></span>
-                            <span class="translation-grid__header-badge"
-                                  :class="'translation-grid__header-badge--' + (translation.muid || '').split('-')[0]"
-                                  x-text="(translation.muid || '').split('-')[0]"></span>
+                            <span class="translation-grid__header-title" x-text="translation.muid"
+                                :class="'translation-grid__header-badge--' + (translation.muid || '').split('-')[0]"
+                            </span>
+
 
                             <!-- Resizer handle (Not shown in the last column) -->
                             <div x-show="index < translations.length - 1"
@@ -232,7 +232,7 @@
                                                         @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; showHints = false;">
                                                         <span class="translation-cell__hints-uid" x-text="hint.uid"></span>
                                                         <div class="translation-cell__hints-content">
-                                                            <p class="translation-cell__hints-source" x-text="hint.segment"></p>
+                                                            <div class="translation-cell__hints-source" x-text="hint.segment"></div>
                                                             <div class="translation-cell__hints-translation">
                                                                 <span class="translation-cell__hints-text" x-text="hint.translation_hints"></span>
                                                                 <span class="translation-cell__hints-strength" x-text="'(' + hint.strength + ')'"></span>

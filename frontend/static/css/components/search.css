@@ -73,9 +73,6 @@
 }
 
 .fields__item {
-    display: flex;
-    justify-content: left;
-    flex-wrap: wrap;
     margin-bottom: var(--space-sm);
 }
 

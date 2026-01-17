@@ -18,7 +18,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
       <style>
           .project-header__message {
               font-weight: var(--font-weight-semibold);
-              padding-left: 15px;
+              padding-left: 22px;
           }
       </style>
       <div class="project-header" x-data="{prefix: new URLSearchParams(window.location.search).get('prefix')}">
