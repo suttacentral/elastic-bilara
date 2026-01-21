@@ -195,7 +195,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           <span class="project-header__message" x-text="prefix"></span>
 
           <!-- Horizontal Progress Bar -->
-          <div class="project-header__progress">
+          <div class="project-header__progress" title="Translation progress">
               <div class="project-header__progress-bar">
                   <div class="project-header__progress-fill" :style="'width: ' + percentage + '%'"></div>
               </div>

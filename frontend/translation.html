@@ -238,14 +238,21 @@
                                                 x-bind:value="getValue(translation, uid)"
                                                 x-bind:readonly="!translation.canEdit"
                                                 x-on:focus="
-                                                    originalValue = getValue(translation, uid);
+                                                    if (!hintClicked) {
+                                                        originalValue = getValue(translation, uid);
+                                                    }
+                                                    hintClicked = false;
                                                     if (hints.length === 0 && muid.startsWith('translation')) {
                                                         hints = await getHints(uid, muid, sourceMuid, sourceValue);
                                                     }
                                                     showHints = true;
                                                 "
-                                                x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 150)"
-                                                x-on:click="hintClicked = false"
+                                                x-on:blur="
+                                                    const hintsEl = $el.closest('.translation-cell').querySelector('.translation-cell__hints');
+                                                    if (!hintsEl?.contains($event.relatedTarget)) {
+                                                        showHints = false;
+                                                    }
+                                                "
                                                 x-on:input="setValue(translation, uid, $event.target.value)"
                                                 x-on:keydown="ensureStatusBadge($event.target, muid, uid, isSource)"
                                                 x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation, originalValue)">
@@ -254,12 +261,14 @@
 
                                         <!-- Translation hints dropdown -->
                                         <div class="translation-cell__hints"
+                                            tabindex="-1"
                                             x-cloak
                                             x-show="hints.length > 0 && showHints && !translation.isSource">
                                             <ul class="translation-cell__hints-list">
                                                 <template x-for="hint in hints.slice(0, 5)" :key="hint.uid">
                                                     <li class="translation-cell__hints-item"
-                                                        @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; showHints = false;">
+                                                        tabindex="-1"
+                                                        @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; showHints = false; $el.closest('.translation-cell').querySelector('textarea').focus();">
                                                         <span class="translation-cell__hints-uid" x-text="hint.uid"></span>
                                                         <div class="translation-cell__hints-content">
                                                             <div class="translation-cell__hints-source" x-text="hint.segment"></div>
@@ -295,14 +304,14 @@
 
             <div class="project-container__detail-panel"
                 :style="`width: ${searchPanelWidth}px;`"
-                x-data="{ active: null }"
-                @toggle-detail-panel.window="active === $event.detail.panel ? active = 'none' : active = $event.detail.panel">
+                x-data="{ detailPanelActive: null }"
+                @toggle-detail-panel.window="detailPanelActive === $event.detail.panel ? detailPanelActive = 'none' : detailPanelActive = $event.detail.panel">
 
                 <!-- Related Projects Panel -->
                 <div class="project-container__detail-panel__related"
                     x-cloak
-                    x-show="active === 'related'"
-                    :class="{'active': active === 'related'}"
+                    x-show="detailPanelActive === 'related'"
+                    :class="{'active': detailPanelActive === 'related'}"
                     x-data="{selectedProjects: {}}">
                     <h3 class="detail-panel__title">Related Projects</h3>
                     <template x-for="project in relatedProjects" :key="project">
