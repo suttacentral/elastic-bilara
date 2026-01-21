@@ -250,7 +250,7 @@ function fetchTranslation() {
             }
 
             if (localStorage.getItem('enableMergeHintDialog') === null) {
-                localStorage.setItem('enableMergeHintDialog', true);
+                localStorage.setItem('enableMergeHintDialog', 'true');
             }
 
             if (localStorage.getItem('enableMergeHintDialog') === "true") {
@@ -286,7 +286,7 @@ function fetchTranslation() {
             let needToMergeNextSection = false;
             let nextSectionFirstKey = '';
 
-            this.translations.forEach(translation => {
+            translations.forEach(translation => {
                 const newObj = {};
 
                 for (const key in translation.data) {
@@ -453,7 +453,7 @@ function fetchTranslation() {
             let nextSectionKeySectionNumber = key.split(':')[1];
             let nextSectionKeyIntegerPart = nextSectionKeySectionNumber.split('.')[0];
             let nextSectionKeyDecimalPart = nextSectionKeySectionNumber.split('.')[1];
-            nextKey = nextSectionKeySectionUid + ':' + nextSectionKeyIntegerPart + '.' + (parseInt(nextSectionKeyDecimalPart) + 1);
+            let nextKey = nextSectionKeySectionUid + ':' + nextSectionKeyIntegerPart + '.' + (parseInt(nextSectionKeyDecimalPart) + 1);
             if (translation.data[nextKey]) {
                 newObj[key] = translation.data[nextKey];
             }
@@ -462,7 +462,7 @@ function fetchTranslation() {
             let nextSectionKeySectionUid = key.split(':')[0];
             let nextSectionKeySectionNumber = key.split(':')[1];
             let SectionNumberParts = nextSectionKeySectionNumber.split('.');
-            nextKey = nextSectionKeySectionUid + ':' + SectionNumberParts[0] + '.' + SectionNumberParts[1] + '.' + (parseInt(SectionNumberParts[2]) + 1);
+            let nextKey = nextSectionKeySectionUid + ':' + SectionNumberParts[0] + '.' + SectionNumberParts[1] + '.' + (parseInt(SectionNumberParts[2]) + 1);
             if (translation.data[nextKey]) {
                 newObj[key] = translation.data[nextKey];
             }
@@ -478,7 +478,7 @@ function fetchTranslation() {
             return (window.location.href = `/translation?prefix=${prefix}&muid=${muid}&source=${source}`);
         },
         async findOrCreateObject(key, prefix, source = false) {
-            let obj = this.translations.find(item => key in item);
+            let obj = this.translations.find(item => item.muid === key);
             if (!obj) {
                 try {
                     const data = await this.fetchData(key, prefix);
@@ -496,7 +496,7 @@ function fetchTranslation() {
             return obj;
         },
         async createObject(key, prefix, source = false) {
-            let obj = this.translations.find(item => key in item);
+            let obj = this.translations.find(item => item.muid === key);
             if (!obj) {
                 try {
                     const data = await this.fetchData(key, prefix);
@@ -599,7 +599,7 @@ function fetchTranslation() {
         },
         async updateHandlerForSplit(muid, prefix, element) {
             try {
-                payload = {
+                let payload = {
                     muid: muid,
                     prefix: prefix,
                     splitter_uid: this.splitter_uid,
@@ -631,7 +631,7 @@ function fetchTranslation() {
         },
         async updateHandlerForMerge(muid, prefix, element) {
             try {
-                payload = {
+                let payload = {
                     muid: muid,
                     prefix: prefix,
                     merger_uid: this.merger_uid,
