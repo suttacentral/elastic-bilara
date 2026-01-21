@@ -25,6 +25,8 @@ function fetchTranslation() {
             if (this.htmlProjectName) {
                 this.htmlProject = await this.createObject(this.htmlProjectName, this.prefix);
             }
+            
+            this.updateProgress();
         },
         getValue(translation, uid) {
             return translation.data[uid] || "";
@@ -34,6 +36,44 @@ function fetchTranslation() {
                 translation.data = {};
             }
             translation.data[uid] = value;
+            this.updateProgress();
+        },
+        /**
+         * Calculate translation progress
+         * @returns {Object} { translated: number, total: number, percentage: number }
+         */
+        getTranslationProgress() {
+            const sourceTranslation = this.translations.find(t => t.isSource);
+            const editableTranslation = this.translations.find(t => t.canEdit && !t.isSource);
+            
+            if (!sourceTranslation || !editableTranslation) {
+                return { translated: 0, total: 0, percentage: 0 };
+            }
+            
+            const sourceData = sourceTranslation.data || {};
+            const translationData = editableTranslation.data || {};
+            const totalKeys = Object.keys(sourceData).length;
+            
+            if (totalKeys === 0) {
+                return { translated: 0, total: 0, percentage: 0 };
+            }
+            
+            let translatedCount = 0;
+            for (const key of Object.keys(sourceData)) {
+                const value = translationData[key];
+                if (value && value.trim() !== '') {
+                    translatedCount++;
+                }
+            }
+            
+            const percentage = Math.round((translatedCount / totalKeys) * 100);
+            return { translated: translatedCount, total: totalKeys, percentage };
+        },
+        updateProgress() {
+            const progressData = this.getTranslationProgress();
+            window.dispatchEvent(new CustomEvent('translation-progress-update', { 
+                detail: progressData 
+            }));
         },
         _backupTranslations() {
             this.originalTranslations = JSON.parse(
@@ -512,7 +552,7 @@ function fetchTranslation() {
                         await this.updateHandler(
                             translation.muid,
                             { [uid]: segment },
-                            document.querySelector("p.project-header__message"),
+                            document.querySelector("span.project-header__message"),
                         );
                     } catch (error) {
                         throw new Error(error);

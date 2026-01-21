@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.3/dist/cdn.min.js"></script>
 
     <script src="./static/js/auth.js"></script>
@@ -73,7 +74,37 @@
 
         <sc-bilara-translation-project-header></sc-bilara-translation-project-header>
 
-        <div class="project-container">
+        <div class="project-container"
+            x-data="{
+                searchPanelWidth: 280,
+                isPanelDragging: false,
+                panelStartX: 0,
+                panelStartWidth: 280,
+                minPanelWidth: 200,
+                maxPanelWidth: 500,
+                startPanelResize(event) {
+                    this.isPanelDragging = true;
+                    this.panelStartX = event.clientX;
+                    this.panelStartWidth = this.searchPanelWidth;
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                },
+                onPanelResize(event) {
+                    if (!this.isPanelDragging) return;
+                    const deltaX = this.panelStartX - event.clientX;
+                    let newWidth = this.panelStartWidth + deltaX;
+                    newWidth = Math.max(this.minPanelWidth, Math.min(this.maxPanelWidth, newWidth));
+                    this.searchPanelWidth = newWidth;
+                },
+                stopPanelResize() {
+                    this.isPanelDragging = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            }"
+            :class="{ 'project-container--resizing': isPanelDragging }"
+            @mousemove.window="onPanelResize($event)"
+            @mouseup.window="stopPanelResize()">
             <div class="translation-grid"
                 x-data="{
                     columnWidths: [],
@@ -145,10 +176,9 @@
                     <template x-for="(translation, index) in translations" :key="'header-' + index">
                         <div class="translation-grid__header-cell"
                             :style="getColumnStyle(index)">
-                            <span class="translation-grid__header-title" x-text="translation.muid"></span>
-                            <span class="translation-grid__header-badge"
-                                  :class="'translation-grid__header-badge--' + (translation.muid || '').split('-')[0]"
-                                  x-text="(translation.muid || '').split('-')[0]"></span>
+                            <span class="translation-grid__header-title" x-text="translation.muid"
+                                :class="'translation-grid__header-badge--' + (translation.muid || '').split('-')[0]"
+                            </span>
 
                             <!-- Resizer handle (Not shown in the last column) -->
                             <div x-show="index < translations.length - 1"
@@ -232,7 +262,7 @@
                                                         @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; showHints = false;">
                                                         <span class="translation-cell__hints-uid" x-text="hint.uid"></span>
                                                         <div class="translation-cell__hints-content">
-                                                            <p class="translation-cell__hints-source" x-text="hint.segment"></p>
+                                                            <div class="translation-cell__hints-source" x-text="hint.segment"></div>
                                                             <div class="translation-cell__hints-translation">
                                                                 <span class="translation-cell__hints-text" x-text="hint.translation_hints"></span>
                                                                 <span class="translation-cell__hints-strength" x-text="'(' + hint.strength + ')'"></span>
@@ -257,7 +287,14 @@
                 </div>
             </div>
 
+            <!-- Panel Resizer -->
+            <div class="project-container__resizer"
+                :class="{ 'project-container__resizer--dragging': isPanelDragging }"
+                @mousedown.prevent="startPanelResize($event)">
+            </div>
+
             <div class="project-container__detail-panel"
+                :style="`width: ${searchPanelWidth}px;`"
                 x-data="{ active: null }"
                 @toggle-detail-panel.window="active === $event.detail.panel ? active = 'none' : active = $event.detail.panel">
 
@@ -277,89 +314,111 @@
                     </template>
                 </div>
 
-                <div class="project-container__detail-panel__search search"
-                    x-cloak
-                    x-show="active === 'search'"
-                    :class="{'active': active === 'search'}"
-                    x-data="search()">
+                <div class="project-container__detail-panel__search search active"
+                    x-data="{...search(), optionsExpanded: true}">
                     <div class="search__container">
-                        <h3 class="detail-panel__title">Search</h3>
-
-                        <!-- Search Bar -->
-                        <div class="search__bar">
-                            <span class="search__bar__icon" x-on:click="$event.target.nextElementSibling.focus()">🔎</span>
-                            <input type="text"
-                                x-model="projectQuery"
-                                x-on:input="updateSuggestions"
-                                class="search__bar__input"
-                                x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
-                                id="project-query"/>
-                            <span x-cloak
-                                x-show="projectQuery.length"
-                                x-on:click="projectQuery = ''; updateSuggestions()"
-                                class="search__bar__clear">❌</span>
+                        <div class="detail-panel__title-row">
+                            <h3 class="detail-panel__title">Search</h3>
+                            <button class="search__toggle-btn"
+                                @click="optionsExpanded = !optionsExpanded"
+                                :title="optionsExpanded ? 'Collapse options' : 'Expand options'">
+                                <i class="bi" :class="optionsExpanded ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
                         </div>
 
-                        <!-- Suggestions -->
-                        <ul class="search__suggestions">
-                            <template x-for="suggestion in suggestions">
-                                <li x-text="suggestion"
-                                    x-on:click="toggleSelectedProjects(suggestion)"
-                                    :class="{ 'search__suggestion-item--selected': selectedProjects[suggestion] }"
-                                    class="search__suggestion-item">
-                                </li>
-                            </template>
-                        </ul>
+                        <!-- Collapsible Search Options -->
+                        <div class="search__options" x-show="optionsExpanded" x-collapse>
+                            <!-- Search Bar -->
+                            <div class="search__bar">
+                                <i class="bi bi-search search__bar__icon" x-on:click="$event.target.nextElementSibling.focus()"></i>
+                                <input type="text"
+                                    x-model="projectQuery"
+                                    x-on:input="updateSuggestions"
+                                    class="search__bar__input"
+                                    x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
+                                    id="project-query"/>
+                                <i x-cloak
+                                    x-show="projectQuery.length"
+                                    x-on:click="projectQuery = ''; updateSuggestions()"
+                                    class="bi bi-x-circle search__bar__clear"></i>
+                            </div>
 
-                        <!-- Search Fields -->
-                        <div class="fields">
-                            <template x-for="(value, key) in fields">
-                                <div class="fields__item">
-                                    <div class="fields__label__container">
-                                        <label x-bind:for="'search-'+key" x-text="key" class="fields__label"></label>
-                                        <span x-show="key !== 'uid'"
-                                            x-cloak
-                                            class="fields__label__cancel"
-                                            x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null">❌</span>
-                                    </div>
-                                    <input class="fields__input"
-                                        type="text"
-                                        x-bind:id="'search-'+key"
-                                        :placeholder="key === 'uid' ? 'an1.1:0.1' : ''"
-                                        x-model="fields[key]"/>
-                                </div>
-                            </template>
-                        </div>
-
-                        <!-- Page Size -->
-                        <div class="page-size">
-                            <label class="page-size__label" for="size">Page Size:</label>
-                            <select name="size" id="size" x-model="size" class="page-size__select">
-                                <template x-for="pageSize in [1,5,10,25,50,100]">
-                                    <option x-text="pageSize"
-                                        x-bind:value="pageSize"
-                                        x-bind:selected="pageSize === 100"
-                                        class="page-size__select__option">
-                                    </option>
+                            <!-- Suggestions -->
+                            <ul class="search__suggestions">
+                                <template x-for="suggestion in suggestions">
+                                    <li x-text="suggestion"
+                                        x-on:click="toggleSelectedProjects(suggestion)"
+                                        :class="{ 'search__suggestion-item--selected': selectedProjects[suggestion] }"
+                                        class="search__suggestion-item">
+                                    </li>
                                 </template>
-                            </select>
+                            </ul>
+
+                            <!-- Search Fields -->
+                            <div class="fields">
+                                <template x-for="(value, key) in fields">
+                                    <div class="fields__item">
+                                        <div class="fields__label__container">
+                                            <label x-bind:for="'search-'+key" x-text="key" class="fields__label"></label>
+                                            <i x-show="key !== 'uid'"
+                                                x-cloak
+                                                class="bi bi-x-circle fields__label__cancel"
+                                                x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null"></i>
+                                        </div>
+                                        <input class="fields__input"
+                                            type="text"
+                                            x-bind:id="'search-'+key"
+                                            :placeholder="key === 'uid' ? 'an1.1:0.1' : ''"
+                                            x-model="fields[key]"/>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Page Size -->
+                            <div class="page-size">
+                                <label class="page-size__label" for="size">Page Size:</label>
+                                <select name="size" id="size" x-model="size" class="page-size__select">
+                                    <template x-for="pageSize in [1,5,10,25,50,100]">
+                                        <option x-text="pageSize"
+                                            x-bind:value="pageSize"
+                                            x-bind:selected="pageSize === 100"
+                                            class="page-size__select__option">
+                                        </option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Navigation -->
+                            <div class="search__navigation">
+                                <button x-on:click="await previousHandler(); scrollTop('#resultsContainer')"
+                                    x-cloak
+                                    x-show="currentPage > 0"
+                                    id="previousPage"
+                                    class="search__navigation__previous btn btn--previous">Previous</button>
+                                <button id="search"
+                                    x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); if(Object.keys(results).length) optionsExpanded = false;"
+                                    class="search__navigation__search btn btn--search">Search</button>
+                                <button x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
+                                    x-bind:disabled="!isNextPage"
+                                    x-cloak
+                                    x-show="isNextPage"
+                                    id="nextPage"
+                                    class="search__navigation__next btn btn--next">Next</button>
+                            </div>
                         </div>
 
-                        <!-- Navigation -->
-                        <div class="search__navigation">
+                        <!-- Collapsed Navigation (shown when collapsed and has results) -->
+                        <div class="search__navigation search__navigation--collapsed"
+                            x-show="!optionsExpanded && Object.keys(results).length"
+                            x-cloak>
                             <button x-on:click="await previousHandler(); scrollTop('#resultsContainer')"
                                 x-cloak
                                 x-show="currentPage > 0"
-                                id="previousPage"
                                 class="search__navigation__previous btn btn--previous">Previous</button>
-                            <button id="search"
-                                x-on:click="await searchHandler($event); scrollTop('#resultsContainer')"
-                                class="search__navigation__search btn btn--search">Search</button>
                             <button x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
                                 x-bind:disabled="!isNextPage"
                                 x-cloak
                                 x-show="isNextPage"
-                                id="nextPage"
                                 class="search__navigation__next btn btn--next">Next</button>
                         </div>
 

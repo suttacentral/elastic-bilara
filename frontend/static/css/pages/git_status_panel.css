@@ -230,7 +230,7 @@ body {
     border-radius: var(--radius-xl);
     font-weight: var(--font-weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--letter-spacing);
 }
 
 .file-status-badge.modified {

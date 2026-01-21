@@ -8,6 +8,7 @@
     font-weight: var(--font-weight-medium);
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-xs);
     line-height: 1;
     height: var(--text-xxl);
@@ -58,13 +59,6 @@
       background-color: var(--color-background-secondary);
 }
 
-.btn--commit {
-
-}
-
-.btn--related-projects {
-
-}
 .btn--search{
     background-color: var(--color-accent);
 
