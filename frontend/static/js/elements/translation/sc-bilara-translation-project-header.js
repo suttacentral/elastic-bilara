@@ -20,38 +20,24 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              padding: 4px 16px;
+              padding: 0px 5px 0px 20px;
               background: transparent;
               border-radius: 0;
               box-shadow: none;
-              margin: 0 16px;
               border: none;
-              border-bottom: 1px solid var(--color-background-tertiary, #e0dcd0);
+              border-bottom: 1px solid var(--color-background-tertiary);
               gap: 12px;
           }
 
           .project-header__message {
-              font-size: 0.9rem;
               font-weight: 600;
               margin: 0;
-              color: var(--color-primary, #8b6914);
-              letter-spacing: 0.5px;
+              color: var(--color-primary);
+              letter-spacing: var(--letter-spacing);
               text-transform: uppercase;
               position: relative;
-              padding-left: 8px;
+              padding-left: 0px;
               flex-shrink: 0;
-          }
-
-          .project-header__message::before {
-              content: '';
-              position: absolute;
-              left: 0;
-              top: 50%;
-              transform: translateY(-50%);
-              width: 2px;
-              height: 50%;
-              background: var(--color-primary, #8b6914);
-              border-radius: 1px;
           }
 
           /* Progress Bar - Horizontal */
@@ -67,7 +53,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           .project-header__progress-bar {
               flex: 1;
               height: 8px;
-              background: var(--color-background-tertiary, #e0dcd0);
+              background: var(--color-background-tertiary);
               border-radius: 2px;
               overflow: hidden;
               position: relative;
@@ -78,7 +64,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               left: 0;
               top: 0;
               bottom: 0;
-              background: linear-gradient(to right, var(--color-success, #28a745), #56c271);
+              background: linear-gradient(to right, var(--color-success), #56c271);
               border-radius: 2px;
               transition: width 0.3s ease;
           }
@@ -86,7 +72,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           .project-header__progress-text {
               font-size: 0.7rem;
               font-weight: 600;
-              color: var(--color-primary, #8b6914);
+              color: var(--color-primary);
               white-space: nowrap;
           }
 

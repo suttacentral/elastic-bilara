@@ -1,5 +1,6 @@
 .main-content{
     flex-grow: 1;
+    background-color: var(--color-background-tertiary);
 }
 
 #how-to-details{
