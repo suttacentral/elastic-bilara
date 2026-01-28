@@ -854,6 +854,10 @@ sl-dialog::part(title) {
     background-color: var(--color-background-secondary);
 }
 
+.translation-cell__hints-item--selected {
+    background-color: var(--color-background-secondary);
+}
+
 .translation-cell__hints-item:last-child {
     border-bottom: none;
 }
