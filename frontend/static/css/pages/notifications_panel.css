@@ -667,7 +667,7 @@ body {
     background-color: var(--color-white);
     transition: all 0.3s ease;
     border-radius: 50%;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-xs);
 }
 
 .sort-switch input:checked + .slider {
@@ -1083,7 +1083,7 @@ color: var(--color-text-on-strong);
 
 .modal-btn-primary {
     background-color: var(--color-success);
-    
+
 }
 
 .modal-btn-primary:hover {

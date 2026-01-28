@@ -495,7 +495,7 @@
 
 .search__navigation .btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .search__navigation .btn:disabled {
@@ -1046,7 +1046,7 @@ sl-dialog::part(title) {
     background: var(--color-background);
     padding: 16px 12px;
     border-radius: var(--translation-radius-lg);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-md);
     border: 1px solid var(--color-background-tertiary);
     flex-shrink: 0;
     margin-left: 8px;
@@ -1095,18 +1095,18 @@ sl-dialog::part(title) {
     border-radius: var(--translation-radius);
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 2px 8px var(--color-success-shadow);
 }
 
 .translation-progress-bar__go-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+    box-shadow: 0 4px 12px var(--color-success-shadow-strong);
     background: linear-gradient(135deg, var(--color-success-light), var(--color-success));
 }
 
 .translation-progress-bar__go-btn:active {
     transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 2px 6px var(--color-success-shadow);
 }
 
 /* ===== Media Queries ===== */
