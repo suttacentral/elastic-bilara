@@ -139,12 +139,12 @@ width: 120px;
 
 .admin-btn-danger {
     background-color: var(--color-warning);
-    color: var(--color-white, white);
+    color: var(--color-white);
 }
 
 .admin-btn-success {
     background-color: var(--color-success);
-    color: var(--color-white, white);
+    color: var(--color-white);
 }
 
 .admin-btn-sm {
@@ -543,7 +543,7 @@ width: 120px;
     width: var(--space-xs);
     height: var(--space-xs);
     border: var(--space-xxs) solid rgba(255, 255, 255, 0.3);
-    border-top-color: var(--color-white, white);
+    border-top-color: var(--color-white);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }

@@ -43,7 +43,7 @@
 .spinner-small {
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-radius: 50%;
-    border-top: 2px solid var(--color-primary, #1976d2);
+    border-top: 2px solid var(--color-primary);
     width: 14px;
     height: 14px;
     animation: spin 0.8s linear infinite;
@@ -115,7 +115,7 @@ sl-dropdown::part(panel) {
     background-color: var(--color-background);
     border: 1px solid var(--color-text-secondary);
     border-radius: 4px;
-    box-shadow: 0 2px 8px var(--color-shadow, rgba(0, 0, 0, 0.15));
+    box-shadow: 0 2px 8px var(--color-shadow);
 }
 
 sl-menu {
@@ -183,7 +183,7 @@ sl-divider {
 }
 
 .modal-dialog {
-    background: var(--color-background, #ffffff);
+    background: var(--color-background);
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     width: 100%;
@@ -214,13 +214,13 @@ sl-divider {
 
 .modal-header i {
     font-size: 1.25rem;
-    color: var(--color-text-secondary, #666);
+    color: var(--color-text-secondary);
 }
 
 .modal-header h3 {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--color-text-emphasized, #333);
+    color: var(--color-text-emphasized);
     margin: 0;
 }
 
@@ -230,7 +230,7 @@ sl-divider {
 }
 
 .modal-header-danger i {
-    color: var(--color-error, #d32f2f);
+    color: var(--color-error);
 }
 
 .modal-header-info {
@@ -238,7 +238,7 @@ sl-divider {
 }
 
 .modal-header-info i {
-    color: var(--color-info, #0288d1);
+    color: var(--color-info);
 }
 
 .modal-header-success {
@@ -246,7 +246,7 @@ sl-divider {
 }
 
 .modal-header-success i {
-    color: var(--color-success, #2e7d32);
+    color: var(--color-success);
 }
 
 .modal-body {
@@ -254,19 +254,19 @@ sl-divider {
 }
 
 .modal-body p {
-    color: var(--color-text, #333);
+    color: var(--color-text);
     margin-bottom: 16px;
 }
 
 .modal-body .file-name {
     font-family: monospace;
     font-size: 0.875rem;
-    background: var(--color-background, #fff);
+    background: var(--color-background);
     padding: 8px 16px;
     border-radius: 4px;
     border: 1px solid var(--color-background-tertiary);
     word-break: break-all;
-    color: var(--color-text-emphasized, #333);
+    color: var(--color-text-emphasized);
 }
 
 .modal-footer {
@@ -289,8 +289,8 @@ sl-divider {
 }
 
 .modal-btn-cancel {
-    background: var(--color-background, #fff);
-    color: var(--color-text, #333);
+    background: var(--color-background);
+    color: var(--color-text);
     border: 1px solid var(--color-background-tertiary);
 }
 
@@ -299,7 +299,7 @@ sl-divider {
 }
 
 .modal-btn-danger {
-    background: var(--color-error, #d32f2f);
+    background: var(--color-error);
     color: white;
 }
 
@@ -308,7 +308,7 @@ sl-divider {
 }
 
 .modal-btn-info {
-    background: var(--color-info, #0288d1);
+    background: var(--color-info);
     color: white;
 }
 
@@ -317,7 +317,7 @@ sl-divider {
 }
 
 .modal-btn-success {
-    background: var(--color-success, #2e7d32);
+    background: var(--color-success);
     color: white;
 }
 
