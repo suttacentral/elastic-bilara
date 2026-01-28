@@ -103,7 +103,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               text-transform: uppercase;
               letter-spacing: 0.5px;
               color: white;
-              background: linear-gradient(135deg, var(--color-success, #28a745), #56c271);
+              background: var(--color-success);
               border: none;
               border-radius: 3px;
               cursor: pointer;
@@ -114,7 +114,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           .project-header__progress-go-btn:hover {
               transform: translateY(-1px);
               box-shadow: 0 2px 6px rgba(40, 167, 69, 0.4);
-              background: linear-gradient(135deg, #56c271, var(--color-success, #28a745));
+              background: var(--color-success);
           }
 
           .project-header__nav {
