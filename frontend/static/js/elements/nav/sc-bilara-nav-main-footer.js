@@ -15,7 +15,7 @@ export class SCBilaraNavMainFooter extends LitElement {
                 <a href="https://suttacentral.net/" class="main-footer__list-item-link">SuttaCentral</a>
             </li>
             <li class="main-footer__list-item">
-                <a href="https://github.com/suttacentral/bilara" class="main-footer__list-item-link">Github</a>
+                <a href="https://github.com/suttacentral/elastic-bilara" class="main-footer__list-item-link">Github</a>
             </li>
             <li class="main-footer__list-item">
                 <a href="https://discourse.suttacentral.net/" class="main-footer__list-item-link">Forum</a>
