@@ -211,6 +211,7 @@
                                             hints: [],
                                             showHints: false,
                                             hintClicked: false,
+                                            selectedHintIndex: -1,
                                             isSource: translation.isSource,
                                             isRoot: translation.isSource,
                                             muid: translation.muid,
@@ -221,6 +222,18 @@
                                             get sourceValue() {
                                                 const sourceTranslation = translations.find(item => item.muid === this.sourceMuid);
                                                 return sourceTranslation ? sourceTranslation.data[uid] : '';
+                                            },
+                                            get visibleHints() {
+                                                return this.hints.slice(0, 5);
+                                            },
+                                            selectHint(index) {
+                                                const hintsToShow = this.visibleHints;
+                                                if (index >= 0 && index < hintsToShow.length) {
+                                                    setValue(translation, uid, hintsToShow[index].translation_hints);
+                                                    this.hintClicked = true;
+                                                    this.showHints = false;
+                                                    this.selectedHintIndex = -1;
+                                                }
                                             }
                                         }">
 
@@ -237,11 +250,33 @@
                                                 x-bind:id="isSource ? `root-textarea-${muid}-${uid}` : `translation-textarea-${muid}-${uid}`"
                                                 x-bind:value="getValue(translation, uid)"
                                                 x-bind:readonly="!translation.canEdit"
+                                                x-on:dblclick="
+                                                    setTimeout(() => {
+                                                        const selectedText = window.getSelection().toString().trim();
+                                                        if (selectedText) {
+                                                            // Clear all search inputs except uid
+                                                            document.querySelectorAll('.fields__input').forEach(input => {
+                                                                if (input.id !== 'search-uid') {
+                                                                    input.value = '';
+                                                                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                                                                }
+                                                            });
+                                                            const searchInput = document.getElementById('search-' + muid);
+                                                            if (searchInput) {
+                                                                searchInput.value = selectedText;
+                                                                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                                                const searchBtn = document.getElementById('search');
+                                                                if (searchBtn) searchBtn.click();
+                                                            }
+                                                        }
+                                                    }, 0);
+                                                "
                                                 x-on:focus="
                                                     if (!hintClicked) {
                                                         originalValue = getValue(translation, uid);
                                                     }
                                                     hintClicked = false;
+                                                    selectedHintIndex = -1;
                                                     if (hints.length === 0 && muid.startsWith('translation')) {
                                                         hints = await getHints(uid, muid, sourceMuid, sourceValue);
                                                     }
@@ -255,7 +290,23 @@
                                                 "
                                                 x-on:input="setValue(translation, uid, $event.target.value)"
                                                 x-on:keydown="ensureStatusBadge($event.target, muid, uid, isSource)"
-                                                x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation, originalValue)">
+                                                x-on:keydown.up.prevent="
+                                                    if (showHints && visibleHints.length > 0) {
+                                                        selectedHintIndex = selectedHintIndex <= 0 ? visibleHints.length - 1 : selectedHintIndex - 1;
+                                                    }
+                                                "
+                                                x-on:keydown.down.prevent="
+                                                    if (showHints && visibleHints.length > 0) {
+                                                        selectedHintIndex = selectedHintIndex >= visibleHints.length - 1 ? 0 : selectedHintIndex + 1;
+                                                    }
+                                                "
+                                                x-on:keydown.enter.prevent="
+                                                    if (showHints && selectedHintIndex >= 0 && selectedHintIndex < visibleHints.length) {
+                                                        selectHint(selectedHintIndex);
+                                                    } else {
+                                                        await handleEnter($event, uid, getValue(translation, uid), translation, originalValue);
+                                                    }
+                                                ">
                                             </textarea>
                                         </div>
 
@@ -265,10 +316,12 @@
                                             x-cloak
                                             x-show="hints.length > 0 && showHints && !translation.isSource">
                                             <ul class="translation-cell__hints-list">
-                                                <template x-for="hint in hints.slice(0, 5)" :key="hint.uid">
+                                                <template x-for="(hint, hintIndex) in visibleHints" :key="hint.uid">
                                                     <li class="translation-cell__hints-item"
+                                                        :class="{ 'translation-cell__hints-item--selected': selectedHintIndex === hintIndex }"
                                                         tabindex="-1"
-                                                        @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; showHints = false; $el.closest('.translation-cell').querySelector('textarea').focus();">
+                                                        @click="selectHint(hintIndex); $el.closest('.translation-cell').querySelector('textarea').focus();"
+                                                        @mouseenter="selectedHintIndex = hintIndex">
                                                         <span class="translation-cell__hints-uid" x-text="hint.uid"></span>
                                                         <div class="translation-cell__hints-content">
                                                             <div class="translation-cell__hints-source" x-text="hint.segment"></div>
@@ -317,14 +370,15 @@
                     <template x-for="project in relatedProjects" :key="project">
                         <div x-text="project"
                             class="project-container__detail-panel__related-item"
-                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project);"
+                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
                             :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }">
                         </div>
                     </template>
                 </div>
 
                 <div class="project-container__detail-panel__search search active"
-                    x-data="{...search(), optionsExpanded: true}">
+                    x-data="{...search(), optionsExpanded: true}"
+                    @toggle-search-field.window="if ($event.detail.selected && !fields[$event.detail.project]) toggleSelectedProjects($event.detail.project); else if (!$event.detail.selected && fields[$event.detail.project] !== undefined) toggleSelectedProjects($event.detail.project);">
                     <div class="search__container">
                         <div class="detail-panel__title-row">
                             <h3 class="detail-panel__title">Search</h3>
