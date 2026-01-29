@@ -96,7 +96,7 @@
 .admin-card {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xs);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
     transition: var(--transition);
     overflow: hidden;
 }
@@ -107,7 +107,7 @@
 
 .admin-card-header {
     padding: var(--space-md) var(--space-lg);
-    border-bottom: 1px solid var(--color-accent);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .admin-card-title {
@@ -180,7 +180,7 @@ width: 120px;
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
     color: var(--color-text-emphasized);
-    border: 2px solid var(--color-accent);
+    border: 2px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background-secondary);
     transition: var(--transition);
@@ -191,7 +191,7 @@ width: 120px;
 .admin-select:focus,
 .admin-textarea:focus {
     outline: none;
-    border-color: var(--color-accent);
+    border-color: var(--color-border);
     box-shadow: var(--shadow-xs);
 }
 
@@ -252,7 +252,7 @@ width: 120px;
 .admin-user-item {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xs);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
     overflow: hidden;
 }
 
@@ -330,7 +330,7 @@ width: 120px;
 }
 
 .admin-user-details {
-    border-top: 1px solid var(--color-accent);
+    border-top: 1px solid var(--color-border);
     padding: var(--space-lg);
 }
 
@@ -467,7 +467,7 @@ width: 120px;
     justify-content: flex-end;
     gap: var(--space-sm);
     padding: var(--space-md) var(--space-lg);
-    border-top: 1px solid var(--color-accent);
+    border-top: 1px solid var(--color-border);
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }
 
@@ -483,19 +483,19 @@ width: 120px;
 .admin-alert-success {
     background-color: var(--color-success;
     color:var(--color-text-on-strong);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
 }
 
 .admin-alert-danger {
     background-color: var(--color-error);
     color: var(--color-text-on-strong);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
 }
 
 .admin-alert-warning {
     background-color: var(--color-warning;
     color: var(--color-text-on-strong);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
 }
 
 .admin-table {
@@ -511,7 +511,7 @@ width: 120px;
 .admin-table td {
     padding: var(--space-xxs) var(--space-md);
     text-align: left;
-    border-bottom: 1px solid var(--color-accent);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .admin-table th {
@@ -586,7 +586,7 @@ width: 120px;
 
 .admin-footer {
     background-color: var(--color-background-secondary);
-    border-top: 1px solid var(--color-accent);
+    border-top: 1px solid var(--color-border);
     padding: var(--space-lg) var(--space-xl);
 }
 
@@ -614,7 +614,7 @@ width: 120px;
 }
 
 .admin-footer-links a {
-    color: var(--color-accent);
+    color: var(--color-border);
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -758,7 +758,7 @@ width: 120px;
 
 .admin-project-tag {
     padding: var(--space-xs) var(--space-sm);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);
     cursor: pointer;
@@ -766,7 +766,7 @@ width: 120px;
 }
 
 .admin-project-tag:hover {
-    border-color: var(--color-accent);
+    border-color: var(--color-border);
     background-color: var(--color-background-secondary);
 }
 
@@ -795,7 +795,7 @@ width: 120px;
     gap: var(--space-xs);
     padding: var(--space-sm) var(--space-md);
     background-color: var(--color-background-secondary);
-    border-bottom: 1px solid var(--color-accent);
+    border-bottom: 1px solid var(--color-border);
     position: sticky;
     top: 0;
 }
@@ -831,7 +831,7 @@ width: 120px;
     width: 100%;
     min-height: 60px;
     padding: var(--space-xs);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
     resize: vertical;
