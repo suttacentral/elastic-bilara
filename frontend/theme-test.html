@@ -1,0 +1,885 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./static/css/main.css">
+<style>
+
+:root{
+--border-color-on-dark: rgba(255, 255, 255, 0.1);
+--border-color-on-light: rgba(0, 0, 0, 0.1);
+--border-color-sunny: rgba(255, 194, 2, 0.3);
+}
+
+  .aruna{
+      .color-primary {background-color: #f39f59}
+      .color-secondary {background-color: #ae445a}
+      .color-background {background-color: #242936}
+      .color-background-secondary {background-color: #451a52}
+      .color-background-tertiary {background-color: #672549}
+      .color-text {color: #f2d8d7}
+      .color-text-emphasized {color: #fcf5f5}
+      .color-text-secondary {color: #e8bcb9}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-dark)}
+      .color-warning {background-color: #ee7612}
+      .color-error {background-color: #ee121c}
+      .color-success {background-color: #0ebf5e}
+      .color-info {background-color: #5960f3}
+    }
+
+    .suriya{
+      .color-primary {background-color: #d33682}
+      .color-secondary {background-color: #6c71c4}
+      .color-background {background-color: #fdf6e3}
+      .color-background-secondary {background-color: #fbeecb}
+      .color-background-tertiary {background-color: #f8df9c}
+      .color-text {color: #657b83}
+      .color-text-emphasized {color: #586e75}
+      .color-text-secondary {color: #93a1a1}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: rgba(255, 194, 2, 0.3)}
+      .color-warning {background-color: #cb4b16}
+      .color-error {background-color: #dc322f}
+      .color-success {background-color: #859900}
+      .color-info {background-color: #268bd2}
+}
+.candima
+{
+      .color-primary {background-color: #dc322f}
+      .color-secondary {background-color: #6c71c4}
+      .color-background {background-color: #002b36}
+      .color-background-secondary {background-color: #073642}
+      .color-background-tertiary {background-color: #094959}
+      .color-text {color: #a1adad}
+      .color-text-emphasized {color: #bcc5c5}
+      .color-text-secondary {color: #788989}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-dark)}
+      .color-warning {background-color: #cb4b16}
+      .color-error {background-color: #dc322f}
+      .color-success {background-color: #859900}
+      .color-info {background-color: #268bd2}
+}
+.manussa
+{
+      .color-primary {background-color: black}
+      .color-secondary {background-color: #757575}
+      .color-background {background-color: white}
+      .color-background-secondary {background-color: #efefef}
+      .color-background-tertiary {background-color: #DDDDDD}
+      .color-text {color: black}
+      .color-text-emphasized {color: black}
+      .color-text-secondary {color: #757575}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-light)}
+      .color-warning {background-color: #FF851B}
+      .color-error {background-color: #FF4136}
+      .color-success {background-color: #2ECC40}
+      .color-info {background-color: #0074D9}
+}
+.yakkha
+{
+      .color-primary {background-color: crimson}
+      .color-secondary {background-color: #85144b}
+      .color-background {background-color: #111111}
+      .color-background-secondary {background-color: #001f3f}
+      .color-background-tertiary {background-color: #3D9970}
+      .color-text {color: #dedede}
+      .color-text-emphasized {color: #ffffff}
+      .color-text-secondary {color: #cccccc}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-dark)}
+      .color-warning {background-color: #FF851B}
+      .color-error {background-color: #FF4136}
+      .color-success {background-color: #2ECC40}
+      .color-info {background-color: #0074D9}
+}
+.deva
+{
+      .color-primary {background-color: #92a8d1}
+      .color-secondary {background-color: #d192a8}
+      .color-background {background-color: #f4f6fa}
+      .color-background-secondary {background-color: #e9edf5}
+      .color-background-tertiary {background-color: #dee4f1}
+      .color-text {color: rgba(0,0,0,0.5)}
+      .color-text-emphasized {color: rgba(0,0,0,0.7)}
+      .color-text-secondary {color: rgba(0,0,0,0.3)}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-light)}
+      .color-warning {background-color: #FF851B}
+      .color-error {background-color: #e34843}
+      .color-success {background-color: #5abb5c}
+      .color-info {background-color: #0074D9}
+}
+.asura
+{
+      .color-primary {background-color: #92a8d1}
+      .color-secondary {background-color: #c5a1a0}
+      .color-background {background-color: #7f7f7f}
+      .color-background-secondary {background-color: #727272}
+      .color-background-tertiary {background-color: #666666}
+      .color-text {color: #e9edf5}
+      .color-text-emphasized {color:  #ffffff}
+      .color-text-secondary {color: #dee4f1}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-dark)}
+      .color-warning {background-color: #FF851B}
+      .color-error {background-color: #ed8986}
+      .color-success {background-color: #2ECC40}
+      .color-info {background-color: #0074D9}
+}
+.gandhabba
+{
+      .color-primary {background-color: #92a8d1}
+      .color-secondary {background-color: #F661B1}
+      .color-background {background-color: #1C1C1C}
+      .color-background-secondary {background-color:  #272727}
+      .color-background-tertiary {background-color: #25313E}
+      .color-text {color: rgba(255,255,255,0.8)}
+      .color-text-emphasized {color:  white}
+      .color-text-secondary {color: #D4D4D4}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-dark)}
+      .color-warning {background-color: #F39B35}
+      .color-error {background-color: #FC4384}
+      .color-success {background-color: #5c8c25}
+      .color-info {background-color: #00A7AA}
+}
+.mara
+{
+      .color-primary {background-color: #6272a4}
+      .color-secondary {background-color: #a46293}
+      .color-background {background-color: #282a36}
+      .color-background-secondary {background-color:  #44475a}
+      .color-background-tertiary {background-color: #4f5269}
+      .color-text {color: #f8f8f2}
+      .color-text-emphasized {color:  white}
+      .color-text-secondary {color: #e8e8e2}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: var(--border-color-on-light)}
+      .color-warning {background-color: #be884e}
+      .color-error {background-color: #ff5555}
+      .color-success {background-color: #06c436}
+      .color-info {background-color: #7b90ce}
+}
+.niraya
+{
+      .color-primary {background-color: #666}
+      .color-secondary {background-color: firebrick}
+      .color-background {background-color: darkred}
+      .color-background-secondary {background-color: red}
+      .color-background-tertiary {background-color: #666}
+      .color-text {color: crimson}
+      .color-text-emphasized {color: maroon}
+      .color-text-secondary {color: maroon}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: orange}
+      .color-warning {background-color: orange}
+      .color-error {background-color: red}
+      .color-success {background-color: tomato}
+      .color-info {background-color: blue}
+}
+.suññatā
+{
+      .color-primary {background-color: initial}
+      .color-secondary {background-color: initial}
+      .color-background {background-color: initial}
+      .color-background-secondary {background-color: initial}
+      .color-background-tertiary {background-color: initial}
+      .color-text {color: initial}
+      .color-text-emphasized {color: initial}
+      .color-text-secondary {color: initial}
+      .color-text-on-strong {color: #ffffff}
+      .color-border {border-color: initial}
+      .color-warning {background-color: initial}
+      .color-error {background-color: initial}
+      .color-success {background-color: initial}
+      .color-info {background-color: initial}
+}
+
+section{
+    display: flex;
+    flex-direction:row;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+div{
+    display: inline-block;
+    border: 4px solid;
+    flex-basis: 16.37%;
+
+}
+
+      div.color-background,
+      div.color-background-secondary,
+      div.color-background-tertiary
+      {
+        flex-basis: 33%;
+      }
+
+      span{
+        display: none;
+      }
+
+     .color-warning.color-text-on-strong,
+     .color-primary.color-text-on-strong,
+     .color-secondary.color-text-on-strong,
+     .color-error.color-text-on-strong,
+     .color-info.color-text-on-strong,
+     .color-success.color-text-on-strong,
+     span.color-background:not(.color-text-on-strong),
+     span.color-background-secondary:not(.color-text-on-strong),
+     span.color-background-tertiary:not(.color-text-on-strong)
+     {
+        display: block;
+        padding: 1em 2em;
+      }
+
+      h1,
+      h2{
+        margin: 1em 0 0 0;
+        color: #ababab;
+}
+
+</style>
+</head>
+<body>
+    <h1>color variables theme test page</h1>
+  <ul>
+    <li>The large squares are the main background colors. These use <code>text</code>, <code>text secondary</code>, or <code>text-emphasized</code>. </li>
+    <li>The small squares are for buttons, popups, etc. and they only use <code>text-on-strong</code>, which is white. Thus they must be dark enough to read white text.</li>
+    <li>Background colors in dark themes go dark, lighter, lightest, while light themes go light, darker, darkest.</li>
+    <li>Warning = orange, error = red, success = green, info = blue.</li>
+  </ul>
+  <h2>aruna</h2>
+  <section class="aruna">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>suriya</h2>
+  <section class="suriya">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>candima</h2>
+  <section class="candima">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>manussa</h2>
+  <section class="manussa">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>yakkha</h2>
+  <section class="yakkha">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>deva</h2>
+  <section class="deva">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>asura</h2>
+  <section class="asura">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>gandhabba</h2>
+  <section class="gandhabba">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>mara</h2>
+  <section class="mara">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>niraya</h2>
+  <section class="niraya">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+  <h2>suññatā</h2>
+  <section class="suññatā">
+    <div class="color-background color-border">
+      <span class="color-background color-text">color-background color-text</span>
+      <span class="color-background color-text-emphasized">color-background color-text-emphasized</span>
+      <span class="color-background color-text-secondary">color-background color-text-secondary</span>
+      <span class="color-background color-text-on-strong">color-background color-text-on-strong</span>
+    </div>
+    <div class="color-background-secondary color-border">
+      <span class="color-background-secondary color-text">color-background-secondary color-text</span>
+      <span class="color-background-secondary color-text-emphasized">color-background-secondary color-text-emphasized</span>
+      <span class="color-background-secondary color-text-secondary">color-background-secondary color-text-secondary</span>
+      <span class="color-background-secondary color-text-on-strong">color-background-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-background-tertiary color-border">
+      <span class="color-background-tertiary color-text">color-background-tertiary color-text</span>
+      <span class="color-background-tertiary color-text-emphasized">color-background-tertiary color-text-emphasized</span>
+      <span class="color-background-tertiary color-text-secondary">color-background-tertiary color-text-secondary</span>
+      <span class="color-background-tertiary color-text-on-strong">color-background-tertiary color-text-on-strong</span>
+    </div>
+    <div class="color-primary color-border">
+      <span class="color-primary color-text">color-primary color-text</span>
+      <span class="color-primary color-text-emphasized">color-primary color-text-emphasized</span>
+      <span class="color-primary color-text-secondary">color-primary color-text-secondary</span>
+      <span class="color-primary color-text-on-strong">color-primary color-text-on-strong</span>
+    </div>
+    <div class="color-secondary color-border">
+      <span class="color-secondary color-text">color-secondary color-text</span>
+      <span class="color-secondary color-text-emphasized">color-secondary color-text-emphasized</span>
+      <span class="color-secondary color-text-secondary">color-secondary color-text-secondary</span>
+      <span class="color-secondary color-text-on-strong">color-secondary color-text-on-strong</span>
+    </div>
+    <div class="color-warning color-border">
+      <span class="color-warning color-text">color-warning color-text</span>
+      <span class="color-warning color-text-emphasized">color-warning color-text-emphasized</span>
+      <span class="color-warning color-text-secondary">color-warning color-text-secondary</span>
+      <span class="color-warning color-text-on-strong">color-warning color-text-on-strong</span>
+    </div>
+    <div class="color-error color-border">
+      <span class="color-error color-text">color-error color-text</span>
+      <span class="color-error color-text-emphasized">color-error color-text-emphasized</span>
+      <span class="color-error color-text-secondary">color-error color-text-secondary</span>
+      <span class="color-error color-text-on-strong">color-error color-text-on-strong</span>
+    </div>
+    <div class="color-success color-border">
+      <span class="color-success color-text">color-success color-text</span>
+      <span class="color-success color-text-emphasized">color-success color-text-emphasized</span>
+      <span class="color-success color-text-secondary">color-success color-text-secondary</span>
+      <span class="color-success color-text-on-strong">color-success color-text-on-strong</span>
+    </div>
+    <div class="color-info color-border">
+      <span class="color-info color-text">color-info color-text</span>
+      <span class="color-info color-text-emphasized">color-info color-text-emphasized</span>
+      <span class="color-info color-text-secondary">color-info color-text-secondary</span>
+      <span class="color-info color-text-on-strong">color-info color-text-on-strong</span>
+    </div>
+  </section>
+</body>
+</html>
