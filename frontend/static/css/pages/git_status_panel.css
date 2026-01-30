@@ -73,7 +73,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
 }
 
 .panel-header {
@@ -198,7 +198,7 @@ body {
 
 .file-item.selected {
     background-color: var(--color-background-tertiary);
-    border-color: var(--color-accent);
+    border-color: var(--color-border);
 }
 
 .file-icon {
@@ -1081,7 +1081,7 @@ body {
     justify-content: space-between;
     padding: var(--space-sm) var(--space-lg);
     background-color: var(--color-background-tertiary);
-    border-bottom: 1px solid var(--color-accent);
+    border-bottom: 1px solid var(--color-border);
     animation: slideDown 0.2s ease;
 }
 

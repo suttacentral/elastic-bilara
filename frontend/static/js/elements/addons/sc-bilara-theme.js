@@ -6,26 +6,29 @@ const commonVariables = css`
     --bilara-footer-height: 108px;
     --scrollbar-size: 8px;
     --scrollbar-minlength: 1.5rem;
-    --border: 1px solid var(--color-primary-color);
+    --border: 1px solid var(--border-color);
     --transition: all 0.2s ease;
+    --border-color-on-dark: rgba(255, 255, 255, 0.1);
+    --border-color-on-light: rgba(0, 0, 0, 0.1);
+    --border-color-sunny: rgba(255, 194, 2, 0.3);
 `;
 
 export const themes = {
   'aruna': css`
-      --color-primary: #D9B26F;
-      --color-secondary: #FFC10A;
-      --color-background: #fdf6e3;
-      --color-background-secondary: #fbeecb;
-      --color-background-tertiary: #f8df9c;
-      --color-text: #657b83;
-      --color-text-emphasized: #586e75;
-      --color-text-secondary: #93a1a1;
+      --color-primary: #f39f59;
+      --color-secondary: #ae445a;
+      --color-background: #242936;
+      --color-background-secondary: #451a52;
+      --color-background-tertiary: #672549;
+      --color-text: #f2d8d7;
+      --color-text-emphasized: #fcf5f5;
+      --color-text-secondary: #e8bcb9;
       --color-text-on-strong: #ffffff;
-      --color-accent: rgba(255, 194, 2, 0.3);
-      --color-warning: #cb4b16;
-      --color-error: #dc322f;
-      --color-success: #859900;
-      --color-info: #268bd2;
+      --color-border: var(--border-color-on-dark);
+      --color-warning: #ee7612;
+      --color-error: #ee121c;
+      --color-success: #0ebf5e;
+      --color-info: #5960f3;
   `,
   'suriya': css`
       --color-primary: #d33682;
@@ -37,7 +40,7 @@ export const themes = {
       --color-text-emphasized: #586e75;
       --color-text-secondary: #93a1a1;
       --color-text-on-strong: #ffffff;
-      --color-accent: rgba(255, 194, 2, 0.3);
+      --color-border: rgba(255, 194, 2, 0.3);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
       --color-success: #859900;
@@ -53,7 +56,7 @@ export const themes = {
       --color-text-emphasized: #bcc5c5;
       --color-text-secondary: #788989;
       --color-text-on-strong: #ffffff;
-      --color-accent: rgba(255, 194, 2, 0.1);
+      --color-border: var(--border-color-on-dark);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
       --color-success: #859900;
@@ -69,7 +72,7 @@ export const themes = {
       --color-text-emphasized: black;
       --color-text-secondary: #757575;
       --color-text-on-strong: #ffffff;
-      --color-accent: rgba(255, 194, 2, 0.3);
+      --color-border: var(--border-color-on-light);
       --color-warning: #FF851B;
       --color-error: #FF4136;
       --color-success: #2ECC40;
@@ -81,11 +84,11 @@ export const themes = {
       --color-background: #111111;
       --color-background-secondary: #001f3f;
       --color-background-tertiary: #3D9970;
-      --color-text: white;
-      --color-text-emphasized: white;
-      --color-text-secondary: #AAAAAA;
+      --color-text: #dedede;
+      --color-text-emphasized: #ffffff;
+      --color-text-secondary: #cccccc;
       --color-text-on-strong: #ffffff;
-      --color-accent: rgba(255, 194, 2, 0.1);
+      --color-border: var(--border-color-on-dark);
       --color-warning: #FF851B;
       --color-error: #FF4136;
       --color-success: #2ECC40;
@@ -93,7 +96,7 @@ export const themes = {
   `,
   'deva': css`
       --color-primary: #92a8d1;
-      --color-secondary: #c5a1a0;
+      --color-secondary: #d192a8;
       --color-background: #f4f6fa;
       --color-background-secondary: #e9edf5;
       --color-background-tertiary: #dee4f1;
@@ -101,10 +104,10 @@ export const themes = {
       --color-text-emphasized: rgba(0,0,0,0.7);
       --color-text-secondary: rgba(0,0,0,0.3);
       --color-text-on-strong: #ffffff;
-      --color-accent: #e4f1de;
+      --color-border: var(--border-color-on-light);
       --color-warning: #FF851B;
-      --color-error: #ed8986;
-      --color-success:#70ea73;
+      --color-error: #e34843;
+      --color-success: #5abb5c;
       --color-info: #0074D9;
   `,
   'asura': css`
@@ -117,7 +120,7 @@ export const themes = {
       --color-text-emphasized:  #ffffff;
       --color-text-secondary: #dee4f1;
       --color-text-on-strong: #ffffff;
-      --color-accent: rgba(228, 241, 222,0.1);
+      --color-border: var(--border-color-on-dark);
       --color-warning: #FF851B;
       --color-error: #ed8986;
       --color-success: #2ECC40;
@@ -133,15 +136,15 @@ export const themes = {
       --color-text-emphasized:  white;
       --color-text-secondary: #D4D4D4;
       --color-text-on-strong: #ffffff;
-      --color-accent: rgba(230, 219, 116,0.1);
+      --color-border: var(--border-color-on-dark);
       --color-warning: #F39B35;
       --color-error: #FC4384;
-      --color-success: #98E342;
+      --color-success: #5c8c25;
       --color-info: #00A7AA;
   `,
   'mara': css`
       --color-primary: #6272a4;
-      --color-secondary: #6272a4;
+      --color-secondary: #a46293;
       --color-background: #282a36;
       --color-background-secondary:  #44475a;
       --color-background-tertiary: #4f5269;
@@ -149,11 +152,11 @@ export const themes = {
       --color-text-emphasized:  white;
       --color-text-secondary: #e8e8e2;
       --color-text-on-strong: #ffffff;
-      --color-accent: #d36d00;
-      --color-warning: #ffb86c;
+      --color-border: var(--border-color-on-light);
+      --color-warning: #be884e;
       --color-error: #ff5555;
       --color-success: #06c436;
-      --color-info: #8be9fd;
+      --color-info: #7b90ce;
   `,
   'niraya': css`
       --color-primary: #666;
@@ -165,7 +168,7 @@ export const themes = {
       --color-text-emphasized: maroon;
       --color-text-secondary: maroon;
       --color-text-on-strong: #ffffff;
-      --color-accent: orange;
+      --color-border: orange;
       --color-warning: orange;
       --color-error: red;
       --color-success: tomato;
@@ -181,7 +184,7 @@ export const themes = {
       --color-text-emphasized: initial;
       --color-text-secondary: initial;
       --color-text-on-strong: #ffffff;
-      --color-accent: initial;
+      --color-border: initial;
       --color-warning: initial;
       --color-error: initial;
       --color-success: initial;

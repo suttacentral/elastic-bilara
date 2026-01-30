@@ -388,7 +388,6 @@
                     @toggle-search-field.window="if ($event.detail.selected && !fields[$event.detail.project]) toggleSelectedProjects($event.detail.project); else if (!$event.detail.selected && fields[$event.detail.project] !== undefined) toggleSelectedProjects($event.detail.project);">
                     <div class="search__container">
                         <div class="detail-panel__title-row">
-                            <h3 class="detail-panel__title">Search</h3>
                             <button class="search__toggle-btn"
                                 @click="optionsExpanded = !optionsExpanded"
                                 :title="optionsExpanded ? 'Collapse options' : 'Expand options'">

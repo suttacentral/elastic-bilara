@@ -87,7 +87,7 @@
     transform: translate(-50%, -50%);
     width: 4px;
     height: 40px;
-    background: var(--color-accent);
+    background: var(--color-border);
     border-radius: 2px;
     opacity: 0;
     transition: opacity 0.2s;
@@ -99,7 +99,7 @@
 }
 
 .project-container__resizer:hover {
-    background: var(--color-accent);
+    background: var(--color-border);
 }
 
 .project-container__resizer--dragging {
@@ -200,7 +200,7 @@
 
 .project-container__detail-panel__related-item:hover {
     background: linear-gradient(90deg,
-        var(--color-accent) 0%,
+        var(--color-border) 0%,
         transparent 100%);
     padding-left: 20px;
 }
@@ -212,7 +212,7 @@
 .project-container__detail-panel__related-item--selected {
     background: linear-gradient(90deg,
         var(--color-primary) 0%,
-        var(--color-accent) 100%);
+        var(--color-border) 100%);
     color: white;
     font-weight: 600;
     padding-left: 20px;
@@ -225,7 +225,7 @@
 
 .project-container__detail-panel__related-item--selected:hover {
     background: linear-gradient(90deg,
-        var(--color-accent) 0%,
+        var(--color-border) 0%,
         var(--color-primary) 100%);
 }
 
@@ -233,7 +233,7 @@
 .project-container__detail-panel__search {
     flex: 1;
     width: 100%;
-    background: var(--color-background);
+    background: var(--color-background-tertiary);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -258,9 +258,6 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--color-primary);
-    background: linear-gradient(to bottom,
-        rgba(255, 255, 255, 0.5) 0%,
-        transparent 100%);
     border-bottom: 1px solid var(--color-background-secondary);
 }
 
@@ -270,7 +267,7 @@
     align-items: center;
     gap: 8px;
     background: var(--color-background);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--translation-radius);
     padding: 8px 12px;
     transition: var(--translation-transition);
@@ -360,7 +357,7 @@
 .search__suggestion-item--selected {
     background: linear-gradient(90deg,
         var(--color-primary) 0%,
-        var(--color-accent) 100%);
+        var(--color-border) 100%);
     color: white;
     font-weight: 500;
 }
@@ -368,7 +365,7 @@
 .search__suggestion-item--selected:hover {
     background: linear-gradient(90deg,
         var(--color-primary) 0%,
-        var(--color-accent) 100%);
+        var(--color-border) 100%);
     padding-left: 14px;
 }
 
@@ -504,14 +501,18 @@
 }
 
 .search__navigation .btn--search {
-    background: var(--color-primary);
-    color: var(--color-text-on-strong);
+    background: linear-gradient(135deg,
+        var(--color-primary) 0%,
+        var(--color-border) 100%);
+    color: white;
     border: none;
     flex: 2;
 }
 
 .search__navigation .btn--search:hover:not(:disabled) {
-    background: var(--color-accent);
+    background: linear-gradient(135deg,
+        var(--color-border) 0%,
+        var(--color-primary) 100%);
 }
 
 .search__navigation .btn--previous,
@@ -827,7 +828,7 @@ sl-dialog::part(title) {
     right: 24px;
     z-index: 100;
     background: var(--color-background);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-xs);
     box-shadow: var(--shadow-md);
     overflow-y: auto;
@@ -897,7 +898,7 @@ sl-dialog::part(title) {
 .translation-grid__footer {
     display: flex;
     background: var(--color-background-secondary);
-    border-top: 2px solid var(--color-accent);
+    border-top: 2px solid var(--color-border);
     min-height: 60px;
     position: sticky;
     bottom: 0;
@@ -911,7 +912,7 @@ sl-dialog::part(title) {
     justify-content: center;
     gap: 10px;
     padding: 10px 16px;
-    border-right: 1px solid var(--color-accent);
+    border-right: 1px solid var(--color-border);
 }
 
 .translation-grid__footer-cell:last-child {
@@ -994,14 +995,15 @@ sl-dialog::part(title) {
     transition: background-color 0.15s;
 }
 
-.translation-cell__resizer:hover {
-    background: var(--color-accent);
+.translation-cell__resizer:hover,
+.translation-cell__resizer--hovered {
+    background: var(--color-border);
     opacity: 0.5;
 }
 
 .translation-cell__resizer--dragging,
 .translation-grid--resizing .translation-cell__resizer:hover {
-    background: var(--color-accent);
+    background: var(--color-border);
     opacity: 1;
 }
 
@@ -1025,7 +1027,8 @@ sl-dialog::part(title) {
     background: transparent;
 }
 
-.translation-grid__header-resizer:hover {
+.translation-grid__header-resizer:hover,
+.translation-grid__header-resizer--hovered {
     background: rgba(255, 255, 255, 0.6);
 }
 
