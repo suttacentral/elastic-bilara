@@ -116,6 +116,7 @@
                     merging: false,
                     mergingUid: '',
                     splittingUid: '',
+                    hoveredResizerIndex: -1,
                     initWidths() {
                         // Initialization: Divide each column equally
                         if (this.columnWidths.length !== translations.length) {
@@ -130,6 +131,7 @@
                     startResize(index, event) {
                         this.isDragging = true;
                         this.dragIndex = index;
+                        this.hoveredResizerIndex = index;
                         this.startX = event.clientX;
                         this.startWidths = [...this.columnWidths];
                         document.body.style.cursor = 'col-resize';
@@ -163,6 +165,7 @@
                     stopResize() {
                         this.isDragging = false;
                         this.dragIndex = -1;
+                        this.hoveredResizerIndex = -1;
                         document.body.style.cursor = '';
                         document.body.style.userSelect = '';
                     }
@@ -183,8 +186,10 @@
                             <!-- Resizer handle (Not shown in the last column) -->
                             <div x-show="index < translations.length - 1"
                                  class="translation-grid__header-resizer"
-                                 :class="{ 'translation-grid__header-resizer--dragging': isDragging && dragIndex === index }"
-                                 @mousedown.prevent="startResize(index, $event)">
+                                 :class="{ 'translation-grid__header-resizer--dragging': isDragging && dragIndex === index, 'translation-grid__header-resizer--hovered': hoveredResizerIndex === index }"
+                                 @mousedown.prevent="startResize(index, $event)"
+                                 @mouseenter="hoveredResizerIndex = index"
+                                 @mouseleave="if (!isDragging) hoveredResizerIndex = -1">
                             </div>
                         </div>
                     </template>
@@ -338,8 +343,10 @@
                                         <!-- Cell Resizer (Not displayed in the last column) -->
                                         <div x-show="colIndex < translations.length - 1"
                                              class="translation-cell__resizer"
-                                             :class="{ 'translation-cell__resizer--dragging': isDragging && dragIndex === colIndex }"
-                                             @mousedown.prevent="startResize(colIndex, $event)">
+                                             :class="{ 'translation-cell__resizer--dragging': isDragging && dragIndex === colIndex, 'translation-cell__resizer--hovered': hoveredResizerIndex === colIndex }"
+                                             @mousedown.prevent="startResize(colIndex, $event)"
+                                             @mouseenter="hoveredResizerIndex = colIndex"
+                                             @mouseleave="if (!isDragging) hoveredResizerIndex = -1">
                                         </div>
                                     </div>
                                 </template>
