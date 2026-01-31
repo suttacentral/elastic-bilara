@@ -528,15 +528,15 @@
 .search__results-container {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    border: 1px solid var(--color-background-secondary);
+    max-height: 100vh;
+    overflow-y: scroll;
+    border: 1px solid var(--color-border);
     border-radius: var(--translation-radius);
-    background-color: var(--color-background);
+    background-color: var(--color-background-secondary);
 }
 
 .search__results-item {
     padding: 8px;
-    border-bottom: 1px solid var(--color-border);
 }
 
 .search__results-item:last-child {
@@ -544,12 +544,9 @@
 }
 
 .search__results-title {
-    font-size: 0.9rem;
+    font-size: var(--text-sm);
     font-weight: 600;
-    color: var(--color-primary);
-    margin: 0 0 10px 0;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed var(--color-background-secondary);
+    color: var(--color-text-secondary);
 }
 
 .search__results-list {
@@ -559,11 +556,9 @@
 }
 
 .search__results-list li {
-    padding: 8px 0;
-    font-size: 0.85rem;
+    padding: 0;
+    font-size: var(--text-sm);
     color: var(--color-text);
-    line-height: 1.5;
-    border-bottom: 1px solid var(--color-border);
 }
 
 .search__results-list li:last-child {
@@ -572,13 +567,10 @@
 
 .search__results-key {
     display: inline-block;
-    font-family: var(--font-serif);
-    font-size: 0.75rem;
+    font-size: var(--text-xxs);
     color: var(--color-text-secondary);
-    background-color: var(--color-background);
-    padding: 2px 8px;
+    padding: 2px 8px 2px 0;
     border-radius: 10px;
-    margin-right: 8px;
 }
 
 .dragging {
@@ -684,6 +676,7 @@ sl-dialog::part(title) {
 
 .translation-grid__body {
     flex: 1;
+    height: fit-content;
     overflow-y: auto;
     overflow-x: hidden;
     border-radius: var(--radius-lg);

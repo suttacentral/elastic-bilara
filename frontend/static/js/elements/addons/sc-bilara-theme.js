@@ -6,11 +6,8 @@ const commonVariables = css`
     --bilara-footer-height: 108px;
     --scrollbar-size: 8px;
     --scrollbar-minlength: 1.5rem;
-    --border: 1px solid var(--border-color);
+    --border: 1px solid var(--color-border);
     --transition: all 0.2s ease;
-    --border-color-on-dark: rgba(255, 255, 255, 0.1);
-    --border-color-on-light: rgba(0, 0, 0, 0.1);
-    --border-color-sunny: rgba(255, 194, 2, 0.3);
 `;
 
 export const themes = {
@@ -24,7 +21,7 @@ export const themes = {
       --color-text-emphasized: #fcf5f5;
       --color-text-secondary: #e8bcb9;
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-dark);
+      --color-border: rgba(255, 255, 255, 0.1);
       --color-warning: #ee7612;
       --color-error: #ee121c;
       --color-success: #0ebf5e;
@@ -56,7 +53,7 @@ export const themes = {
       --color-text-emphasized: #bcc5c5;
       --color-text-secondary: #788989;
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-dark);
+      --color-border: rgba(255, 255, 255, 0.1);
       --color-warning: #cb4b16;
       --color-error: #dc322f;
       --color-success: #859900;
@@ -72,7 +69,7 @@ export const themes = {
       --color-text-emphasized: black;
       --color-text-secondary: #757575;
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-light);
+      --color-border: rgba(0, 0, 0, 0.1);
       --color-warning: #FF851B;
       --color-error: #FF4136;
       --color-success: #2ECC40;
@@ -88,7 +85,7 @@ export const themes = {
       --color-text-emphasized: #ffffff;
       --color-text-secondary: #cccccc;
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-dark);
+      --color-border: rgba(255, 255, 255, 0.1);
       --color-warning: #FF851B;
       --color-error: #FF4136;
       --color-success: #2ECC40;
@@ -104,7 +101,7 @@ export const themes = {
       --color-text-emphasized: rgba(0,0,0,0.7);
       --color-text-secondary: rgba(0,0,0,0.3);
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-light);
+      --color-border: rgba(0, 0, 0, 0.1);
       --color-warning: #FF851B;
       --color-error: #e34843;
       --color-success: #5abb5c;
@@ -120,7 +117,7 @@ export const themes = {
       --color-text-emphasized:  #ffffff;
       --color-text-secondary: #dee4f1;
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-dark);
+      --color-border: rgba(255, 255, 255, 0.1);
       --color-warning: #FF851B;
       --color-error: #ed8986;
       --color-success: #2ECC40;
@@ -136,7 +133,7 @@ export const themes = {
       --color-text-emphasized:  white;
       --color-text-secondary: #D4D4D4;
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-dark);
+      --color-border: rgba(255, 255, 255, 0.1);
       --color-warning: #F39B35;
       --color-error: #FC4384;
       --color-success: #5c8c25;
@@ -152,7 +149,7 @@ export const themes = {
       --color-text-emphasized:  white;
       --color-text-secondary: #e8e8e2;
       --color-text-on-strong: #ffffff;
-      --color-border: var(--border-color-on-light);
+      --color-border: rgba(0, 0, 0, 0.1);
       --color-warning: #be884e;
       --color-error: #ff5555;
       --color-success: #06c436;
