@@ -8,9 +8,9 @@ export class SCBilaraNavMainMobile extends LitElement {
       }
 
       nav {
-        border-bottom: 1px solid var(--color-disabled, #e0e0e0);
-        box-shadow: 0 2px 4px var(--color-shadow, rgba(0, 0, 0, 0.1));
-        background-color: var(--color-background-tertiary, #BEB9AA);
+        border-bottom: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+        background-color: var(--color-background-tertiary);
       }
     `
   ];

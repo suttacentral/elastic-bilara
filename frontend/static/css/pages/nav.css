@@ -130,7 +130,7 @@
     align-items: center;
     width: 80px;
     height: 18px;
-    background: var(--color-background-secondary);
+    background-color: var(--color-background-secondary);
     border-radius: var(--radius-sm);
     position: relative;
     overflow: hidden;
@@ -157,15 +157,15 @@
 }
 
 .translation-progress.low .progress-bar {
-    background: linear-gradient(90deg, #ef4444, #f87171);
+    background-color: linear-gradient(90deg, #ef4444, #f87171);
 }
 
 .translation-progress.medium .progress-bar {
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    background-color: linear-gradient(90deg, #f59e0b, #fbbf24);
 }
 
 .translation-progress.high .progress-bar {
-    background: linear-gradient(90deg, #22c55e, #4ade80);
+    background-color: linear-gradient(90deg, #22c55e, #4ade80);
 }
 
 @media (max-width: 575px) {

@@ -21,7 +21,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               justify-content: space-between;
               align-items: center;
               padding: 0px 5px 0px 20px;
-              background: transparent;
+              background-color: transparent;
               border-radius: 0;
               box-shadow: none;
               border: none;
@@ -53,7 +53,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           .project-header__progress-bar {
               flex: 1;
               height: 8px;
-              background: var(--color-background);
+              background-color: var(--color-background);
               border-radius: 2px;
               overflow: hidden;
               position: relative;
@@ -64,7 +64,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               left: 0;
               top: 0;
               bottom: 0;
-              background: linear-gradient(to right, var(--color-success), #56c271);
+              background-color: var(--color-success);
               border-radius: 2px;
               transition: width 0.3s ease;
           }
@@ -78,7 +78,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
 
           .project-header__progress-detail {
               font-size: 0.65rem;
-              color: var(--color-text-secondary, #666);
+              color: var(--color-text-secondary);
               white-space: nowrap;
           }
 
@@ -89,18 +89,18 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               text-transform: uppercase;
               letter-spacing: 0.5px;
               color: white;
-              background: var(--color-success);
+              background-color: var(--color-success);
               border: none;
               border-radius: 3px;
               cursor: pointer;
               transition: all 0.2s ease;
-              box-shadow: 0 1px 4px rgba(40, 167, 69, 0.3);
+              box-shadow: var(--shadow-sm);
           }
 
           .project-header__progress-go-btn:hover {
               transform: translateY(-1px);
-              box-shadow: 0 2px 6px rgba(40, 167, 69, 0.4);
-              background: var(--color-success);
+              box-shadow: var(--shadow-sm);
+              background-color: var(--color-success);
           }
 
           .project-header__nav {
@@ -125,6 +125,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               border-radius: var(--radius-md);
               cursor: pointer;
               transition: var(--transition);
+              background-color: var(--secondary-background-color);
               white-space: nowrap;
               font-size: var(--text-xs);
           }
@@ -144,7 +145,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
 
           .project-header__nav-item sl-button::part(base):hover {
               transform: translateY(-1px);
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+              box-shadow: var(--shadow-sm);
           }
 
           @media (max-width: 768px) {

@@ -4,18 +4,10 @@
     --color-shadow: #00000033;
     --color-backdrop: #2C2B2BAD;
 
-    --color-disabled: #E0E0E0;
-    --color-focus-ring: rgba(139, 105, 20, 0.1);
-    --color-border-subtle: rgba(0, 0, 0, 0.04);
-
     --color-shadow-medium: rgba(0, 0, 0, 0.15);
     --color-shadow-dark: rgba(0, 0, 0, 0.2);
     --color-success-shadow: rgba(40, 167, 69, 0.3);
     --color-success-shadow-strong: rgba(40, 167, 69, 0.4);
-
-    --color-cta: #E84A5F;
-    --color-cta-dark: #B23540;
-    --color-cta-light: #EA7582;
 }
 
 body {

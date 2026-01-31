@@ -15,7 +15,7 @@ const commonVariables = css`
 
 export const themes = {
   'aruna': css`
-      --color-primary: #f39f59;
+      --color-primary: #ee7612;
       --color-secondary: #ae445a;
       --color-background: #242936;
       --color-background-secondary: #451a52;
