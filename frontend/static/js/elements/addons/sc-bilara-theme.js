@@ -6,7 +6,6 @@ const commonVariables = css`
     --bilara-footer-height: 108px;
     --scrollbar-size: 8px;
     --scrollbar-minlength: 1.5rem;
-    --border: 1px solid var(--color-border);
     --transition: all 0.2s ease;
 `;
 

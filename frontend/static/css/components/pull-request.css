@@ -110,7 +110,7 @@
 
 .pull-request-container__actions__select-all-button:hover {
     background-color: var(--color-primary);
-    color: var(--color-accent);
+    color: var(--color-border);
 }
 
 .pull-request-container__actions__publish-button {

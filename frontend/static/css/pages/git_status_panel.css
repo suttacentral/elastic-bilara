@@ -124,7 +124,7 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid;
+    border: 1px solid var(--color-border);
 }
 
 .diff-action-btn.edit-btn {
@@ -284,7 +284,7 @@ body {
     border-radius: var(--radius-sm);
     font-size: 0.8125rem;
     line-height: 1.6;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .diff-line {
@@ -352,7 +352,7 @@ body {
     background-color: var(--color-background);
     border-radius: var(--radius-xl);
     font-size: 0.8125rem;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .stat-chip i {
@@ -435,7 +435,7 @@ body {
 .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -609,7 +609,7 @@ body {
     background-color: var(--color-background);
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     word-break: break-all;
     color: var(--color-text-emphasized);
 }
@@ -657,7 +657,7 @@ body {
 .modal-btn-cancel {
     background-color: var(--color-background);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .modal-btn-cancel:hover {
@@ -771,7 +771,7 @@ body {
 .filter-input {
     width: 100%;
     padding: var(--space-sm) var(--space-md) var(--space-sm) 2.5rem;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background-tertiary);
     color: var(--color-text);
@@ -852,7 +852,7 @@ body {
     background-color: var(--color-background-tertiary);
     transition: all 0.3s ease;
     border-radius: 24px;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .sort-switch .slider::before {
@@ -941,7 +941,7 @@ body {
     height: 32px;
     background-color: var(--color-text-on-strong);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
     cursor: pointer;
@@ -979,7 +979,7 @@ body {
 
 .page-size-selector select {
     padding: var(--space-xs) var(--space-sm);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background-color: var(--color-text-on-strong);
     color: var(--color-text);

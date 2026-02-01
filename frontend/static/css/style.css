@@ -261,7 +261,7 @@ sl-divider {
     background-color: var(--color-background);
     padding: 8px 16px;
     border-radius: 4px;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     word-break: break-all;
     color: var(--color-text-emphasized);
 }
@@ -288,7 +288,7 @@ sl-divider {
 .modal-btn-cancel {
     background-color: var(--color-background);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .modal-btn-cancel:hover {

@@ -497,7 +497,7 @@ width: 120px;
 .admin-alert-warning {
     background-color: var(--color-warning);
     color: var(--color-text-on-strong);
-    border: 1px solid var(--color-accent);
+    border: 1px solid var(--color-border);
 }
 
 .admin-table {

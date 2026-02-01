@@ -274,7 +274,7 @@ body {
     background-color: var(--color-background-secondary);
     border-radius: var(--radius-md);
     padding: var(--space-md);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .commit-meta {
@@ -304,7 +304,7 @@ body {
 .file-detail-item {
     background-color: var(--color-background);
     border-radius: var(--radius-md);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     overflow: hidden;
 }
 
@@ -416,7 +416,7 @@ body {
     background-color: var(--color-text-on-strong);
     padding: var(--space-md);
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .change-html {
@@ -523,7 +523,7 @@ body {
 .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -572,7 +572,7 @@ body {
 .filter-input {
     width: 100%;
     padding: var(--space-sm) var(--space-md) var(--space-sm) 2.5rem;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background-tertiary);
     color: var(--color-text);
@@ -654,7 +654,7 @@ body {
     background-color: var(--color-background-tertiary);
     transition: all 0.3s ease;
     border-radius: 24px;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .sort-switch .slider::before {
@@ -822,7 +822,7 @@ body {
 .batch-btn-clear {
     background-color: var(--color-text-on-strong);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .batch-btn-clear:hover {
@@ -877,7 +877,7 @@ body {
     height: 32px;
     background-color: var(--color-background);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
     cursor: pointer;
@@ -919,7 +919,7 @@ body {
 
 .page-size-selector select {
     padding: var(--space-xs) var(--space-sm);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background-color: var(--color-background);
     color: var(--color-text);
@@ -1137,7 +1137,7 @@ color: var(--color-text-on-strong);
 .search-input {
     width: 100%;
     padding: var(--space-sm) var(--space-md) var(--space-sm) 2.5rem;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background);
     color: var(--color-text);
@@ -1163,7 +1163,7 @@ color: var(--color-text-on-strong);
     padding: var(--space-xs) var(--space-sm);
     background-color: var(--color-background);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-size: 0.8125rem;
     font-weight: var(--font-weight-medium);
@@ -1183,7 +1183,7 @@ color: var(--color-text-on-strong);
 .author-list {
     max-height: 300px;
     overflow-y: auto;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     padding: var(--space-sm);  /* 从 var(--space-xs) 改为 var(--space-sm) */
     background-color: var(--color-background);
@@ -1263,7 +1263,7 @@ color: var(--color-text-on-strong);
 .days-selector {
     width: 100%;
     padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background);
     color: var(--color-text);
