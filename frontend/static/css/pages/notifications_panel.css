@@ -81,7 +81,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: var(--space-md) var(--space-lg);
-    background: var(--color-background-secondary);
+    background-color: var(--color-background-secondary);
     border-bottom: 1px solid var(--color-background-tertiary);
     height: 56px;
     box-sizing: border-box;
@@ -154,7 +154,7 @@ body {
     justify-content: center;
     font-size: var(--text-lg);
     color: var(--color-info);
-    background-color: var(--color-info-bg);
+    background-color: var(--color-background-tertiary);
     border-radius: var(--radius-sm);
 }
 
@@ -274,7 +274,7 @@ body {
     background-color: var(--color-background-secondary);
     border-radius: var(--radius-md);
     padding: var(--space-md);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .commit-meta {
@@ -292,7 +292,7 @@ body {
 }
 
 .meta-item i {
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
 }
 
 .files-list {
@@ -304,7 +304,7 @@ body {
 .file-detail-item {
     background-color: var(--color-background);
     border-radius: var(--radius-md);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     overflow: hidden;
 }
 
@@ -328,7 +328,7 @@ body {
 }
 
 .file-name-section i {
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
     flex-shrink: 0;
 }
 
@@ -351,7 +351,7 @@ body {
 }
 
 .badge-root {
-    background-color: var(--color-info-bg);
+    background-color: var(--color-background-tertiary);
     color: var(--color-info);
 }
 
@@ -366,12 +366,12 @@ body {
 }
 
 .badge-html {
-    background-color: var(--color-error-bg);
+    background-color: var(--color-background-tertiary);
     color: var(--color-error);
 }
 
 .badge-reference {
-    background-color: var(--color-info-bg);
+    background-color: var(--color-background-tertiary);
     color: var(--color-info);
 }
 
@@ -398,7 +398,7 @@ body {
 }
 
 .view-sc-btn:hover {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary);
     color: var(--color-text-on-strong);
 }
 
@@ -416,7 +416,7 @@ body {
     background-color: var(--color-text-on-strong);
     padding: var(--space-md);
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .change-html {
@@ -434,7 +434,7 @@ body {
 
 .change-html del,
 .change-html .delete {
-    background-color: var(--color-error-bg);
+    background-color: var(--color-background-tertiary);
     color: var(--color-error);
     text-decoration: line-through;
     padding: 2px 4px;
@@ -486,7 +486,7 @@ body {
 
 .stat-chip i {
     font-size: var(--text-sm);
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
 }
 
 /* Skeleton Loading */
@@ -523,7 +523,7 @@ body {
 .spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -572,7 +572,7 @@ body {
 .filter-input {
     width: 100%;
     padding: var(--space-sm) var(--space-md) var(--space-sm) 2.5rem;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background-tertiary);
     color: var(--color-text);
@@ -583,7 +583,7 @@ body {
 .filter-input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary);
+    box-shadow: var(--shadow-sm);
 }
 
 .clear-btn {
@@ -624,7 +624,7 @@ body {
 }
 
 .sort-label.active {
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
 }
 
 .sort-label i {
@@ -654,7 +654,7 @@ body {
     background-color: var(--color-background-tertiary);
     transition: all 0.3s ease;
     border-radius: 24px;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .sort-switch .slider::before {
@@ -684,7 +684,7 @@ body {
 }
 
 .sort-switch input:checked + .slider:hover {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary);
 }
 
 /* Checkbox */
@@ -737,7 +737,7 @@ body {
 }
 
 .checkbox-wrapper input[type="checkbox"]:indeterminate + .checkmark {
-    background-color: var(--color-primary-light);
+    background-color: var(--color-primary);
     border-color: var(--color-primary);
 }
 
@@ -792,7 +792,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    color: var(--color-primary-darker);
+    color: var(--color-primary);
     font-weight: var(--font-weight-medium);
     font-size: var(--text-sm);
 }
@@ -822,7 +822,7 @@ body {
 .batch-btn-clear {
     background-color: var(--color-text-on-strong);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .batch-btn-clear:hover {
@@ -877,7 +877,7 @@ body {
     height: 32px;
     background-color: var(--color-background);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
     cursor: pointer;
@@ -919,7 +919,7 @@ body {
 
 .page-size-selector select {
     padding: var(--space-xs) var(--space-sm);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background-color: var(--color-background);
     color: var(--color-text);
@@ -1045,7 +1045,7 @@ body {
 }
 
 .close-btn:hover {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary);
     color: var(--color-text-on-strong);
 }
 
@@ -1087,7 +1087,7 @@ color: var(--color-text-on-strong);
 }
 
 .modal-btn-primary:hover {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary);
     color: var(--color-text-on-strong);
 }
 
@@ -1118,7 +1118,7 @@ color: var(--color-text-on-strong);
 }
 
 .section-label i {
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
 }
 
 .author-search-box {
@@ -1137,7 +1137,7 @@ color: var(--color-text-on-strong);
 .search-input {
     width: 100%;
     padding: var(--space-sm) var(--space-md) var(--space-sm) 2.5rem;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background);
     color: var(--color-text);
@@ -1148,7 +1148,7 @@ color: var(--color-text-on-strong);
 .search-input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary);
+    box-shadow: var(--shadow-sm);
 }
 
 .author-controls {
@@ -1163,7 +1163,7 @@ color: var(--color-text-on-strong);
     padding: var(--space-xs) var(--space-sm);
     background-color: var(--color-background);
     color: var(--color-text);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-size: 0.8125rem;
     font-weight: var(--font-weight-medium);
@@ -1183,7 +1183,7 @@ color: var(--color-text-on-strong);
 .author-list {
     max-height: 300px;
     overflow-y: auto;
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     padding: var(--space-sm);  /* 从 var(--space-xs) 改为 var(--space-sm) */
     background-color: var(--color-background);
@@ -1208,7 +1208,7 @@ color: var(--color-text-on-strong);
 }
 
 .author-list::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary);
 }
 
 .author-item {
@@ -1263,7 +1263,7 @@ color: var(--color-text-on-strong);
 .days-selector {
     width: 100%;
     padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--color-background-tertiary);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background);
     color: var(--color-text);
@@ -1275,11 +1275,11 @@ color: var(--color-text-on-strong);
 .days-selector:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary);
+    box-shadow: var(--shadow-sm);
 }
 
 .days-selector:hover {
-    border-color: var(--color-primary-light);
+    border-color: var(--color-primary);
 }
 
 /* Scrollbar */
@@ -1302,7 +1302,7 @@ color: var(--color-text-on-strong);
 
 .panel-content::-webkit-scrollbar-thumb:hover,
 .detail-content::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-primary-dark);
+    background-color: var(--color-primary);
 }
 
 /* Responsive */

@@ -18,7 +18,7 @@ time, mark, audio, video {
 }
 
 button {
-    background: none;
+    background-color: none;
     color: inherit;
     border: none;
     padding: 0;

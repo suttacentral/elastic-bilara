@@ -61,7 +61,7 @@ b {
 
 kbd {
     font-family: monospace;
-    border: 1px solid var(--color-black);
+    border: 1px solid var(--color-primary);
     padding: .2em .4em;
     border-radius: 4px;
     background-color: #ccc;

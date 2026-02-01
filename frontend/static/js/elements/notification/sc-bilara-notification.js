@@ -17,44 +17,41 @@ import "../../utils.js";
 class SCBilaraNotification extends LitElement {
   static styles = css`
     :host {
-      background-color: var(--color-primary-lighter);
+      background-color: var(--color-primary);
       margin: 0;
       padding: 20px;
     }
 
     .notification {
-      background-color: #ffffff;
-      border: 1px solid #e1e4e8;
-      border-radius: 6px;
-      padding: 15px;
-      margin-bottom: 10px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      background-color: var(--color-background-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+      box-shadow: var(--shadow-sm);
     }
 
     .notification-content {
-      margin: 10px 0;
+      margin: var(--space-lg) 0;
     }
 
     .notification {
-      background-color: var(--color-primary-lighter);
+      background-color: var(--color-primary);
     }
 
     .notify-item:hover {
-      background-color: var(--color-primary-light);
+      background-color: var(--color-primary);
     }
 
     .notify-item {
       display: flex;
       flex-direction: row;
       justify-content: space-between;
-      background-color: var(--color-primary-light);
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      padding: 10px;
-      margin: 10px 0;
-      font-family: var(--font-serif);
-      font-size: 14px;
-      color: #333;
+      background-color: var(--color-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      margin: var(--space-lg) 0;
     }
 
     .notify-item div {
@@ -63,8 +60,8 @@ class SCBilaraNotification extends LitElement {
     }
 
     .notify-item strong {
-      color: #007bff;
-      font-size: 16px;
+      color: var(--color-text-emphasized);
+      font-size: var(--text-sm);
     }
 
     ul {
@@ -92,19 +89,19 @@ class SCBilaraNotification extends LitElement {
     }
 
     .sc-link-button, .notify-item-detail {
-      font-size: 16px;
+      font-size: var(--text-md);
     }
 
     .effected-file div {
-      margin: 10px;
+      margin: var(--space-lg);
     }
 
     .delete {
-      background-color: #ffebe9;
+      background-color: var(--color-error);
     }
 
     .add {
-      background-color: #dafbe1;
+      background-color: var(--color-success);
     }
 
     .spinner {

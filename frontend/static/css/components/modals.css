@@ -8,7 +8,7 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    background: var(--color-backdrop);
+    background-color: var(--color-backdrop);
     color: var(--color-text-on-strong);
     backdrop-filter: blur(10px);
 }

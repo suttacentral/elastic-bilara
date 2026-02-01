@@ -42,7 +42,7 @@ export class ScBilaraToast extends LitElement {
             align-items: center;
             gap: var(--space-sm);
             padding: var(--space-md) var(--space-lg);
-            background: var(--color-black);
+            background-color: var(--color-black);
             color: var(--color-text-on-strong);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
@@ -54,11 +54,11 @@ export class ScBilaraToast extends LitElement {
         }
 
         .toast.success {
-            background: var(--color-success);
+            background-color: var(--color-success);
         }
 
         .toast.error {
-            background: var(--color-error);
+            background-color: var(--color-error);
         }
 
         .toast.hidden {
