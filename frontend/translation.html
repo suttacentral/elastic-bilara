@@ -34,6 +34,7 @@
     <script src="./static/js/elements/translation/sc-bilara-translation-project-actions.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-toast.js"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-pali-lookup.js"></script>
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
@@ -371,6 +372,7 @@
                 <div class="project-container__detail-panel__related"
                     x-cloak
                     x-show="detailPanelActive === 'related'"
+                    @click.outside="detailPanelActive = null"
                     :class="{'active': detailPanelActive === 'related'}"
                     x-data="{selectedProjects: {}}">
                     <h3 class="detail-panel__title">Related Projects</h3>
@@ -504,6 +506,7 @@
         </div>
     </main>
     <sc-bilara-toast></sc-bilara-toast>
+    <sc-bilara-pali-lookup></sc-bilara-pali-lookup>
     <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
 </body>
 </html>

@@ -1,5 +1,6 @@
 from app.api.api_v1.endpoints import (
     auth,
+    dictionary,
     directories,
     git_ops,
     projects,
@@ -30,3 +31,4 @@ api_router.include_router(
 api_router.include_router(users.router_exposed, tags=["users"])
 api_router.include_router(remarks.router, tags=["remarks"])
 api_router.include_router(notifications.router, tags=["notifications"])
+api_router.include_router(dictionary.router, tags=["dictionary"])
