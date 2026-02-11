@@ -1,4 +1,5 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
+import '../addons/sc-bilara-settings-dialog.js';
 
 export class SCBilaraNavMainMobile extends LitElement {
   static styles = [
@@ -17,6 +18,13 @@ export class SCBilaraNavMainMobile extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  _openSettings() {
+    const dialog = this.querySelector('sc-bilara-settings-dialog');
+    if (dialog) {
+      dialog.show();
+    }
   }
 
   render() {

@@ -179,3 +179,28 @@ const BadgeStatus = {
     ERROR: 'error',
     MODIFIED: 'modified'
 };
+
+// Global user settings (loaded once on page init)
+window.userSettings = { pali_lookup: true, dblclick_search: true };
+
+async function loadUserSettings() {
+    try {
+        const response = await requestWithTokenRetry('settings');
+        if (response.ok) {
+            const data = await response.json();
+            window.userSettings = {
+                pali_lookup: data.pali_lookup ?? true,
+                dblclick_search: data.dblclick_search ?? true,
+            };
+        }
+    } catch (err) {
+        console.error('Failed to load user settings:', err);
+    }
+}
+
+// Update settings in real-time when user saves from settings dialog
+document.addEventListener('settings-saved', (e) => {
+    if (e.detail) {
+        window.userSettings = { ...window.userSettings, ...e.detail };
+    }
+});

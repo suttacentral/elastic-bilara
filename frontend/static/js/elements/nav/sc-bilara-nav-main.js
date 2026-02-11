@@ -5,6 +5,7 @@ import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/compone
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/menu-item/menu-item.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/divider/divider.js';
 import '../notification/sc-bilara-notification-icon.js';
+import '../addons/sc-bilara-settings-dialog.js';
 
 export class SCBilaraNavMain extends LitElement {
   static styles = [
@@ -23,6 +24,13 @@ export class SCBilaraNavMain extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  _openSettings() {
+    const dialog = this.querySelector('sc-bilara-settings-dialog');
+    if (dialog) {
+      dialog.show();
+    }
   }
 
   render() {
@@ -60,6 +68,9 @@ export class SCBilaraNavMain extends LitElement {
                     <sl-menu-item>
                       <a href="/admin" target="_blank" rel="noopener noreferrer" class="menu-item-link">Admin</a>
                     </sl-menu-item>
+                    <sl-menu-item @click=${this._openSettings}>
+                      <span class="menu-item-link">Settings</span>
+                    </sl-menu-item>
                     <sl-menu-item @click.prevent="await logout()">
                       Logout
                     </sl-menu-item>
@@ -68,6 +79,7 @@ export class SCBilaraNavMain extends LitElement {
               </li>
           </ul>
       </nav>
+      <sc-bilara-settings-dialog></sc-bilara-settings-dialog>
     `;
   }
 }

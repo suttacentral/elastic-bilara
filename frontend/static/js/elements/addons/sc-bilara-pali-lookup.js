@@ -280,6 +280,7 @@ export class ScBilaraPaliLookup extends LitElement {
 
     _handleClick(event) {
         event.stopPropagation();
+        if (window.userSettings && window.userSettings.pali_lookup === false) return;
         const textarea = event.target;
 
         // Use selectionStart which is set by the browser after click

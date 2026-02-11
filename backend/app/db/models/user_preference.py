@@ -14,3 +14,9 @@ class UserPreference(Base):
         JSON, nullable=True
     )
     notification_days: Mapped[Optional[int]] = mapped_column(nullable=True)
+    pali_lookup: Mapped[Optional[bool]] = mapped_column(
+        nullable=True, default=True
+    )
+    dblclick_search: Mapped[Optional[bool]] = mapped_column(
+        nullable=True, default=True
+    )

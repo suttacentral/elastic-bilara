@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -8,11 +10,18 @@ class UserPreferenceBase(BaseModel):
 
     notification_authors: list[str]
     notification_days: int
+    pali_lookup: bool = True
+    dblclick_search: bool = True
 
 
 class UserPreferenceUpdate(BaseModel):
     notification_authors: list[str]
     notification_days: int
+
+
+class UserPreferenceSettingsUpdate(BaseModel):
+    pali_lookup: Optional[bool] = None
+    dblclick_search: Optional[bool] = None
 
 
 class UserPreference(UserPreferenceBase):

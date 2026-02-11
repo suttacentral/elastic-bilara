@@ -7,6 +7,7 @@ from app.api.api_v1.endpoints import (
     pull_request,
     remarks,
     search,
+    settings,
     tasks,
     users,
     notifications
@@ -32,3 +33,4 @@ api_router.include_router(users.router_exposed, tags=["users"])
 api_router.include_router(remarks.router, tags=["remarks"])
 api_router.include_router(notifications.router, tags=["notifications"])
 api_router.include_router(dictionary.router, tags=["dictionary"])
+api_router.include_router(settings.router, tags=["settings"])
