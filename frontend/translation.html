@@ -495,10 +495,46 @@
 
                         <!-- Results -->
                         <div x-cloak
-                            x-show="Object.keys(results).length"
-                            x-html="renderResults()"
+                            x-show="resultEntries.length"
                             class="search__results-container"
                             id="resultsContainer">
+                            <template x-for="entry in resultEntries" :key="entry.uid">
+                                <div class="search__results-item">
+                                    <h3 class="search__results-title">
+                                        <a :href="'translation.html?prefix=' + entry.uid.split(':')[0] + '&source=' + new URLSearchParams(window.location.search).get('source') + '&muid=' + new URLSearchParams(window.location.search).get('muid')"
+                                           x-text="entry.uid"
+                                           class="search__results-title-link"
+                                           target="_blank"></a>
+                                    </h3>
+                                    <ul class="search__results-list">
+                                        <template x-for="seg in entry.segments" :key="seg.muid">
+                                            <li class="search__results-list-item"
+                                                :class="{ 'search__results-list-item--editable': canEditMuid(seg.muid, isAdmin) }">
+                                                <span class="search__results-key" x-text="seg.muid"></span>
+                                                <!-- Editable textarea for muids user can edit (admin only) -->
+                                                <template x-if="canEditMuid(seg.muid, isAdmin)">
+                                                    <div class="search__results-textarea-wrapper">
+                                                        <textarea
+                                                            class="search__results-textarea"
+                                                            :class="{ 'search__results-textarea--readonly': seg.muid.startsWith('root-') }"
+                                                            :id="'search-textarea-' + seg.muid + '-' + entry.uid"
+                                                            :value="seg.segment"
+                                                            :readonly="seg.muid.startsWith('root-')"
+                                                            @focus="searchResultFocus(entry.uid, seg.muid)"
+                                                            @input="searchResultInput(entry.uid, seg.muid, $event.target.value)"
+                                                            @keydown.enter.prevent="await searchResultSave(entry.uid, seg.muid, $event.target.value)"
+                                                        ></textarea>
+                                                    </div>
+                                                </template>
+                                                <!-- Read-only text for non-editable muids -->
+                                                <template x-if="!canEditMuid(seg.muid, isAdmin)">
+                                                    <span class="search__results-text" x-text="seg.segment"></span>
+                                                </template>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
