@@ -14,6 +14,8 @@ function fetchTranslation() {
             const muid = params.get("muid");
             const source = params.get("source");
 
+            this.muid = muid;
+
             await this.findOrCreateObject(source, this.prefix, true);
             if (muid) {
                 await this.findOrCreateObject(muid, this.prefix);
@@ -25,7 +27,22 @@ function fetchTranslation() {
             if (this.htmlProjectName) {
                 this.htmlProject = await this.createObject(this.htmlProjectName, this.prefix);
             }
-            
+
+            // Restore previously saved related project selections
+            const savedRelated = this.getSavedRelatedProjects();
+            const validSaved = savedRelated.filter(p => this.relatedProjects.includes(p));
+            for (const project of validSaved) {
+                try {
+                    await this.findOrCreateObject(project, this.prefix);
+                } catch (error) {
+                    console.error(`Failed to restore related project ${project}:`, error);
+                }
+            }
+            if (validSaved.length !== savedRelated.length) {
+                this.saveRelatedProjects(validSaved);
+            }
+            window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: validSaved } }));
+
             this.updateProgress();
         },
         getValue(translation, uid) {
@@ -45,19 +62,19 @@ function fetchTranslation() {
         getTranslationProgress() {
             const sourceTranslation = this.translations.find(t => t.isSource);
             const editableTranslation = this.translations.find(t => t.canEdit && !t.isSource);
-            
+
             if (!sourceTranslation || !editableTranslation) {
                 return { translated: 0, total: 0, percentage: 0 };
             }
-            
+
             const sourceData = sourceTranslation.data || {};
             const translationData = editableTranslation.data || {};
             const totalKeys = Object.keys(sourceData).length;
-            
+
             if (totalKeys === 0) {
                 return { translated: 0, total: 0, percentage: 0 };
             }
-            
+
             let translatedCount = 0;
             for (const key of Object.keys(sourceData)) {
                 const value = translationData[key];
@@ -65,14 +82,14 @@ function fetchTranslation() {
                     translatedCount++;
                 }
             }
-            
+
             const percentage = Math.round((translatedCount / totalKeys) * 100);
             return { translated: translatedCount, total: totalKeys, percentage };
         },
         updateProgress() {
             const progressData = this.getTranslationProgress();
-            window.dispatchEvent(new CustomEvent('translation-progress-update', { 
-                detail: progressData 
+            window.dispatchEvent(new CustomEvent('translation-progress-update', {
+                detail: progressData
             }));
         },
         _backupTranslations() {
@@ -678,13 +695,32 @@ function fetchTranslation() {
             const index = this.translations.findIndex(t => t.muid === project);
             if (index > -1) {
                 this.translations.splice(index, 1);
+                const saved = this.getSavedRelatedProjects().filter(p => p !== project);
+                this.saveRelatedProjects(saved);
             } else {
                 try {
                     await this.findOrCreateObject(project, this.prefix);
+                    const saved = this.getSavedRelatedProjects();
+                    if (!saved.includes(project)) {
+                        saved.push(project);
+                        this.saveRelatedProjects(saved);
+                    }
                 } catch (error) {
                     throw new Error(error);
                 }
             }
+        },
+        getSavedRelatedProjects() {
+            try {
+                const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                return JSON.parse(localStorage.getItem(key)) || [];
+            } catch {
+                return [];
+            }
+        },
+        saveRelatedProjects(projects) {
+            const key = `relatedProjects_${this.prefix}_${this.muid}`;
+            localStorage.setItem(key, JSON.stringify(projects));
         },
     };
 }

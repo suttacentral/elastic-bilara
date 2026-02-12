@@ -375,7 +375,8 @@
                     x-show="detailPanelActive === 'related'"
                     @click.outside="detailPanelActive = null"
                     :class="{'active': detailPanelActive === 'related'}"
-                    x-data="{selectedProjects: {}}">
+                    x-data="{selectedProjects: {}}"
+                    @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
                     <h3 class="detail-panel__title">Related Projects</h3>
                     <template x-for="project in relatedProjects" :key="project">
                         <div x-text="selectedProjects[project] ? '✓ ' + project : project"
