@@ -378,7 +378,7 @@
                     x-data="{selectedProjects: {}}">
                     <h3 class="detail-panel__title">Related Projects</h3>
                     <template x-for="project in relatedProjects" :key="project">
-                        <div x-text="project"
+                        <div x-text="selectedProjects[project] ? '✓ ' + project : project"
                             class="project-container__detail-panel__related-item"
                             @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
                             :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }">
