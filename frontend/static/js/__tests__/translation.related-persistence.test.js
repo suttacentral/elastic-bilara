@@ -321,9 +321,6 @@ describe('init() restoration of saved related projects', () => {
                         console.error(`Failed to restore related project ${project}:`, error);
                     }
                 }
-                if (validSaved.length !== savedRelated.length) {
-                    this.saveRelatedProjects(validSaved);
-                }
                 window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: validSaved } }));
 
                 this.updateProgress();
@@ -355,18 +352,17 @@ describe('init() restoration of saved related projects', () => {
         expect(restoreEvent.detail.projects).toEqual(['de-sabbamitta', 'fr-noeismet']);
     });
 
-    test('should filter out invalid projects and update localStorage', async () => {
+    test('should skip unavailable projects without removing them from localStorage', async () => {
         getItemSpy.mockReturnValue(JSON.stringify(['de-sabbamitta', 'nonexistent-project']));
 
         await mockContext.init();
 
+        // Only the valid project should be loaded into translations
         expect(mockContext.translations).toHaveLength(3);
         expect(mockContext.translations[2].muid).toBe('de-sabbamitta');
 
-        expect(setItemSpy).toHaveBeenCalledWith(
-            'relatedProjects_en-sujato',
-            JSON.stringify(['de-sabbamitta'])
-        );
+        // localStorage should NOT be updated — unavailable projects are preserved for other prefixes
+        expect(setItemSpy).not.toHaveBeenCalled();
     });
 
     test('should not call saveRelatedProjects when all saved projects are valid', async () => {

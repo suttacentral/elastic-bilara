@@ -38,9 +38,6 @@ function fetchTranslation() {
                     console.error(`Failed to restore related project ${project}:`, error);
                 }
             }
-            if (validSaved.length !== savedRelated.length) {
-                this.saveRelatedProjects(validSaved);
-            }
             window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: validSaved } }));
 
             this.updateProgress();
