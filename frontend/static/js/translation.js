@@ -712,14 +712,14 @@ function fetchTranslation() {
         },
         getSavedRelatedProjects() {
             try {
-                const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                const key = `relatedProjects_${this.muid}`;
                 return JSON.parse(localStorage.getItem(key)) || [];
             } catch {
                 return [];
             }
         },
         saveRelatedProjects(projects) {
-            const key = `relatedProjects_${this.prefix}_${this.muid}`;
+            const key = `relatedProjects_${this.muid}`;
             localStorage.setItem(key, JSON.stringify(projects));
         },
     };

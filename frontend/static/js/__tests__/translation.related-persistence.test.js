@@ -27,14 +27,14 @@ describe('Related Projects Persistence Helpers', () => {
             muid: 'en-sujato',
             getSavedRelatedProjects() {
                 try {
-                    const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                    const key = `relatedProjects_${this.muid}`;
                     return JSON.parse(localStorage.getItem(key)) || [];
                 } catch {
                     return [];
                 }
             },
             saveRelatedProjects(projects) {
-                const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                const key = `relatedProjects_${this.muid}`;
                 localStorage.setItem(key, JSON.stringify(projects));
             },
         };
@@ -49,7 +49,7 @@ describe('Related Projects Persistence Helpers', () => {
             getItemSpy.mockReturnValue(JSON.stringify(['pli-ms', 'de-sabbamitta']));
             const result = mockContext.getSavedRelatedProjects();
             expect(result).toEqual(['pli-ms', 'de-sabbamitta']);
-            expect(getItemSpy).toHaveBeenCalledWith('relatedProjects_mn1_en-sujato');
+            expect(getItemSpy).toHaveBeenCalledWith('relatedProjects_en-sujato');
         });
 
         test('should return empty array when nothing is saved', () => {
@@ -67,7 +67,7 @@ describe('Related Projects Persistence Helpers', () => {
             mockContext.muid = 'zh-sujato';
             getItemSpy.mockReturnValue(null);
             mockContext.getSavedRelatedProjects();
-            expect(getItemSpy).toHaveBeenCalledWith('relatedProjects_dn2_zh-sujato');
+            expect(getItemSpy).toHaveBeenCalledWith('relatedProjects_zh-sujato');
         });
     });
 
@@ -75,7 +75,7 @@ describe('Related Projects Persistence Helpers', () => {
         test('should save projects to localStorage as JSON', () => {
             mockContext.saveRelatedProjects(['pli-ms', 'de-sabbamitta']);
             expect(setItemSpy).toHaveBeenCalledWith(
-                'relatedProjects_mn1_en-sujato',
+                'relatedProjects_en-sujato',
                 JSON.stringify(['pli-ms', 'de-sabbamitta'])
             );
         });
@@ -83,7 +83,7 @@ describe('Related Projects Persistence Helpers', () => {
         test('should save empty array', () => {
             mockContext.saveRelatedProjects([]);
             expect(setItemSpy).toHaveBeenCalledWith(
-                'relatedProjects_mn1_en-sujato',
+                'relatedProjects_en-sujato',
                 '[]'
             );
         });
@@ -93,7 +93,7 @@ describe('Related Projects Persistence Helpers', () => {
             mockContext.muid = 'fr-noeismet';
             mockContext.saveRelatedProjects(['pli-ms']);
             expect(setItemSpy).toHaveBeenCalledWith(
-                'relatedProjects_sn3_fr-noeismet',
+                'relatedProjects_fr-noeismet',
                 JSON.stringify(['pli-ms'])
             );
         });
@@ -128,14 +128,14 @@ describe('toggleRelatedProject with persistence', () => {
             },
             getSavedRelatedProjects() {
                 try {
-                    const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                    const key = `relatedProjects_${this.muid}`;
                     return JSON.parse(localStorage.getItem(key)) || [];
                 } catch {
                     return [];
                 }
             },
             saveRelatedProjects(projects) {
-                const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                const key = `relatedProjects_${this.muid}`;
                 localStorage.setItem(key, JSON.stringify(projects));
             },
             async toggleRelatedProject(project) {
@@ -171,7 +171,7 @@ describe('toggleRelatedProject with persistence', () => {
         expect(mockContext.translations).toHaveLength(3);
         expect(mockContext.translations[2].muid).toBe('de-sabbamitta');
         expect(setItemSpy).toHaveBeenCalledWith(
-            'relatedProjects_mn1_en-sujato',
+            'relatedProjects_en-sujato',
             JSON.stringify(['de-sabbamitta'])
         );
     });
@@ -184,7 +184,7 @@ describe('toggleRelatedProject with persistence', () => {
 
         expect(mockContext.translations.find(t => t.muid === 'de-sabbamitta')).toBeUndefined();
         expect(setItemSpy).toHaveBeenCalledWith(
-            'relatedProjects_mn1_en-sujato',
+            'relatedProjects_en-sujato',
             JSON.stringify(['fr-noeismet'])
         );
     });
@@ -211,11 +211,11 @@ describe('toggleRelatedProject with persistence', () => {
         expect(mockContext.translations).toHaveLength(4);
         expect(setItemSpy).toHaveBeenCalledTimes(2);
         expect(setItemSpy).toHaveBeenNthCalledWith(1,
-            'relatedProjects_mn1_en-sujato',
+            'relatedProjects_en-sujato',
             JSON.stringify(['de-sabbamitta'])
         );
         expect(setItemSpy).toHaveBeenNthCalledWith(2,
-            'relatedProjects_mn1_en-sujato',
+            'relatedProjects_en-sujato',
             JSON.stringify(['de-sabbamitta', 'fr-noeismet'])
         );
     });
@@ -227,7 +227,7 @@ describe('toggleRelatedProject with persistence', () => {
         await mockContext.toggleRelatedProject('de-sabbamitta');
 
         expect(setItemSpy).toHaveBeenCalledWith(
-            'relatedProjects_mn1_en-sujato',
+            'relatedProjects_en-sujato',
             '[]'
         );
     });
@@ -280,14 +280,14 @@ describe('init() restoration of saved related projects', () => {
             },
             getSavedRelatedProjects() {
                 try {
-                    const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                    const key = `relatedProjects_${this.muid}`;
                     return JSON.parse(localStorage.getItem(key)) || [];
                 } catch {
                     return [];
                 }
             },
             saveRelatedProjects(projects) {
-                const key = `relatedProjects_${this.prefix}_${this.muid}`;
+                const key = `relatedProjects_${this.muid}`;
                 localStorage.setItem(key, JSON.stringify(projects));
             },
             updateProgress() {},
@@ -364,7 +364,7 @@ describe('init() restoration of saved related projects', () => {
         expect(mockContext.translations[2].muid).toBe('de-sabbamitta');
 
         expect(setItemSpy).toHaveBeenCalledWith(
-            'relatedProjects_mn1_en-sujato',
+            'relatedProjects_en-sujato',
             JSON.stringify(['de-sabbamitta'])
         );
     });
