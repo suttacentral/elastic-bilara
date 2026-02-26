@@ -13,6 +13,8 @@
  * - Search result focus snapshotting (searchResultFocus)
  * - Search result input updating (searchResultInput)
  * - Search result saving (searchResultSave)
+ * - Search-and-replace: replaceSegment, submitReplacement
+ * - Highlight: getHighlightedSegment, _escapeHtml
  */
 
 // ============================================================================
@@ -44,6 +46,10 @@ function createMockSearch(overrides = {}) {
         editableMusids: {},
         originalValues: {},
         resultEntries: [],
+        // Search-and-replace support
+        replacementText: '',
+        replacedItems: {},
+        submittedItems: {},
 
         updateSuggestions() {
             if (!this.projectQuery) {
@@ -167,6 +173,88 @@ function createMockSearch(overrides = {}) {
             }
         },
 
+        /** Return HTML with search/replacement keywords wrapped in <mark> tags */
+        getHighlightedSegment(segment, uid, muid) {
+            if (!segment) return '';
+            const key = uid + '::' + muid;
+            let term;
+            if (this.replacedItems[key]) {
+                term = this.replacementText;
+            } else {
+                term = this.fields[muid];
+                if (!term) {
+                    for (const [k, v] of Object.entries(this.fields)) {
+                        if (k !== 'uid' && v) { term = v; break; }
+                    }
+                }
+            }
+            const escaped = this._escapeHtml(segment);
+            if (!term) return escaped;
+            const escapedTerm = this._escapeHtml(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escapedTerm, 'gi');
+            return escaped.replace(regex, '<mark class="search__highlight">$&</mark>');
+        },
+        _escapeHtml(text) {
+            const el = document.createElement('span');
+            el.textContent = text;
+            return el.innerHTML;
+        },
+
+        /** Replace search keyword in a single segment with replacementText */
+        replaceSegment(uid, muid, seg) {
+            let searchTerm = this.fields[muid];
+            if (!searchTerm) {
+                for (const [key, value] of Object.entries(this.fields)) {
+                    if (key !== 'uid' && value) {
+                        searchTerm = value;
+                        break;
+                    }
+                }
+            }
+            if (!searchTerm) return;
+
+            const newValue = seg.segment.replaceAll(searchTerm, this.replacementText);
+            seg.segment = newValue;
+            if (this.results[uid]) {
+                this.results[uid][muid] = newValue;
+            }
+            this.replacedItems[uid + '::' + muid] = true;
+        },
+
+        /** Submit a single replaced segment to the server */
+        async submitReplacement(uid, muid, currentValue) {
+            const key = uid + '::' + muid;
+            const prefix = this.getPrefixFromUid(uid);
+            const badgeId = `search-badge-${muid}-${uid}`;
+
+            try {
+                const textarea = document.getElementById(`search-textarea-${muid}-${uid}`);
+                if (textarea) {
+                    let badge = document.getElementById(badgeId);
+                    if (!badge) {
+                        badge = document.createElement('sc-bilara-translation-edit-status');
+                        badge.id = badgeId;
+                        badge.className = 'search__results-status';
+                        textarea.parentElement.appendChild(badge);
+                    }
+                }
+
+                displayBadge(badgeId, BadgeStatus.PENDING);
+                const response = await requestWithTokenRetry(`projects/${muid}/${prefix}/`, {
+                    credentials: 'include',
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [uid]: currentValue }),
+                });
+                await response.json();
+                displayBadge(badgeId, BadgeStatus.COMMITTED);
+                this.submittedItems[key] = true;
+            } catch (error) {
+                displayBadge(badgeId, BadgeStatus.ERROR);
+                throw new Error(error);
+            }
+        },
+
         scrollTop(selector) {
             document.querySelector(selector).scrollTop = 0;
         },
@@ -205,6 +293,13 @@ describe('Search State Initialization', () => {
         expect(s.originalValues).toEqual({});
         expect(s.resultEntries).toEqual([]);
         expect(s.results).toEqual({});
+    });
+
+    test('should have correct default search-and-replace state', () => {
+        const s = createMockSearch();
+        expect(s.replacementText).toBe('');
+        expect(s.replacedItems).toEqual({});
+        expect(s.submittedItems).toEqual({});
     });
 });
 
@@ -756,6 +851,7 @@ describe('searchResultSave', () => {
             }
             return null;
         });
+        const originalCreateElement = document.createElement.bind(document);
         document.createElement = jest.fn(() => ({
             id: '',
             className: '',
@@ -769,6 +865,7 @@ describe('searchResultSave', () => {
 
         expect(document.createElement).toHaveBeenCalledWith('sc-bilara-translation-edit-status');
         expect(mockParent.appendChild).toHaveBeenCalled();
+        document.createElement = originalCreateElement;
     });
 });
 
@@ -962,5 +1059,331 @@ describe('Integration Tests', () => {
         expect(params.get('translation-en-sujato')).toBe('monks');
         expect(params.get('size')).toBe('20');
         expect(params.get('page')).toBe('0');
+    });
+});
+
+// ============================================================================
+// replaceSegment Tests
+// ============================================================================
+
+describe('replaceSegment', () => {
+    test('should replace search term in segment with replacementText', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'hello' };
+        s.replacementText = 'world';
+        s.results = { 'mn1:1.1': { 'translation-en-sujato': 'say hello to hello' } };
+        const seg = { muid: 'translation-en-sujato', segment: 'say hello to hello' };
+
+        s.replaceSegment('mn1:1.1', 'translation-en-sujato', seg);
+
+        expect(seg.segment).toBe('say world to world');
+        expect(s.results['mn1:1.1']['translation-en-sujato']).toBe('say world to world');
+        expect(s.replacedItems['mn1:1.1::translation-en-sujato']).toBe(true);
+    });
+
+    test('should use fallback field when muid not in fields', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-zh-site': 'hello' };
+        s.replacementText = 'world';
+        s.results = { 'mn1:1.1': { 'translation-en-sujato': 'hello there' } };
+        const seg = { muid: 'translation-en-sujato', segment: 'hello there' };
+
+        s.replaceSegment('mn1:1.1', 'translation-en-sujato', seg);
+
+        expect(seg.segment).toBe('world there');
+    });
+
+    test('should do nothing when no search term found', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '' };
+        s.replacementText = 'world';
+        s.results = { 'mn1:1.1': { 'translation-en-sujato': 'hello' } };
+        const seg = { muid: 'translation-en-sujato', segment: 'hello' };
+
+        s.replaceSegment('mn1:1.1', 'translation-en-sujato', seg);
+
+        expect(seg.segment).toBe('hello');
+        expect(s.replacedItems).toEqual({});
+    });
+
+    test('should replace with empty string when replacementText is empty', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'hello' };
+        s.replacementText = '';
+        s.results = { 'mn1:1.1': { 'translation-en-sujato': 'say hello' } };
+        const seg = { muid: 'translation-en-sujato', segment: 'say hello' };
+
+        s.replaceSegment('mn1:1.1', 'translation-en-sujato', seg);
+
+        expect(seg.segment).toBe('say ');
+        expect(s.replacedItems['mn1:1.1::translation-en-sujato']).toBe(true);
+    });
+
+    test('should not modify results if uid not in results', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'hello' };
+        s.replacementText = 'world';
+        s.results = {};
+        const seg = { muid: 'translation-en-sujato', segment: 'hello' };
+
+        s.replaceSegment('unknown:1.1', 'translation-en-sujato', seg);
+
+        expect(seg.segment).toBe('world');
+        expect(s.replacedItems['unknown:1.1::translation-en-sujato']).toBe(true);
+    });
+
+    test('should handle case-sensitive replacement', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'Hello' };
+        s.replacementText = 'World';
+        s.results = { 'mn1:1.1': { 'translation-en-sujato': 'Hello hello HELLO' } };
+        const seg = { muid: 'translation-en-sujato', segment: 'Hello hello HELLO' };
+
+        s.replaceSegment('mn1:1.1', 'translation-en-sujato', seg);
+
+        // replaceAll is case-sensitive
+        expect(seg.segment).toBe('World hello HELLO');
+    });
+});
+
+// ============================================================================
+// submitReplacement Tests
+// ============================================================================
+
+describe('submitReplacement', () => {
+    beforeEach(() => {
+        requestWithTokenRetry.mockReset();
+        displayBadge.mockReset();
+        document.getElementById = jest.fn().mockReturnValue(null);
+    });
+
+    test('should call API with correct params and mark as submitted', async () => {
+        const s = createMockSearch();
+        requestWithTokenRetry.mockResolvedValue({
+            json: () => Promise.resolve({}),
+        });
+
+        await s.submitReplacement('mn1:1.1', 'translation-en-sujato', 'new text');
+
+        expect(requestWithTokenRetry).toHaveBeenCalledWith(
+            'projects/translation-en-sujato/mn1/',
+            expect.objectContaining({
+                method: 'PATCH',
+                body: JSON.stringify({ 'mn1:1.1': 'new text' }),
+            }),
+        );
+        expect(s.submittedItems['mn1:1.1::translation-en-sujato']).toBe(true);
+    });
+
+    test('should display PENDING then COMMITTED badge on success', async () => {
+        const s = createMockSearch();
+        requestWithTokenRetry.mockResolvedValue({
+            json: () => Promise.resolve({}),
+        });
+
+        await s.submitReplacement('mn1:1.1', 'translation-en-sujato', 'text');
+
+        const badgeId = 'search-badge-translation-en-sujato-mn1:1.1';
+        expect(displayBadge).toHaveBeenCalledWith(badgeId, BadgeStatus.PENDING);
+        expect(displayBadge).toHaveBeenCalledWith(badgeId, BadgeStatus.COMMITTED);
+    });
+
+    test('should display ERROR badge and throw on failure', async () => {
+        const s = createMockSearch();
+        requestWithTokenRetry.mockRejectedValue(new Error('Network error'));
+
+        await expect(
+            s.submitReplacement('mn1:1.1', 'translation-en-sujato', 'text'),
+        ).rejects.toThrow();
+
+        const badgeId = 'search-badge-translation-en-sujato-mn1:1.1';
+        expect(displayBadge).toHaveBeenCalledWith(badgeId, BadgeStatus.PENDING);
+        expect(displayBadge).toHaveBeenCalledWith(badgeId, BadgeStatus.ERROR);
+        expect(s.submittedItems['mn1:1.1::translation-en-sujato']).toBeUndefined();
+    });
+
+    test('should use correct prefix for compound uid', async () => {
+        const s = createMockSearch();
+        requestWithTokenRetry.mockResolvedValue({
+            json: () => Promise.resolve({}),
+        });
+
+        await s.submitReplacement('an1.1:0.1', 'translation-zh-site', 'replaced');
+
+        expect(requestWithTokenRetry).toHaveBeenCalledWith(
+            'projects/translation-zh-site/an1.1/',
+            expect.objectContaining({
+                method: 'PATCH',
+                body: JSON.stringify({ 'an1.1:0.1': 'replaced' }),
+            }),
+        );
+    });
+});
+
+// ============================================================================
+// _escapeHtml Tests
+// ============================================================================
+
+describe('_escapeHtml', () => {
+    test('should escape HTML special characters', () => {
+        const s = createMockSearch();
+        expect(s._escapeHtml('<script>alert("xss")</script>')).toBe(
+            '&lt;script&gt;alert("xss")&lt;/script&gt;',
+        );
+    });
+
+    test('should escape ampersand', () => {
+        const s = createMockSearch();
+        expect(s._escapeHtml('a & b')).toBe('a &amp; b');
+    });
+
+    test('should return empty string for empty input', () => {
+        const s = createMockSearch();
+        expect(s._escapeHtml('')).toBe('');
+    });
+
+    test('should not modify plain text', () => {
+        const s = createMockSearch();
+        expect(s._escapeHtml('hello world')).toBe('hello world');
+    });
+});
+
+// ============================================================================
+// getHighlightedSegment Tests
+// ============================================================================
+
+describe('getHighlightedSegment', () => {
+    test('should wrap search term in <mark> tags', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'hello' };
+
+        const result = s.getHighlightedSegment('say hello world', 'mn1:1.1', 'translation-en-sujato');
+
+        expect(result).toBe('say <mark class="search__highlight">hello</mark> world');
+    });
+
+    test('should highlight all occurrences case-insensitively', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'hello' };
+
+        const result = s.getHighlightedSegment('Hello hello HELLO', 'mn1:1.1', 'translation-en-sujato');
+
+        expect(result).toBe(
+            '<mark class="search__highlight">Hello</mark> <mark class="search__highlight">hello</mark> <mark class="search__highlight">HELLO</mark>',
+        );
+    });
+
+    test('should highlight replacement text after replace', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'hello' };
+        s.replacementText = 'world';
+        s.replacedItems['mn1:1.1::translation-en-sujato'] = true;
+
+        const result = s.getHighlightedSegment('say world to world', 'mn1:1.1', 'translation-en-sujato');
+
+        expect(result).toBe(
+            'say <mark class="search__highlight">world</mark> to <mark class="search__highlight">world</mark>',
+        );
+    });
+
+    test('should return escaped text when no search term', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '' };
+
+        const result = s.getHighlightedSegment('hello <b>world</b>', 'mn1:1.1', 'unknown-muid');
+
+        expect(result).toBe('hello &lt;b&gt;world&lt;/b&gt;');
+    });
+
+    test('should return empty string for empty segment', () => {
+        const s = createMockSearch();
+        expect(s.getHighlightedSegment('', 'mn1:1.1', 'muid')).toBe('');
+    });
+
+    test('should return empty string for null/undefined segment', () => {
+        const s = createMockSearch();
+        expect(s.getHighlightedSegment(null, 'mn1:1.1', 'muid')).toBe('');
+        expect(s.getHighlightedSegment(undefined, 'mn1:1.1', 'muid')).toBe('');
+    });
+
+    test('should escape HTML in segment before highlighting', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'test' };
+
+        const result = s.getHighlightedSegment('<script>test</script>', 'mn1:1.1', 'translation-en-sujato');
+
+        expect(result).toContain('<mark class="search__highlight">');
+        expect(result).not.toContain('<script>');
+        expect(result).toContain('&lt;script&gt;');
+    });
+
+    test('should handle regex special characters in search term', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'a.b' };
+
+        const result = s.getHighlightedSegment('a.b and axb', 'mn1:1.1', 'translation-en-sujato');
+
+        // Only "a.b" should be highlighted, not "axb"
+        expect(result).toBe('<mark class="search__highlight">a.b</mark> and axb');
+    });
+
+    test('should use fallback field when muid not in fields', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-zh-site': 'hello' };
+
+        const result = s.getHighlightedSegment('hello world', 'mn1:1.1', 'root-pli-ms');
+
+        expect(result).toBe('<mark class="search__highlight">hello</mark> world');
+    });
+});
+
+// ============================================================================
+// Replace + Submit Integration Tests
+// ============================================================================
+
+describe('Replace + Submit Integration', () => {
+    beforeEach(() => {
+        requestWithTokenRetry.mockReset();
+        displayBadge.mockReset();
+        document.getElementById = jest.fn().mockReturnValue(null);
+    });
+
+    test('full replace → submit workflow', async () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'old' };
+        s.replacementText = 'new';
+        s.results = { 'mn1:1.1': { 'translation-en-sujato': 'the old text' } };
+        s._buildResultEntries();
+        const seg = s.resultEntries[0].segments[0];
+
+        // 1. Replace
+        s.replaceSegment('mn1:1.1', 'translation-en-sujato', seg);
+        expect(seg.segment).toBe('the new text');
+        expect(s.replacedItems['mn1:1.1::translation-en-sujato']).toBe(true);
+        expect(s.submittedItems['mn1:1.1::translation-en-sujato']).toBeUndefined();
+
+        // 2. Highlight should use replacement text
+        const highlighted = s.getHighlightedSegment(seg.segment, 'mn1:1.1', 'translation-en-sujato');
+        expect(highlighted).toContain('<mark class="search__highlight">new</mark>');
+
+        // 3. Submit
+        requestWithTokenRetry.mockResolvedValue({
+            json: () => Promise.resolve({}),
+        });
+        await s.submitReplacement('mn1:1.1', 'translation-en-sujato', seg.segment);
+        expect(s.submittedItems['mn1:1.1::translation-en-sujato']).toBe(true);
+    });
+
+    test('replace updates both seg object and results dict', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': 'abc' };
+        s.replacementText = 'xyz';
+        s.results = { 'mn1:1.1': { 'translation-en-sujato': 'abc def abc' } };
+        const seg = { muid: 'translation-en-sujato', segment: 'abc def abc' };
+
+        s.replaceSegment('mn1:1.1', 'translation-en-sujato', seg);
+
+        expect(seg.segment).toBe('xyz def xyz');
+        expect(s.results['mn1:1.1']['translation-en-sujato']).toBe('xyz def xyz');
     });
 });

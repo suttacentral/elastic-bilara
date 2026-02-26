@@ -17,6 +17,10 @@ const search = () => {
         editableMusids: {},       // { muid: bool } — cached can_edit per muid
         originalValues: {},       // { "uid::muid": string } — snapshot on focus
         resultEntries: [],        // reactive array for x-for: [ { uid, segments: [ { muid, segment } ] } ]
+        // Search-and-replace support
+        replacementText: "",      // bound to the Replacement input
+        replacedItems: {},        // { "uid::muid": true } — replaced but not yet submitted
+        submittedItems: {},       // { "uid::muid": true } — successfully submitted
         async init() {
             try {
                 const response = await requestWithTokenRetry(`projects/`);
@@ -72,6 +76,8 @@ const search = () => {
                 }
                 this.results = results;
                 this.originalValues = {};
+                this.replacedItems = {};
+                this.submittedItems = {};
                 await this._fetchEditPermissions(results);
                 this._buildResultEntries();
                 this.currentPage = this.page;
@@ -183,6 +189,32 @@ const search = () => {
                 if (seg) seg.segment = value;
             }
         },
+        /** Return HTML with search/replacement keywords wrapped in <mark> tags */
+        getHighlightedSegment(segment, uid, muid) {
+            if (!segment) return '';
+            const key = uid + '::' + muid;
+            let term;
+            if (this.replacedItems[key]) {
+                term = this.replacementText;
+            } else {
+                term = this.fields[muid];
+                if (!term) {
+                    for (const [k, v] of Object.entries(this.fields)) {
+                        if (k !== 'uid' && v) { term = v; break; }
+                    }
+                }
+            }
+            const escaped = this._escapeHtml(segment);
+            if (!term) return escaped;
+            const escapedTerm = this._escapeHtml(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escapedTerm, 'gi');
+            return escaped.replace(regex, '<mark class="search__highlight">$&</mark>');
+        },
+        _escapeHtml(text) {
+            const el = document.createElement('span');
+            el.textContent = text;
+            return el.innerHTML;
+        },
         /** Called on Enter to save edited search result */
         async searchResultSave(uid, muid, currentValue) {
             const key = uid + '::' + muid;
@@ -217,6 +249,78 @@ const search = () => {
                 });
                 await response.json();
                 displayBadge(badgeId, BadgeStatus.COMMITTED);
+            } catch (error) {
+                displayBadge(badgeId, BadgeStatus.ERROR);
+                throw new Error(error);
+            }
+        },
+        /** Check if a segment contains the search term that would be replaced */
+        hasReplaceTerm(muid, segment) {
+            let searchTerm = this.fields[muid];
+            if (!searchTerm) {
+                // Only allow fallback for the user's own translation muid
+                const userMuid = new URLSearchParams(window.location.search).get('muid');
+                if (muid === userMuid) {
+                    for (const [key, value] of Object.entries(this.fields)) {
+                        if (key !== 'uid' && value) {
+                            searchTerm = value;
+                            break;
+                        }
+                    }
+                }
+            }
+            return !!(searchTerm && segment && segment.includes(searchTerm));
+        },
+        /** Replace search keyword in a single segment with replacementText */
+        replaceSegment(uid, muid, seg) {
+            // Find the search term for this muid
+            let searchTerm = this.fields[muid];
+            if (!searchTerm) {
+                // Fallback: use the first non-uid field that has a value
+                for (const [key, value] of Object.entries(this.fields)) {
+                    if (key !== 'uid' && value) {
+                        searchTerm = value;
+                        break;
+                    }
+                }
+            }
+            if (!searchTerm) return;
+
+            const newValue = seg.segment.replaceAll(searchTerm, this.replacementText);
+            seg.segment = newValue;
+            if (this.results[uid]) {
+                this.results[uid][muid] = newValue;
+            }
+            this.replacedItems[uid + '::' + muid] = true;
+        },
+        /** Submit a single replaced segment to the server */
+        async submitReplacement(uid, muid, currentValue) {
+            const key = uid + '::' + muid;
+            const prefix = this.getPrefixFromUid(uid);
+            const badgeId = `search-badge-${muid}-${uid}`;
+
+            try {
+                const textarea = document.getElementById(`search-textarea-${muid}-${uid}`);
+                if (textarea) {
+                    let badge = document.getElementById(badgeId);
+                    if (!badge) {
+                        badge = document.createElement('sc-bilara-translation-edit-status');
+                        badge.id = badgeId;
+                        badge.className = 'search__results-status';
+                        textarea.parentElement.appendChild(badge);
+                    }
+                }
+
+                displayBadge(badgeId, BadgeStatus.PENDING);
+                const response = await requestWithTokenRetry(`projects/${muid}/${prefix}/`, {
+                    credentials: "include",
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ [uid]: currentValue }),
+                });
+                await response.json();
+                displayBadge(badgeId, BadgeStatus.COMMITTED);
+                this.submittedItems[key] = true;
             } catch (error) {
                 displayBadge(badgeId, BadgeStatus.ERROR);
                 throw new Error(error);

@@ -496,6 +496,16 @@
 
 .search__results-item {
     padding: 8px;
+    position: relative;
+}
+
+.search__results-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 1;
 }
 
 .search__results-item:last-child {
@@ -574,7 +584,7 @@
     padding: 4px 8px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xxs);
-    background-color: var(--color-background);
+    background: transparent;
     font-family: var(--font-serif);
     font-size: var(--text-sm);
     color: var(--color-text);
@@ -587,18 +597,85 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
     word-break: break-word;
+    position: relative;
+    z-index: 1;
 }
 
 .search__results-textarea:focus {
     outline: none;
     border-color: var(--color-primary);
-    background-color: var(--color-background-secondary);
+}
+
+.search__results-highlight-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xxs);
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    color: transparent;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    pointer-events: none;
+    z-index: 0;
+    background-color: var(--color-background);
+}
+
+.search__highlight {
+    background-color: rgba(255, 235, 59, 0.45);
+    color: transparent;
+    border-radius: 2px;
+}
+
+.search__results-text .search__highlight {
+    color: inherit;
 }
 
 .search__results-status {
     position: absolute;
     bottom: 2px;
     right: 4px;
+}
+
+.search__replace-btn,
+.search__submit-btn {
+    display: inline-block;
+    padding: 1px 8px;
+    font-size: var(--text-xxs);
+    font-weight: 600;
+    border-radius: var(--radius-xxs);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: var(--transition);
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.search__replace-btn {
+    background-color: var(--color-background-tertiary);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    height: var(--text-xl);
+}
+
+.search__replace-btn:hover {
+    background-color: var(--color-primary);
+    color: var(--color-text-on-strong);
+}
+
+.search__submit-btn {
+    background-color: var(--color-primary);
+    color: var(--color-text-on-strong);
+    border-color: var(--color-primary);
+}
+
+.search__submit-btn:hover {
+    filter: brightness(0.9);
 }
 
 @supports not (field-sizing: content) {

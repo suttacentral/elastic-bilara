@@ -447,6 +447,17 @@
                                 </template>
                             </div>
 
+                            <!-- Replacement -->
+                            <div class="fields__item" style="padding-bottom: 12px;">
+                                <div class="fields__label__container">
+                                    <label for="search-replacement" class="fields__label">Replacement</label>
+                                </div>
+                                <input class="fields__input"
+                                    type="text"
+                                    id="search-replacement"
+                                    x-model="replacementText"/>
+                            </div>
+
                             <!-- Page Size -->
                             <div class="page-size">
                                 <label class="page-size__label" for="size">Page Size:</label>
@@ -501,13 +512,32 @@
                             class="search__results-container"
                             id="resultsContainer">
                             <template x-for="entry in resultEntries" :key="entry.uid">
-                                <div class="search__results-item">
+                                <div class="search__results-item"
+                                    x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditMuid(s.muid, isAdmin) && !s.muid.startsWith('root-')); } }">
                                     <h3 class="search__results-title">
                                         <a :href="'translation.html?prefix=' + entry.uid.split(':')[0] + '&source=' + new URLSearchParams(window.location.search).get('source') + '&muid=' + new URLSearchParams(window.location.search).get('muid')"
                                            x-text="entry.uid"
                                            class="search__results-title-link"
                                            target="_blank"></a>
                                     </h3>
+                                    <div class="search__results-actions">
+                                        <template x-for="seg in entry.segments" :key="'btn-' + seg.muid">
+                                            <span>
+                                                <!-- REPLACE button -->
+                                                <button class="btn search__replace-btn"
+                                                    x-show="replacementText && canEditMuid(seg.muid, isAdmin) && !seg.muid.startsWith('root-') && !replacedItems[entry.uid + '::' + seg.muid] && hasReplaceTerm(seg.muid, seg.segment)"
+                                                    x-cloak
+                                                    @click="replaceSegment(entry.uid, seg.muid, seg)"
+                                                >REPLACE</button>
+                                                <!-- SUBMIT button -->
+                                                <button class="btn search__submit-btn"
+                                                    x-show="replacedItems[entry.uid + '::' + seg.muid] && !submittedItems[entry.uid + '::' + seg.muid]"
+                                                    x-cloak
+                                                    @click="await submitReplacement(entry.uid, seg.muid, seg.segment)"
+                                                >SUBMIT</button>
+                                            </span>
+                                        </template>
+                                    </div>
                                     <ul class="search__results-list">
                                         <template x-for="seg in entry.segments" :key="seg.muid">
                                             <li class="search__results-list-item"
@@ -516,6 +546,9 @@
                                                 <!-- Editable textarea for muids user can edit (admin only) -->
                                                 <template x-if="canEditMuid(seg.muid, isAdmin)">
                                                     <div class="search__results-textarea-wrapper">
+                                                        <div class="search__results-highlight-backdrop"
+                                                            aria-hidden="true"
+                                                            x-html="getHighlightedSegment(seg.segment, entry.uid, seg.muid)"></div>
                                                         <textarea
                                                             class="search__results-textarea"
                                                             :class="{ 'search__results-textarea--readonly': seg.muid.startsWith('root-') }"
@@ -530,7 +563,7 @@
                                                 </template>
                                                 <!-- Read-only text for non-editable muids -->
                                                 <template x-if="!canEditMuid(seg.muid, isAdmin)">
-                                                    <span class="search__results-text" x-text="seg.segment"></span>
+                                                    <span class="search__results-text" x-html="getHighlightedSegment(seg.segment, entry.uid, seg.muid)"></span>
                                                 </template>
                                             </li>
                                         </template>
