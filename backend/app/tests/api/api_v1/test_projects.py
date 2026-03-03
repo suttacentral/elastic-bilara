@@ -196,7 +196,7 @@ class TestProjects:
                     "loc": ["body"],
                     "msg": "Field required",
                     "input": None,
-                    "url": "https://errors.pydantic.dev/2.3/v/missing",
+                    "url": "https://errors.pydantic.dev/2.11/v/missing",
                 }
             ]
         }

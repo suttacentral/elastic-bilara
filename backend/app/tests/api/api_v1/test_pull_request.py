@@ -25,7 +25,7 @@ class TestPullRequest:
                     "loc": ["body", "paths"],
                     "msg": "List should have at least 1 item after validation, not 0",
                     "type": "too_short",
-                    "url": "https://errors.pydantic.dev/2.3/v/too_short",
+                    "url": "https://errors.pydantic.dev/2.11/v/too_short",
                     "ctx": {"field_type": "List", "min_length": 1, "actual_length": 0},
                 }
             ]

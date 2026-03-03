@@ -4,6 +4,9 @@ function fetchTranslation() {
         relatedProjects: [],
         htmlProjectName: '',
         htmlProject: null,
+        tagProjectName: '',
+        tagProject: null,
+        availableTags: [],
         originalTranslations: null,
         splitter_uid: null,
         merger_uid: null,
@@ -21,12 +24,19 @@ function fetchTranslation() {
                 await this.findOrCreateObject(muid, this.prefix);
             }
             const projects = await this.fetchRelatedProjects(this.prefix);
-            this.relatedProjects = projects.filter(project => project !== muid && project !== source);
 
             this.htmlProjectName = projects.find(project => project.includes('html'));
             if (this.htmlProjectName) {
                 this.htmlProject = await this.createObject(this.htmlProjectName, this.prefix);
             }
+
+            this.tagProjectName = projects.find(project => project.startsWith('tag'));
+            await this.loadAvailableTags();
+
+            this.relatedProjects = projects.filter(project =>
+                project !== muid && project !== source &&
+                project !== this.htmlProjectName
+            );
 
             // Restore previously saved related project selections
             const savedRelated = this.getSavedRelatedProjects();
@@ -562,6 +572,17 @@ function fetchTranslation() {
 
                 // Save only when content is modified.
                 if (segment !== originalValue) {
+                    // Validate tag values before saving
+                    if (translation.muid && translation.muid.startsWith('tag')) {
+                        const invalidTags = this.getInvalidTags(segment);
+                        if (invalidTags.length > 0) {
+                            const toast = document.querySelector('sc-bilara-toast');
+                            if (toast) {
+                                toast.show(`Invalid tags: ${invalidTags.join(', ')}`, 'warning');
+                            }
+                            return;
+                        }
+                    }
                     try {
                         await this.updateHandler(
                             translation.muid,
@@ -687,6 +708,27 @@ function fetchTranslation() {
             } catch (error) {
                 throw new Error(error);
             }
+        },
+        async loadAvailableTags() {
+            try {
+                const response = await requestWithTokenRetry('tags/');
+                const data = await response.json();
+                this.availableTags = Array.isArray(data) ? data : [];
+            } catch (error) {
+                this.availableTags = [];
+            }
+        },
+        validateTagValue(value) {
+            if (!value || !value.trim()) return true;
+            const tags = value.split(',').map(t => t.trim()).filter(t => t);
+            const validNames = new Set(this.availableTags.map(t => t.tag));
+            return tags.every(t => validNames.has(t));
+        },
+        getInvalidTags(value) {
+            if (!value || !value.trim()) return [];
+            const tags = value.split(',').map(t => t.trim()).filter(t => t);
+            const validNames = new Set(this.availableTags.map(t => t.tag));
+            return tags.filter(t => !validNames.has(t));
         },
         async toggleRelatedProject(project) {
             const index = this.translations.findIndex(t => t.muid === project);

@@ -221,6 +221,11 @@
                                             isSource: translation.isSource,
                                             isRoot: translation.isSource,
                                             muid: translation.muid,
+                                            isTag: translation.muid && translation.muid.startsWith('tag'),
+                                            tagSuggestions: [],
+                                            showTagSuggestions: false,
+                                            selectedTagIndex: -1,
+                                            tagSuggestionLimit: 100,
                                             i: rowIndex,
                                             uid: uid,
                                             originalValue: '',
@@ -240,6 +245,38 @@
                                                     this.showHints = false;
                                                     this.selectedHintIndex = -1;
                                                 }
+                                            },
+                                            filterTagSuggestions(value) {
+                                                if (!this.isTag) return;
+                                                const parts = value.split(',');
+                                                const current = parts[parts.length - 1].trim().toLowerCase();
+                                                const existing = new Set(parts.slice(0, -1).map(t => t.trim()));
+                                                if (!current) {
+                                                    this.tagSuggestions = availableTags.filter(t => !existing.has(t.tag));
+                                                } else {
+                                                    this.tagSuggestions = availableTags.filter(t => t.tag.startsWith(current) && !existing.has(t.tag));
+                                                }
+                                                this.showTagSuggestions = true;
+                                                this.selectedTagIndex = -1;
+                                            },
+                                            selectTag(index) {
+                                                const tag = this.tagSuggestions[index];
+                                                if (!tag) return;
+                                                const textarea = this.$el.querySelector('textarea');
+                                                const typedValue = textarea ? textarea.value : (getValue(translation, uid) || '');
+                                                const parts = typedValue.split(',').map(t => t.trim());
+                                                // Replace the last part (current input) with the selected tag
+                                                parts[parts.length - 1] = tag.tag;
+                                                const newValue = parts.filter(t => t).join(', ');
+                                                setValue(translation, uid, newValue);
+                                                this.showTagSuggestions = false;
+                                                this.selectedTagIndex = -1;
+                                                this.$nextTick(() => {
+                                                    if (textarea) {
+                                                        textarea.value = newValue;
+                                                        textarea.focus();
+                                                    }
+                                                });
                                             }
                                         }">
 
@@ -284,31 +321,55 @@
                                                     }
                                                     hintClicked = false;
                                                     selectedHintIndex = -1;
-                                                    if (hints.length === 0 && muid.startsWith('translation')) {
+                                                    if (isTag) {
+                                                        filterTagSuggestions(getValue(translation, uid) || '');
+                                                    } else if (hints.length === 0 && muid.startsWith('translation')) {
                                                         hints = await getHints(uid, muid, sourceMuid, sourceValue);
                                                     }
                                                     showHints = true;
                                                 "
                                                 x-on:blur="
-                                                    const hintsEl = $el.closest('.translation-cell').querySelector('.translation-cell__hints');
-                                                    if (!hintsEl?.contains($event.relatedTarget)) {
+                                                    const cell = $el.closest('.translation-cell');
+                                                    const allHints = cell.querySelectorAll('.translation-cell__hints');
+                                                    let inHints = false;
+                                                    allHints.forEach(el => { if (el.contains($event.relatedTarget)) inHints = true; });
+                                                    if (!inHints) {
                                                         showHints = false;
+                                                        showTagSuggestions = false;
+                                                        if (isTag) {
+                                                            const curVal = getValue(translation, uid) || '';
+                                                            const validNames = new Set(availableTags.map(t => t.tag));
+                                                            const cleaned = curVal.split(',').map(t => t.trim()).filter(t => validNames.has(t)).join(', ');
+                                                            setValue(translation, uid, cleaned);
+                                                            $event.target.value = cleaned;
+                                                        }
                                                     }
                                                 "
-                                                x-on:input="setValue(translation, uid, $event.target.value)"
+                                                x-on:input="
+                                                    setValue(translation, uid, $event.target.value);
+                                                    if (isTag) {
+                                                        filterTagSuggestions($event.target.value);
+                                                    }
+                                                "
                                                 x-on:keydown="ensureStatusBadge($event.target, muid, uid, isSource)"
                                                 x-on:keydown.up.prevent="
-                                                    if (showHints && visibleHints.length > 0) {
+                                                    if (isTag && showTagSuggestions && tagSuggestions.length > 0) {
+                                                        selectedTagIndex = selectedTagIndex <= 0 ? Math.min(tagSuggestions.length, tagSuggestionLimit) - 1 : selectedTagIndex - 1;
+                                                    } else if (showHints && visibleHints.length > 0) {
                                                         selectedHintIndex = selectedHintIndex <= 0 ? visibleHints.length - 1 : selectedHintIndex - 1;
                                                     }
                                                 "
                                                 x-on:keydown.down.prevent="
-                                                    if (showHints && visibleHints.length > 0) {
+                                                    if (isTag && showTagSuggestions && tagSuggestions.length > 0) {
+                                                        selectedTagIndex = selectedTagIndex >= Math.min(tagSuggestions.length, tagSuggestionLimit) - 1 ? 0 : selectedTagIndex + 1;
+                                                    } else if (showHints && visibleHints.length > 0) {
                                                         selectedHintIndex = selectedHintIndex >= visibleHints.length - 1 ? 0 : selectedHintIndex + 1;
                                                     }
                                                 "
                                                 x-on:keydown.enter.prevent="
-                                                    if (showHints && selectedHintIndex >= 0 && selectedHintIndex < visibleHints.length) {
+                                                    if (isTag && showTagSuggestions && selectedTagIndex >= 0 && selectedTagIndex < tagSuggestions.length) {
+                                                        selectTag(selectedTagIndex);
+                                                    } else if (showHints && selectedHintIndex >= 0 && selectedHintIndex < visibleHints.length) {
                                                         selectHint(selectedHintIndex);
                                                     } else {
                                                         await handleEnter($event, uid, getValue(translation, uid), translation, originalValue);
@@ -339,6 +400,39 @@
                                                         </div>
                                                     </li>
                                                 </template>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Tag suggestions dropdown -->
+                                        <div class="translation-cell__hints translation-cell__tag-suggestions"
+                                            tabindex="-1"
+                                            x-cloak
+                                            x-show="isTag && showTagSuggestions && translation.canEdit && (tagSuggestions.length > 0 || (isAdmin && isActive))">
+                                            <ul class="translation-cell__hints-list">
+                                                <template x-for="(tagItem, tagIdx) in tagSuggestions.slice(0, tagSuggestionLimit)" :key="tagItem.tag">
+                                                    <li class="translation-cell__hints-item"
+                                                        :class="{ 'translation-cell__hints-item--selected': selectedTagIndex === tagIdx }"
+                                                        tabindex="-1"
+                                                        @mousedown.prevent="selectTag(tagIdx)"
+                                                        @mouseenter="selectedTagIndex = tagIdx">
+                                                        <span class="translation-cell__hints-uid" x-text="tagItem.tag"></span>
+                                                        <div class="translation-cell__hints-content">
+                                                            <div class="translation-cell__hints-source" x-text="tagItem.expansion || tagItem.tag"></div>
+                                                            <div class="translation-cell__hints-translation" x-show="tagItem.definition">
+                                                                <span class="translation-cell__hints-text" x-text="tagItem.definition"></span>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </template>
+                                                <li class="translation-cell__hints-item translation-cell__hints-item--manage"
+                                                    x-show="isAdmin && isActive"
+                                                    tabindex="-1"
+                                                    @mousedown.prevent="window.open('/tags', '_blank')">
+                                                    <a href="/tags" target="_blank" rel="noopener noreferrer" class="translation-cell__tag-manage-link">
+                                                        <i class="bi bi-tags"></i>
+                                                        <span>Manage tags</span>
+                                                    </a>
+                                                </li>
                                             </ul>
                                         </div>
 

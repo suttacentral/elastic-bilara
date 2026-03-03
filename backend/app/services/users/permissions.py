@@ -12,6 +12,8 @@ def can_edit_translation(github_id: int, muid: str) -> bool:
     user: UserBase = get_user(github_id)
     if user.role == Role.ADMIN.value:
         return True
+    if muid.startswith("tag"):
+        return is_user_in_admin_group(user)
     if user.role == Role.REVIEWER.value:
         return False
     if muid.startswith("translation") and is_username_in_muid(user.username, muid):

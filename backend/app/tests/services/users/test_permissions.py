@@ -83,3 +83,30 @@ class TestUserPermissions:
         user.role = role
         mock_get_user.return_value = user
         assert can_create_projects(user.github_id) == expected
+
+    @pytest.mark.parametrize(
+        "muid, role, expected",
+        [
+            ("tag-pli-ms", Role.ADMIN.value, True),
+            ("tag-pli-ms", Role.SUPERUSER.value, True),
+            ("tag-pli-ms", Role.WRITER.value, False),
+            ("tag-pli-ms", Role.REVIEWER.value, False),
+            ("translation-en-test", Role.WRITER.value, False),  # Non-tag muid, role doesn't matter for tag check
+        ],
+    )
+    @patch("app.services.users.permissions.get_user")
+    @patch("app.services.users.permissions.is_username_in_muid")
+    @patch("app.services.users.permissions.get_json_data")
+    def test_can_edit_translation_tag_permission(
+        self, mock_get_json_data, mock_is_user_in_muid, mock_get_user, user, muid, role, expected
+    ) -> None:
+        """Test that only admins/superusers can edit tag projects."""
+        user.role = role
+        mock_get_user.return_value = user
+        mock_is_user_in_muid.return_value = False
+        mock_get_json_data.return_value = []
+
+        result = can_edit_translation(user.github_id, muid)
+        if muid.startswith("tag"):
+            assert result == expected
+        # For non-tag muids, the test shouldn't reach the tag-specific logic

@@ -8,3 +8,4 @@ class TextType(Enum):
     COMMENT = "comment"
     REFERENCE = "reference"
     VARIANT = "variant"
+    TAG = "tag"

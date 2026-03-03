@@ -57,7 +57,6 @@ def test_get_user_with_mocked_db_session(mock_session, id_, github_id, username,
         is_active=is_active,
         created_on=datetime.datetime.utcnow(),
         last_login=datetime.datetime.utcnow(),
-        remarks=[],
     )
 
     result_user = get_user(github_id=github_id)

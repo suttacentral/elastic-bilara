@@ -54,6 +54,7 @@ from search.utils import (
     get_json_data,
     get_muid,
     get_prefix,
+    yield_file_path,
 )
 
 router = APIRouter(prefix="/projects")
@@ -69,6 +70,18 @@ async def get_projects(
     projects = search.find_unique_data(field="muid", prefix=prefix)
     if not projects:
         projects = search.get_distinct_data(field="muid", prefix=prefix)
+
+    # Auto-discover unindexed tag files on disk
+    if prefix and not any(p.startswith("tag") for p in projects):
+        tag_dir = settings.WORK_DIR / "tag"
+        if tag_dir.exists():
+            for f in yield_file_path(tag_dir, level=1):
+                if get_prefix(f) == prefix:
+                    success, _ = search.add_to_index(f)
+                    if success:
+                        projects.append(get_muid(f))
+                    break
+
     return ProjectsOut(projects=projects)
 
 
@@ -226,6 +239,17 @@ async def get_json_data_for_prefix_in_project(
     user: Annotated[UserBase, Depends(utils.get_current_user)], muid: str, prefix: str
 ) -> JSONDataOut:
     file: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True, _type="file_path")
+
+    # Auto-discover and index tag files that exist on disk but aren't in ES
+    if not file and muid.startswith("tag"):
+        tag_dir = settings.WORK_DIR / "tag"
+        if tag_dir.exists():
+            for f in yield_file_path(tag_dir, level=1):
+                if get_prefix(f) == prefix:
+                    search.add_to_index(f)
+                    file = {str(f)}
+                    break
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -245,7 +269,37 @@ async def update_json_data_for_prefix_in_project(
 ) -> JSONDataOut:
     if not can_edit_translation(int(user.github_id), muid):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to edit this resource")
+
+    # Validate tag values against _tags.json
+    if muid.startswith("tag"):
+        tags_file = settings.WORK_DIR / "_tags.json"
+        if tags_file.exists():
+            defined_tags = {tag["tag"] for tag in get_json_data(tags_file)}
+        else:
+            defined_tags = set()
+        for uid, value in data.items():
+            if not value or not value.strip():
+                continue
+            individual_tags = [t.strip() for t in value.split(",") if t.strip()]
+            invalid_tags = [t for t in individual_tags if t not in defined_tags]
+            if invalid_tags:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid tags: {', '.join(invalid_tags)}. Tags must be defined in the tag list.",
+                )
+
     file: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True, _type="file_path")
+
+    # Auto-discover and index tag files that exist on disk but aren't in ES
+    if not file and muid.startswith("tag"):
+        tag_dir = settings.WORK_DIR / "tag"
+        if tag_dir.exists():
+            for f in yield_file_path(tag_dir, level=1):
+                if get_prefix(f) == prefix:
+                    search.add_to_index(f)
+                    file = {str(f)}
+                    break
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

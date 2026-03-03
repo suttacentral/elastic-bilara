@@ -48,12 +48,9 @@ def update_file(
 
     written, file_error = write_json_data(path, file_data)
     cleaned_path_string = str(utils.clean_path(str(path)))
-    print(f"Writing data to {cleaned_path_string} by {user.username}")
-    print(f"Data: {written}, Error: {file_error}")
-    # if written:
-    #     result = commit.delay(user.model_dump(), str(path), f"Translations by {user.username} to {cleaned_path_string}")
-    #     task_id = result.id
-    task_id = None
+    if written:
+        result = commit.delay(user.model_dump(), str(path), f"Translations by {user.username} to {cleaned_path_string}")
+        task_id = result.id
 
     if file_error:
         updated = False

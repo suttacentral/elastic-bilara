@@ -786,6 +786,11 @@ sl-dialog::part(title) {
     color: var(--color-text-on-strong);
 }
 
+.translation-grid__header-badge--tag {
+    background-color: var(--color-accent, #7c3aed);
+    color: var(--color-text-on-strong);
+}
+
 .translation-grid__body {
     flex: 1;
     height: fit-content;
@@ -981,6 +986,24 @@ sl-dialog::part(title) {
 
 .translation-cell__hints-item:last-child {
     border-bottom: none;
+}
+
+.translation-cell__hints-item--manage {
+    padding: 0;
+}
+
+.translation-cell__tag-manage-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 8px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+}
+
+.translation-cell__tag-manage-link:hover {
+    color: var(--color-text);
 }
 
 .translation-cell__hints-uid {
