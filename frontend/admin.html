@@ -66,7 +66,7 @@
                 <div class="admin-section-header">
                     <h1 class="admin-section-title">User Management</h1>
                 </div>
-                
+
 
                 <ul class="admin-user-list">
                     <template x-for="(user, key) in users" :key="user.id">
@@ -245,12 +245,19 @@
                 <div class="admin-section-header">
                     <h1 class="admin-section-title">Project Management</h1>
                 </div>
+                <div class="admin-projects-shell">
                 <!-- Toggle Buttons -->
-                <div class="admin-projects-toggle">
-                    <button x-on:click="toggleAdd()" class="btn admin-btn admin-btn-primary">
+                <div class="admin-projects-toggle" role="tablist" aria-label="Project actions">
+                    <button x-on:click="toggleAdd()"
+                            class="btn admin-btn"
+                            :class="showAdd ? 'admin-btn-primary admin-project-toggle-active' : 'admin-btn-secondary'"
+                            :aria-pressed="showAdd.toString()">
                         <i class="bi-plus-circle"></i> Add Project
                     </button>
-                    <button x-on:click="toggleRemove()" class="btn admin-btn admin-btn-danger">
+                        <button x-on:click="toggleRemove()"
+                            class="btn admin-btn admin-project-remove-btn"
+                            :class="showRemove ? 'admin-btn-danger admin-project-toggle-active' : 'admin-btn-secondary'"
+                            :aria-pressed="showRemove.toString()">
                         <i class="bi-trash"></i> Remove Project
                     </button>
                 </div>
@@ -263,7 +270,11 @@
                         <i class="bi-exclamation-circle"></i>
                         The form contains invalid data.
                     </div>
-                    <div class="admin-card">
+                    <div class="admin-card admin-project-card">
+                        <div class="admin-card-header admin-project-card-header">
+                            <h3 class="admin-card-title">Create Project Files</h3>
+                            <p class="admin-text-muted">Select a root, assignee, and language to scaffold translation files.</p>
+                        </div>
                         <div class="admin-card-body">
                             <form class="admin-project-form">
                                 <div class="admin-form-group">
@@ -293,13 +304,15 @@
                                 </div>
                                 <div class="admin-form-group">
                                     <div x-cloak x-show="!validLanguageCode" class="admin-alert admin-alert-danger">
-                                        Language code must be 2 or 3 characters long.
+                                        Please select a language.
                                     </div>
-                                    <label class="admin-label" for="languageProjects">Language code:</label>
-                                    <input id="languageProjects"
-                                           :class="{ 'admin-input-error': !validLanguageCode }"
-                                           class="admin-input" type="text" x-model="languageCode"
-                                           placeholder="en" x-on:input.debounce.500ms="checkLanguageCode">
+                                    <label class="admin-label" for="languageProjects">Language:</label>
+                                    <select id="languageProjects" x-model="languageCode" class="admin-select" @change="checkLanguageCode()">
+                                        <option value="">Select a language...</option>
+                                        <template x-for="(lang, code) in languages" :key="code">
+                                            <option x-text="`${code} - ${lang.name}`" :value="code"></option>
+                                        </template>
+                                    </select>
                                 </div>
                                 <div class="admin-form-actions">
                                     <button @click.prevent="await handleSubmit()" class="btn admin-btn admin-btn-primary">
@@ -309,14 +322,21 @@
                             </form>
                         </div>
                     </div>
-                    <div x-cloak x-show="created.status" class="admin-alert admin-alert-success admin-mt-2 admin-text-center">
-                        <div>
-                            <p>You have created <strong x-text="created.paths.length"></strong> files for user <strong x-text="created.username"></strong></p>
-                            <ul class="admin-tag-list admin-mt-1" style="justify-content: center;">
-                                <template x-for="path in created.paths" :key="path">
-                                    <li class="admin-tag" x-text="path"></li>
+                    <div x-cloak x-show="created.status" class="admin-card admin-project-created admin-mt-2">
+                        <div class="admin-card-header admin-project-created-header">
+                            <h3 class="admin-card-title">Files Created</h3>
+                            <span class="admin-badge admin-badge-active" x-text="created.paths.length + ' files'"></span>
+                        </div>
+                        <div class="admin-card-body">
+                            <p class="admin-mb-2">Generated for user <strong x-text="created.username"></strong>.</p>
+                            <ol class="admin-created-path-list">
+                                <template x-for="(path, index) in created.paths" :key="path">
+                                    <li class="admin-created-path-item">
+                                        <span class="admin-created-index" x-text="index + 1"></span>
+                                        <code class="admin-created-path" x-text="path"></code>
+                                    </li>
                                 </template>
-                            </ul>
+                            </ol>
                         </div>
                     </div>
                 </div>
@@ -325,7 +345,11 @@
                     <div x-cloak x-show="loading" class="admin-loading">
                         <div class="admin-spinner"></div>
                     </div>
-                    <div class="admin-card">
+                    <div class="admin-card admin-project-card">
+                        <div class="admin-card-header admin-project-card-header">
+                            <h3 class="admin-card-title">Delete Project Files</h3>
+                            <p class="admin-text-muted">Preview impacted files first, then confirm deletion.</p>
+                        </div>
                         <div class="admin-card-body">
                             <form class="admin-project-form">
                                 <div x-cloak x-show="!validPath" class="admin-alert admin-alert-danger">
@@ -362,28 +386,33 @@
                     </div>
                     <!-- Preview Data -->
                     <div x-cloak x-show="data && data.length > 0" x-data="{modal: false}" class="admin-mt-3">
-                        <div class="admin-card">
-                            <div class="admin-card-header">
+                        <div class="admin-card admin-project-review-card">
+                            <div class="admin-card-header admin-project-review-header">
                                 <h3 class="admin-card-title">Review Files to Delete</h3>
+                                <span class="admin-badge admin-badge-inactive" x-text="data.length + ' items'"></span>
                             </div>
                             <div class="admin-card-body">
                                 <p class="admin-text-center admin-mb-2">You are about to delete the following files and directories:</p>
                                 <ul class="admin-project-list">
                                     <template x-for="item in data" :key="item.path">
-                                        <li x-data="tooltip()" class="admin-project-item">
-                                            <span class="admin-project-tag" x-text="item.path"
-                                                  @mouseover="await fetchData(item.path)"
-                                                  @mouseleave="hide()"></span>
-                                            <span class="admin-badge admin-badge-role" x-text="item.muid"></span>
-                                            <span class="admin-badge" x-text="item.language"></span>
-                                            <div x-cloak x-show="show" class="admin-tooltip"
-                                                 @mouseover="await fetchData(item.path)"
-                                                 @mouseleave="hide()">
-                                                <ul>
-                                                    <template x-for="file in tooltipData" :key="file">
-                                                        <li x-text="file"></li>
-                                                    </template>
-                                                </ul>
+                                        <li x-data="tooltip()" class="admin-project-item admin-project-item-review">
+                                            <div class="admin-project-path-wrap">
+                                                <span class="admin-project-tag admin-project-path" x-text="item.path"
+                                                      @mouseover="await fetchData(item.path)"
+                                                      @mouseleave="hide()"></span>
+                                                <div x-cloak x-show="show" class="admin-tooltip"
+                                                     @mouseover="await fetchData(item.path)"
+                                                     @mouseleave="hide()">
+                                                    <ul>
+                                                        <template x-for="file in tooltipData" :key="file">
+                                                            <li x-text="file"></li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="admin-project-meta">
+                                                <span class="admin-badge admin-badge-role" x-text="item.muid"></span>
+                                                <span class="admin-badge" x-text="item.language"></span>
                                             </div>
                                         </li>
                                     </template>
@@ -415,6 +444,7 @@
                             </div>
                         </div>
                     </div>
+                </div>
                 </div>
             </div>
             <!-- ==================== ROOTS SECTION ==================== -->

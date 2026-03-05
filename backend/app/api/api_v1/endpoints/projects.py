@@ -440,6 +440,11 @@ async def create_new_project(
         source_user = get_user(user_github_id)
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_github_id} not found. {e}")
+    if not (2 <= len(translation_language) <= 3):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Translation language code must be 2 or 3 characters long.",
+        )
     if root_path.parts[0] == "root":
         root_path = settings.WORK_DIR.joinpath(root_path)
     else:
