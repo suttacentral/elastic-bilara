@@ -182,6 +182,25 @@
             font-size: 0.85rem;
             font-family: monospace;
         }
+
+        .tags-how-to{
+            margin: 6em 3em;
+            display: flex;
+            justify-content: center;
+
+        }
+
+        .tags-how-to article{
+            max-width:40em;
+        }
+
+         .tags-how-to article p,
+        .tags-how-to article ul,
+        .tags-how-to article ol, 
+        .tags-how-to article li{
+            all: revert;
+        }
+
     </style>
 </head>
 <body class="page-layout" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
@@ -297,6 +316,27 @@
                 <p>No tags defined yet. Click "Add Tag" to create one.</p>
             </div>
         </div>
+
+        <section class='tags-how-to'>
+            <article>
+            <h3>How to apply tags</h3>
+            <p>The tagger must first be authorized to create and apply tags. Then they can create a list of tags on this page. This can be edited or deleted at any time. Each tag consists of three elements.</p>
+            <ol>
+                <li><b>tag</b>: this is used for processing, URLs, etc. It must be<ul>
+                    <li>lowercase</li>
+                    <li>alphanumeric</li>
+                    <li>no diacriticals or other fancy characters</li>
+                    <li>no punctuation except hyphen</li>
+                    <li>no spaces</li>
+                </ul>
+                <li><b>expansion</b>: this is shown to the user. It is a short, readable version of the tag. Eg., the tag “4nt” might expand to “four noble truths”. Keep them lowercase, but you may use spaces, punctuation, etc. </li>
+                <li><b>Definition</b>: a short explanation of the tag concept understandable to general readers. Avoid using Pali or technical language.</li>
+            </li></ol>
+            <p>Once the tag list is created, the tagger may begin adding tags to texts. Only valid tags may be entered.</p>
+            <p>If the tagger deletes a tag, all instances of that tag will be deleted from the files.. Likewise, if a tagger edits a tag, all instances will be updated to the new form. </p>
+            <p>The tagger may add as many tags as they like per segment in a comma separated list. </p>
+        </article>
+        </section>
     </main>
 
     <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
