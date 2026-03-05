@@ -438,39 +438,28 @@ function gitStatusPanel() {
             this.closePublishModal();
         },
 
-        editFile(file) {
-            if (!file || !file.path) return;
-            console.log(`Navigating to edit file: ${file.path}`);
-            // Navigate to the translation editor with the file path
-            // window.location.href = `/translation?path=${encodeURIComponent(file.path)}`;
-        },
-
         async publishFile(file) {
             if (this.publishing || this.publishingFile) return;
             this.publishing = true;
-
             this.publishingFile = file.path;
+
             try {
-                const response = await fetch('pr/', {
+                const response = await requestWithTokenRetry('pr/', {
                     credentials: 'include',
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paths: [file.path] })
                 });
-
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.detail?.error || errorData.detail || `HTTP error! status: ${response.status}`);
                 }
+                const { task_id: taskID } = await response.json();
 
-                const data = await response.json();
-
+                if (!taskID) {
+                    throw new Error('Failed to schedule pull request');
+                }
                 this.showToast(`Pull Request scheduled for: ${file.path}`, 'success');
-
-                // Refresh file list after a short delay
                 setTimeout(async () => {
                     await this.fetchStatus();
                 }, 1000);
