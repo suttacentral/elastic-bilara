@@ -40,6 +40,119 @@ def _validate_tag_name(tag_name: str) -> None:
         )
 
 
+def _find_all_tag_files() -> list[Path]:
+    """Find all tag files in the tag directory."""
+    tag_dir = settings.WORK_DIR / "tag"
+    if not tag_dir.exists():
+        return []
+
+    result = []
+    for f in yield_file_path(tag_dir, level=1):
+        if f.name.endswith("_tag.json"):
+            result.append(Path(f))
+    return result
+
+
+def _parse_tag_value(value: str) -> list[str]:
+    """Parse comma-separated tag value, preserving leading spaces.
+
+    Example: "practice, 4nt" -> ["practice", " 4nt"]
+    """
+    if not value or not value.strip():
+        return []
+    return value.split(",")
+
+
+def _serialize_tag_value(tags: list[str]) -> str:
+    """Serialize tag list back to comma-separated string.
+
+    Example: ["practice", " 4nt"] -> "practice, 4nt"
+    """
+    return ",".join(tags)
+
+
+def _delete_tag_from_files(tag_name: str) -> int:
+    """Remove a tag from all tag files. Returns the number of files modified."""
+    tag_files = _find_all_tag_files()
+    modified_count = 0
+
+    for tag_file in tag_files:
+        try:
+            with open(tag_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            changed = False
+            for segment_key in data:
+                tag_value = data[segment_key]
+                if not tag_value or not tag_value.strip():
+                    continue
+
+                # Parse the tag value
+                tags = _parse_tag_value(tag_value)
+                # Filter out tag_name (comparing stripped versions)
+                filtered_tags = [t for t in tags if t.strip() != tag_name]
+
+                if len(filtered_tags) != len(tags):
+                    # A tag was removed
+                    data[segment_key] = _serialize_tag_value(filtered_tags)
+                    changed = True
+
+            if changed:
+                with open(tag_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                modified_count += 1
+        except Exception as e:
+            # Continue with other files on error
+            continue
+
+    return modified_count
+
+
+def _update_tag_in_files(old_tag_name: str, new_tag_name: str) -> int:
+    """Rename a tag in all tag files. Returns the number of files modified."""
+    tag_files = _find_all_tag_files()
+    modified_count = 0
+
+    for tag_file in tag_files:
+        try:
+            with open(tag_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            changed = False
+            for segment_key in data:
+                tag_value = data[segment_key]
+                if not tag_value or not tag_value.strip():
+                    continue
+
+                # Parse the tag value
+                tags = _parse_tag_value(tag_value)
+                # Replace old_tag_name with new_tag_name
+                new_tags = []
+                segment_changed = False
+                for t in tags:
+                    if t.strip() == old_tag_name:
+                        # Replace with new name, preserving the leading spaces
+                        leading_spaces = len(t) - len(t.lstrip())
+                        new_tags.append(" " * leading_spaces + new_tag_name)
+                        segment_changed = True
+                    else:
+                        new_tags.append(t)
+
+                if segment_changed:
+                    data[segment_key] = _serialize_tag_value(new_tags)
+                    changed = True
+
+            if changed:
+                with open(tag_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                modified_count += 1
+        except Exception as e:
+            # Continue with other files on error
+            continue
+
+    return modified_count
+
+
 @router.get("/")
 async def get_tags(
     user: Annotated[UserBase, Depends(utils.get_current_user)],
@@ -99,6 +212,8 @@ async def update_tag(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=f"Tag '{new_name}' already exists",
                     )
+                # Update tag name in all tag files before updating the definition
+                files_modified = _update_tag_in_files(tag_name, new_name)
                 tag["tag"] = new_name
             _write_tags(tags)
             return tag
@@ -119,8 +234,15 @@ async def delete_tag(
     tags = [t for t in tags if t["tag"] != tag_name]
     if len(tags) == original_len:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Tag '{tag_name}' not found")
+
+    # Delete tag from all tag files before removing from definitions
+    files_modified = _delete_tag_from_files(tag_name)
+
     _write_tags(tags)
-    return {"detail": f"Tag '{tag_name}' deleted"}
+    return {
+        "detail": f"Tag '{tag_name}' deleted",
+        "files_modified": files_modified,
+    }
 
 
 @router.post(

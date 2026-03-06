@@ -298,6 +298,244 @@ class TestTagDataFile:
         assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
 
 
+class TestTagFileSynchronization:
+    """Test tag reference synchronization in tag data files."""
+
+    def test_parse_tag_value_with_spaces(self):
+        """Parse comma-separated tag values preserving spaces."""
+        from app.api.api_v1.endpoints.tags import _parse_tag_value
+
+        # Test with spaces
+        result = _parse_tag_value("practice, 4nt, test")
+        assert result == ["practice", " 4nt", " test"]
+
+        # Test without spaces
+        result = _parse_tag_value("tag1,tag2,tag3")
+        assert result == ["tag1", "tag2", "tag3"]
+
+        # Test empty
+        result = _parse_tag_value("")
+        assert result == []
+
+        # Test single tag
+        result = _parse_tag_value("single-tag")
+        assert result == ["single-tag"]
+
+    def test_serialize_tag_value_preserves_spaces(self):
+        """Serialize tag list back preserving space formatting."""
+        from app.api.api_v1.endpoints.tags import _serialize_tag_value
+
+        # Test with spaces
+        result = _serialize_tag_value(["practice", " 4nt"])
+        assert result == "practice, 4nt"
+
+        # Test without spaces
+        result = _serialize_tag_value(["tag1", "tag2"])
+        assert result == "tag1,tag2"
+
+        # Test single
+        result = _serialize_tag_value(["single"])
+        assert result == "single"
+
+        # Test empty
+        result = _serialize_tag_value([])
+        assert result == ""
+
+    def test_delete_tag_from_value_single_tag(self):
+        """Delete tag when it's the only tag in value."""
+        from app.api.api_v1.endpoints.tags import _parse_tag_value, _serialize_tag_value
+
+        value = "practice"
+        tags = _parse_tag_value(value)
+        filtered = [t for t in tags if t.strip() != "practice"]
+
+        assert filtered == []
+        assert _serialize_tag_value(filtered) == ""
+
+    def test_delete_tag_from_value_multiple_tags(self):
+        """Delete one tag from multiple tags."""
+        from app.api.api_v1.endpoints.tags import _parse_tag_value, _serialize_tag_value
+
+        value = "practice, 4nt, test"
+        tags = _parse_tag_value(value)
+        filtered = [t for t in tags if t.strip() != "4nt"]
+
+        # Should preserve space before "test" after removing "4nt"
+        assert len(filtered) == 2
+        result = _serialize_tag_value(filtered).lstrip()
+        assert "4nt" not in result
+        assert "practice" in result
+        assert "test" in result
+
+    def test_update_tag_in_value(self):
+        """Update tag name in a value."""
+        from app.api.api_v1.endpoints.tags import _parse_tag_value, _serialize_tag_value
+
+        value = "old-name, new-tag, another"
+        tags = _parse_tag_value(value)
+
+        new_tags = []
+        for t in tags:
+            if t.strip() == "old-name":
+                leading_spaces = len(t) - len(t.lstrip())
+                new_tags.append(" " * leading_spaces + "renamed-tag")
+            else:
+                new_tags.append(t)
+
+        result = _serialize_tag_value(new_tags)
+        assert "old-name" not in result
+        assert "renamed-tag" in result
+        assert "new-tag" in result
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.tags._find_all_tag_files")
+    async def test_delete_tag_from_files(self, mock_find_files, tmp_path):
+        """Test deleting a tag from all tag files."""
+        from app.api.api_v1.endpoints.tags import _delete_tag_from_files
+
+        # Create mock tag files
+        mock_file1 = tmp_path / "sn1.1_tag.json"
+        mock_file2 = tmp_path / "sn1.2_tag.json"
+
+        data1 = {
+            "sn1.1:1.1": "practice, 4nt",
+            "sn1.1:2.1": "test",
+        }
+
+        data2 = {
+            "sn1.2:1.1": "4nt",
+            "sn1.2:2.1": "practice, test",
+        }
+
+        # Mock find_all_tag_files to return our mock files
+        mock_find_files.return_value = [mock_file1, mock_file2]
+
+        # Write actual data to files
+        with open(mock_file1, "w") as f:
+            json.dump(data1, f)
+        with open(mock_file2, "w") as f:
+            json.dump(data2, f)
+
+        # Delete tag "4nt"
+        modified = _delete_tag_from_files("4nt")
+
+        # Both files should be modified
+        assert modified == 2
+
+        # Check file1
+        with open(mock_file1, "r") as f:
+            result1 = json.load(f)
+        assert result1["sn1.1:1.1"] == "practice"
+        assert result1["sn1.1:2.1"] == "test"
+
+        # Check file2
+        with open(mock_file2, "r") as f:
+            result2 = json.load(f)
+        assert result2["sn1.2:1.1"] == ""
+        assert result2["sn1.2:2.1"] == "practice, test"
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.tags._find_all_tag_files")
+    async def test_update_tag_in_files(self, mock_find_files, tmp_path):
+        """Test renaming a tag in all tag files."""
+        from app.api.api_v1.endpoints.tags import _update_tag_in_files
+
+        # Create mock tag files
+        mock_file1 = tmp_path / "sn1.1_tag.json"
+
+        data1 = {
+            "sn1.1:1.1": "old-tag, new-tag",
+            "sn1.1:2.1": "old-tag",
+        }
+
+        # Mock find_all_tag_files
+        mock_find_files.return_value = [mock_file1]
+
+        # Write actual data
+        with open(mock_file1, "w") as f:
+            json.dump(data1, f)
+
+        # Update tag
+        modified = _update_tag_in_files("old-tag", "renamed-tag")
+
+        # File should be modified
+        assert modified == 1
+
+        # Check result
+        with open(mock_file1, "r") as f:
+            result = json.load(f)
+        assert "old-tag" not in result["sn1.1:1.1"]
+        assert "renamed-tag" in result["sn1.1:1.1"]
+        assert result["sn1.1:2.1"] == "renamed-tag"
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.tags._delete_tag_from_files")
+    @patch("app.api.api_v1.endpoints.tags._write_tags")
+    @patch("app.api.api_v1.endpoints.tags._read_tags")
+    async def test_delete_tag_syncs_files(
+        self, mock_read_tags, mock_write_tags, mock_delete_files,
+        mock_get_current_user_admin, mock_is_admin_or_superuser_is_active, user, async_client, tags_data
+    ):
+        """Deleting a tag syncs with all tag files."""
+        mock_read_tags.return_value = tags_data.copy()
+        mock_delete_files.return_value = 5  # 5 files modified
+
+        response = await async_client.delete("/tags/cck15.2/")
+
+        # Should return success with file count
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["files_modified"] == 5
+        assert "deleted" in response.json()["detail"]
+
+        # Both functions should be called
+        mock_delete_files.assert_called_once_with("cck15.2")
+        mock_write_tags.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.tags._update_tag_in_files")
+    @patch("app.api.api_v1.endpoints.tags._write_tags")
+    @patch("app.api.api_v1.endpoints.tags._read_tags")
+    async def test_update_tag_rename_syncs_files(
+        self, mock_read_tags, mock_write_tags, mock_update_files,
+        mock_get_current_user_admin, mock_is_admin_or_superuser_is_active, user, async_client, tags_data
+    ):
+        """Renaming a tag syncs with all tag files."""
+        mock_read_tags.return_value = tags_data.copy()
+        mock_update_files.return_value = 3  # 3 files modified
+
+        update_data = {"tag": "new-tag-name"}
+        response = await async_client.patch("/tags/cck15.2/", json=update_data)
+
+        # Should return success
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["tag"] == "new-tag-name"
+
+        # Update files should be called
+        mock_update_files.assert_called_once_with("cck15.2", "new-tag-name")
+        mock_write_tags.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.tags._update_tag_in_files")
+    @patch("app.api.api_v1.endpoints.tags._write_tags")
+    @patch("app.api.api_v1.endpoints.tags._read_tags")
+    async def test_update_tag_expansion_does_not_sync_files(
+        self, mock_read_tags, mock_write_tags, mock_update_files,
+        mock_get_current_user_admin, mock_is_admin_or_superuser_is_active, user, async_client, tags_data
+    ):
+        """Updating only expansion doesn't sync files."""
+        mock_read_tags.return_value = tags_data.copy()
+
+        update_data = {"expansion": "New Expansion"}
+        response = await async_client.patch("/tags/cck15.2/", json=update_data)
+
+        # Should return success
+        assert response.status_code == status.HTTP_200_OK
+
+        # Update files should NOT be called
+        mock_update_files.assert_not_called()
+        mock_write_tags.assert_called_once()
+
+
 class TestTagValidationInProjects:
     """Test tag validation in projects PATCH endpoint."""
 
