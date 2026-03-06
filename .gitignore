@@ -86,3 +86,16 @@ node_modules/
 package-lock.json
 npm-debug.log*
 coverage/
+node_modules
+.history/
+.vscode/
+openspec/
+AGENTS.md
+.github/
+.agent
+.gemini
+deploy_elastic_bilara.md
+.gitnexus
+google-cloud-sdk/
+.claude/
+google-cloud-cli-linux-x86_64.tar.gz
