@@ -4,35 +4,40 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Bilara</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./static/css/style.css"/>
+    <link rel="stylesheet" href="./static/css/pages/translation.css"/>
     <link rel="stylesheet" href="./static/css/main.css">
-    <script
-            defer
-            src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"
-    ></script>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.3/dist/cdn.min.js"></script>
+
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/utils.js"></script>
     <script src="./static/js/translation.js"></script>
     <script src="./static/js/search.js"></script>
     <script src="./static/js/pullRequest.js"></script>
-    <link rel="stylesheet" href="./static/css/style.css"/>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button/button.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/spinner/spinner.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/split-panel/split-panel.js"></script>
+
+    <!-- Shoelace Components -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/button/button.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/dialog/dialog.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/checkbox/checkbox.js"></script>
+
+    <!-- Custom Web Components -->
     <script src="./static/js/elements/translation/sc-bilara-translation-edit-status.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
-    <script src="./static/js/elements/translation/sc-bilara-translation.js" type="module"></script>
     <script src="./static/js/elements/translation/sc-bilara-translation-project-header.js" type="module"></script>
     <script src="./static/js/elements/translation/sc-bilara-translation-project-actions.js" type="module"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-toast.js"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-pali-lookup.js"></script>
 </head>
 
-<body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
+<body class="page-layout" x-data="getUserInfo()" x-init="getRole(); loadUserSettings()">
     <sl-dialog label="Hint" class="dialog-split-hint">
         When any split is made, you must check the HTML and confirm it is correct.
         <br>
@@ -40,8 +45,7 @@
             <sl-checkbox @sl-change="localStorage.setItem('enableSplitHintDialog', !$event.target.checked);">Don't show again</sl-checkbox>
             <sl-button slot="footer" variant="primary"
                 @click="document.querySelector('.dialog-split-hint').hide()"
-                class="cc cc-logo"
-            >Close
+                class="cc cc-logo">Close
             </sl-button>
         </div>
     </sl-dialog>
@@ -53,8 +57,7 @@
             <sl-checkbox @sl-change="localStorage.setItem('enableMergeHintDialog', !$event.target.checked);">Don't show again</sl-checkbox>
             <sl-button slot="footer" variant="primary"
                 @click="document.querySelector('.dialog-merge-hint').hide()"
-                class="cc cc-logo"
-            >Close
+                class="cc cc-logo">Close
             </sl-button>
         </div>
     </sl-dialog>
@@ -65,225 +68,610 @@
     </header>
 
     <main class="main-content"
-        x-data="{...fetchTranslation(), active: null, params: new URLSearchParams(window.location.search)}" x-cloak x-show="isActive"
+        x-data="{...fetchTranslation(), active: null, params: new URLSearchParams(window.location.search)}"
+        x-cloak
+        x-show="isActive"
         @toggle-detail-panel.window="active === $event.detail.panel ? active = null : active = $event.detail.panel">
 
         <sc-bilara-translation-project-header></sc-bilara-translation-project-header>
 
-        <div class="project-container">
-            <div class="project-container__content split-panel-divider">
-                <sc-bilara-translation :translationsCount="translations.length"></sc-bilara-translation>
-                <template
-                    id="translation-template"
-                    x-data="{splitting: false, merging: false, mergingUid: '', splittingUid: ''}"
-                    x-for="(translation, index) in translations"
-                    :key="index">
-                    <div
-                        class="project-container__content-details"
-                        :slot="translation.isSource ? 'start' : 'end'"
-                        :style="`order: ${index}`"
-                        style="height: 200px; background: var(--sl-color-neutral-50); display: flex; align-items: center; justify-content: center; overflow: hidden;"
-                        x-data="{ clicked: false, isRoot: translation.isSource }"
-                        :class="{ 'border-effect': clicked }">
-                        <div class="project-container__content-body" x-data="textareaAdjuster();">
-                            <template
-                                x-for="(uid, i) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
-                                :key="uid">
-                                <div class="project-container__content-body__section"
-                                    :data-index="i"
-                                    x-data="{
-                                        hints: [],
-                                        showHints: false,
-                                        uid: uid,
-                                        muid: translation.muid,
-                                        hintClicked: false,
-                                        isSource: translation.isSource,
-                                        sourceMuid: new URLSearchParams(window.location.search).get('source'),
-                                        sourceValue: translations.find(item => item.muid === new URLSearchParams(window.location.search).get('source')).data[uid]}">
+        <div class="project-container"
+            x-data="{
+                searchPanelWidth: 280,
+                isPanelDragging: false,
+                panelStartX: 0,
+                panelStartWidth: 280,
+                minPanelWidth: 200,
+                maxPanelWidth: 500,
+                startPanelResize(event) {
+                    this.isPanelDragging = true;
+                    this.panelStartX = event.clientX;
+                    this.panelStartWidth = this.searchPanelWidth;
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                },
+                onPanelResize(event) {
+                    if (!this.isPanelDragging) return;
+                    const deltaX = this.panelStartX - event.clientX;
+                    let newWidth = this.panelStartWidth + deltaX;
+                    newWidth = Math.max(this.minPanelWidth, Math.min(this.maxPanelWidth, newWidth));
+                    this.searchPanelWidth = newWidth;
+                },
+                stopPanelResize() {
+                    this.isPanelDragging = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            }"
+            :class="{ 'project-container--resizing': isPanelDragging }"
+            @mousemove.window="onPanelResize($event)"
+            @mouseup.window="stopPanelResize()">
+            <div class="translation-grid"
+                x-data="{
+                    columnWidths: [],
+                    isDragging: false,
+                    dragIndex: -1,
+                    startX: 0,
+                    startWidths: [],
+                    splitting: false,
+                    merging: false,
+                    mergingUid: '',
+                    splittingUid: '',
+                    hoveredResizerIndex: -1,
+                    initWidths() {
+                        // Initialization: Divide each column equally
+                        if (this.columnWidths.length !== translations.length) {
+                            const w = 100 / translations.length;
+                            this.columnWidths = translations.map(() => w);
+                        }
+                    },
+                    getColumnStyle(index) {
+                        this.initWidths();
+                        return `flex: 0 0 ${this.columnWidths[index]}%; width: ${this.columnWidths[index]}%;`;
+                    },
+                    startResize(index, event) {
+                        this.isDragging = true;
+                        this.dragIndex = index;
+                        this.hoveredResizerIndex = index;
+                        this.startX = event.clientX;
+                        this.startWidths = [...this.columnWidths];
+                        document.body.style.cursor = 'col-resize';
+                        document.body.style.userSelect = 'none';
+                    },
+                    onResize(event) {
+                        if (!this.isDragging) return;
+                        const container = this.$el;
+                        const containerWidth = container.offsetWidth - 120; // Subtract UID column width
+                        const deltaX = event.clientX - this.startX;
+                        const deltaPercent = (deltaX / containerWidth) * 100;
 
-                                    <sc-bilara-translation-project-actions></sc-bilara-translation-project-actions>
+                        const i = this.dragIndex;
+                        let newLeft = this.startWidths[i] + deltaPercent;
+                        let newRight = this.startWidths[i + 1] - deltaPercent;
 
-                                    <div class="project-container__content-body__textarea-container">
-                                        <textarea class="project-container__content-body__textarea"
-                                            x-bind:value="getValue(translation, uid)"
-                                            x-bind:readonly="!translation.canEdit"
-                                            x-on:focus="if (hints.length === 0 && muid.startsWith('translation')) {hints = await getHints(uid, muid, sourceMuid, sourceValue);} showHints = true"
-                                            x-on:blur="setTimeout(() => { if (!hintClicked) { showHints = false } }, 100)"
-                                            x-on:click="hintClicked = false"
-                                            x-on:input="setValue(translation, uid, $event.target.value); adjustTextareas($event.target)"
-                                            x-on:keydown.enter.prevent="await handleEnter($event, uid, getValue(translation, uid), translation)">
-                                        </textarea>
-                                        <sc-bilara-translation-edit-status
-                                            x-bind:id="isSource ? `root-badge-${muid}-${uid}` : `translation-badge-${muid}-${uid}`"
-                                        ></sc-bilara-translation-edit-status>
-                                    </div>
-                                    <div class="project-container__content-body__hints" x-cloak
-                                        x-show="hints.length > 0 && showHints">
-                                        <ul class="project-container__content-body__hints-list">
-                                            <template x-for="hint in hints.slice(0, 5)">
-                                                <li @click="setValue(translation, uid, hint.translation_hints); hintClicked = true; observeSections()"
-                                                class="project-container__content-body__hints-list-item">
-                                                    <p x-text="hint.uid" class="project-container__content-body__hints-list-item__uid"></p>
-                                                    <div class="project-container__content-body__hints-list-item__info">
-                                                        <p x-text="hint.segment"
-                                                        class="project-container__content-body__hints-list-item__info-source"></p>
-                                                        <div class="project-container__content-body__hints-list-item__info-translation">
-                                                            <p x-text="hint.translation_hints"
-                                                                class="project-container__content-body__hints-list-item__info-translation__text"></p>
-                                                            <span x-text="'('+ hint.strength + ')'"
-                                                                class="project-container__content-body__hints-list-item__info-translation__strength">
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                            </template>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="project-container__content-footer">
-                            <sl-button variant="primary" size="large" x-bind:id="isRoot ? `btn-root-commit` : `btn-translation-commit`"
-                                x-show="translation.canEdit && !merging && !splitting"
-                                @click="await updateHandler(translation.muid, translation.data, document.querySelector('p.project-header__message'), $event.target.id)">
-                                Commit Changes
-                            </sl-button>
-                            <div x-data="{params: new URLSearchParams(window.location.search)}">
-                                <sl-button variant="success"  size="large" id="btn-publish-changes"
-                                    x-show="translation.canEdit && !merging && !splitting"
-                                    @click="await publishChangesHandler(await (await requestWithTokenRetry(`projects/${translation.muid}/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
-                                    Publish Changes
-                                </sl-button>
-                            </div>
-                            <div x-data="{params: new URLSearchParams(window.location.search)}">
-                                <sl-button variant="success"  size="large"  id="btn-publish-changes-split-merge"
-                                    x-show="translation.canEdit && isAdmin && isRoot && !merging && !splitting"
-                                    @click="await publishChangesHandlerForSplitOrMerge(await (await requestWithTokenRetry(`projects/${translation.muid}/split-merge/?prefix=${params.get('prefix')}&_type=file_path`)).json(), document.querySelector('.project-header__message'))">
-                                    Publish Changes For Split Or Merge
-                                </sl-button>
+                        // Minimum width limited to 2%
+                        const minWidth = 2;
+                        if (newLeft < minWidth) {
+                            newRight = newRight - (minWidth - newLeft);
+                            newLeft = minWidth;
+                        }
+                        if (newRight < minWidth) {
+                            newLeft = newLeft - (minWidth - newRight);
+                            newRight = minWidth;
+                        }
+
+                        this.columnWidths[i] = Math.max(minWidth, newLeft);
+                        this.columnWidths[i + 1] = Math.max(minWidth, newRight);
+                    },
+                    stopResize() {
+                        this.isDragging = false;
+                        this.dragIndex = -1;
+                        this.hoveredResizerIndex = -1;
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                }"
+                :class="{ 'translation-grid--resizing': isDragging }"
+                @mousemove.window="onResize($event)"
+                @mouseup.window="stopResize()">
+
+                <!-- Grid Header: Column titles for each translation project -->
+                <div class="translation-grid__header">
+                    <template x-for="(translation, index) in translations" :key="'header-' + index">
+                        <div class="translation-grid__header-cell"
+                            :style="getColumnStyle(index)">
+                            <span class="translation-grid__header-title" x-text="translation.muid"
+                                :class="'translation-grid__header-badge--' + (translation.muid || '').split('-')[0]">
+                            </span>
+
+                            <!-- Resizer handle (Not shown in the last column) -->
+                            <div x-show="index < translations.length - 1"
+                                 class="translation-grid__header-resizer"
+                                 :class="{ 'translation-grid__header-resizer--dragging': isDragging && dragIndex === index, 'translation-grid__header-resizer--hovered': hoveredResizerIndex === index }"
+                                 @mousedown.prevent="startResize(index, $event)"
+                                 @mouseenter="hoveredResizerIndex = index"
+                                 @mouseleave="if (!isDragging) hoveredResizerIndex = -1">
                             </div>
                         </div>
-                    </div>
-                </template>
-            </div>
-            <div class="project-container__detail-panel" x-data="{ active: null }"
-                @toggle-detail-panel.window="active === $event.detail.panel ? active = 'none' : active = $event.detail.panel">
-                <div class="project-container__detail-panel__related" x-cloak x-show="active === 'related'"
-                    :class="{'active': active === 'related'}" x-data="{selectedProjects: {}}">
-                    <template x-for="project in relatedProjects" :key="project">
-                        <div x-text="project" class="project-container__detail-panel__related-item"
-                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); moveContentDetails(); "
-                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }"></div>
                     </template>
                 </div>
-                <div class="project-container__detail-panel__search search" x-cloak x-show="active === 'search'"
-                    :class="{'active': active === 'search'}" x-data="search()">
-                    <div class="search__container">
-                        <svg class="resize" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
-                            <path d="M0 0h24v24H0z" fill="none"/>
-                            <path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/>
-                        </svg>
-                        <div class="search__bar">
-                            <span class="search__bar__icon"
-                                x-on:click="$event.target.nextElementSibling.focus()">🔎</span>
-                            <input
-                                type="text"
-                                x-model="projectQuery"
-                                x-on:input="updateSuggestions"
-                                class="search__bar__input"
-                                x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
-                                id="project-query"/>
-                            <span x-cloak
-                                x-show="projectQuery.length"
-                                x-on:click="projectQuery = ''; updateSuggestions()"
-                                class="search__bar__clear">❌</span>
-                        </div>
-                        <ul class="search__suggestions">
-                            <template x-for="suggestion in suggestions">
-                                <li x-text="suggestion"
-                                    x-on:click="toggleSelectedProjects(suggestion); adjustVisibleTextareas()"
-                                    :class="{ 'search__suggestion-item--selected': selectedProjects[suggestion] }"
-                                    class="search__suggestion-item">
-                                </li>
-                            </template>
-                        </ul>
-                        <div class="fields">
-                            <template x-for="(value, key) in fields">
-                                <div class="fields__item">
-                                    <div class="fields__label__container">
-                                        <label
-                                            x-bind:for="'search-'+key"
-                                            x-text="key"
-                                            class="fields__label">
-                                        </label>
-                                        <span
-                                            x-show="key !== 'uid'"
+
+                <!-- Grid Body: Row-based layout for synchronized heights -->
+                <div class="translation-grid__body" x-ref="gridBody">
+                    <template
+                        x-for="(uid, rowIndex) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
+                        :key="uid">
+
+                        <!-- Each row contains the same segment across all translation projects -->
+                        <div class="translation-row" :data-uid="uid" :data-index="rowIndex">
+                            <!-- Cells for each translation project -->
+                            <div class="translation-row__cells">
+                                <template x-for="(translation, colIndex) in translations" :key="'cell-' + colIndex + '-' + uid">
+                                    <div class="translation-cell"
+                                        :style="getColumnStyle(colIndex)"
+                                        :class="{
+                                            'translation-cell--source': translation.isSource,
+                                            'translation-cell--editable': translation.canEdit
+                                        }"
+                                        x-data="{
+                                            hints: [],
+                                            showHints: false,
+                                            hintClicked: false,
+                                            selectedHintIndex: -1,
+                                            isSource: translation.isSource,
+                                            isRoot: translation.isSource,
+                                            muid: translation.muid,
+                                            isTag: translation.muid && translation.muid.startsWith('tag'),
+                                            tagSuggestions: [],
+                                            showTagSuggestions: false,
+                                            selectedTagIndex: -1,
+                                            tagSuggestionLimit: 100,
+                                            i: rowIndex,
+                                            uid: uid,
+                                            originalValue: '',
+                                            sourceMuid: new URLSearchParams(window.location.search).get('source'),
+                                            get sourceValue() {
+                                                const sourceTranslation = translations.find(item => item.muid === this.sourceMuid);
+                                                return sourceTranslation ? sourceTranslation.data[uid] : '';
+                                            },
+                                            get visibleHints() {
+                                                return this.hints.slice(0, 5);
+                                            },
+                                            selectHint(index) {
+                                                const hintsToShow = this.visibleHints;
+                                                if (index >= 0 && index < hintsToShow.length) {
+                                                    setValue(translation, uid, hintsToShow[index].translation_hints);
+                                                    this.hintClicked = true;
+                                                    this.showHints = false;
+                                                    this.selectedHintIndex = -1;
+                                                }
+                                            },
+                                            filterTagSuggestions(value) {
+                                                if (!this.isTag) return;
+                                                const parts = value.split(',');
+                                                const current = parts[parts.length - 1].trim().toLowerCase();
+                                                const existing = new Set(parts.slice(0, -1).map(t => t.trim()));
+                                                if (!current) {
+                                                    this.tagSuggestions = availableTags.filter(t => !existing.has(t.tag));
+                                                } else {
+                                                    this.tagSuggestions = availableTags.filter(t => t.tag.startsWith(current) && !existing.has(t.tag));
+                                                }
+                                                this.showTagSuggestions = true;
+                                                this.selectedTagIndex = -1;
+                                            },
+                                            selectTag(index) {
+                                                const tag = this.tagSuggestions[index];
+                                                if (!tag) return;
+                                                const textarea = this.$el.querySelector('textarea');
+                                                const typedValue = textarea ? textarea.value : (getValue(translation, uid) || '');
+                                                const parts = typedValue.split(',').map(t => t.trim());
+                                                // Replace the last part (current input) with the selected tag
+                                                parts[parts.length - 1] = tag.tag;
+                                                const newValue = parts.filter(t => t).join(', ');
+                                                setValue(translation, uid, newValue);
+                                                this.showTagSuggestions = false;
+                                                this.selectedTagIndex = -1;
+                                                this.$nextTick(() => {
+                                                    if (textarea) {
+                                                        textarea.value = newValue;
+                                                        textarea.focus();
+                                                    }
+                                                });
+                                            }
+                                        }">
+
+                                        <!-- Action buttons (split/merge) -->
+                                        <sc-bilara-translation-project-actions
+                                            x-show="translation.canEdit"
+                                            class="translation-cell__actions">
+                                        </sc-bilara-translation-project-actions>
+
+                                        <div class="translation-cell__textarea-wrapper">
+                                            <textarea
+                                                class="translation-cell__textarea"
+                                                :class="{ 'translation-cell__textarea--readonly': !translation.canEdit }"
+                                                x-bind:id="isSource ? `root-textarea-${muid}-${uid}` : `translation-textarea-${muid}-${uid}`"
+                                                x-bind:value="getValue(translation, uid)"
+                                                x-bind:readonly="!translation.canEdit"
+                                                x-on:dblclick="
+                                                    if (window.userSettings && window.userSettings.dblclick_search === false) return;
+                                                    setTimeout(() => {
+                                                        const selectedText = window.getSelection().toString().trim();
+                                                        if (selectedText) {
+                                                            // Clear all search inputs except uid
+                                                            document.querySelectorAll('.fields__input').forEach(input => {
+                                                                if (input.id !== 'search-uid') {
+                                                                    input.value = '';
+                                                                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                                                                }
+                                                            });
+                                                            const searchInput = document.getElementById('search-' + muid);
+                                                            if (searchInput) {
+                                                                searchInput.value = selectedText;
+                                                                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                                                const searchBtn = document.getElementById('search');
+                                                                if (searchBtn) searchBtn.click();
+                                                            }
+                                                        }
+                                                    }, 0);
+                                                "
+                                                x-on:focus="
+                                                    if (!hintClicked) {
+                                                        originalValue = getValue(translation, uid);
+                                                    }
+                                                    hintClicked = false;
+                                                    selectedHintIndex = -1;
+                                                    if (isTag) {
+                                                        filterTagSuggestions(getValue(translation, uid) || '');
+                                                    } else if (hints.length === 0 && muid.startsWith('translation')) {
+                                                        hints = await getHints(uid, muid, sourceMuid, sourceValue);
+                                                    }
+                                                    showHints = true;
+                                                "
+                                                x-on:blur="
+                                                    const cell = $el.closest('.translation-cell');
+                                                    const allHints = cell.querySelectorAll('.translation-cell__hints');
+                                                    let inHints = false;
+                                                    allHints.forEach(el => { if (el.contains($event.relatedTarget)) inHints = true; });
+                                                    if (!inHints) {
+                                                        showHints = false;
+                                                        showTagSuggestions = false;
+                                                        if (isTag) {
+                                                            const curVal = getValue(translation, uid) || '';
+                                                            const validNames = new Set(availableTags.map(t => t.tag));
+                                                            const cleaned = curVal.split(',').map(t => t.trim()).filter(t => validNames.has(t)).join(', ');
+                                                            setValue(translation, uid, cleaned);
+                                                            $event.target.value = cleaned;
+                                                        }
+                                                    }
+                                                "
+                                                x-on:input="
+                                                    setValue(translation, uid, $event.target.value);
+                                                    if (isTag) {
+                                                        filterTagSuggestions($event.target.value);
+                                                    }
+                                                "
+                                                x-on:keydown="ensureStatusBadge($event.target, muid, uid, isSource)"
+                                                x-on:keydown.up.prevent="
+                                                    if (isTag && showTagSuggestions && tagSuggestions.length > 0) {
+                                                        selectedTagIndex = selectedTagIndex <= 0 ? Math.min(tagSuggestions.length, tagSuggestionLimit) - 1 : selectedTagIndex - 1;
+                                                    } else if (showHints && visibleHints.length > 0) {
+                                                        selectedHintIndex = selectedHintIndex <= 0 ? visibleHints.length - 1 : selectedHintIndex - 1;
+                                                    }
+                                                "
+                                                x-on:keydown.down.prevent="
+                                                    if (isTag && showTagSuggestions && tagSuggestions.length > 0) {
+                                                        selectedTagIndex = selectedTagIndex >= Math.min(tagSuggestions.length, tagSuggestionLimit) - 1 ? 0 : selectedTagIndex + 1;
+                                                    } else if (showHints && visibleHints.length > 0) {
+                                                        selectedHintIndex = selectedHintIndex >= visibleHints.length - 1 ? 0 : selectedHintIndex + 1;
+                                                    }
+                                                "
+                                                x-on:keydown.enter.prevent="
+                                                    if (isTag && showTagSuggestions && selectedTagIndex >= 0 && selectedTagIndex < tagSuggestions.length) {
+                                                        selectTag(selectedTagIndex);
+                                                    } else if (showHints && selectedHintIndex >= 0 && selectedHintIndex < visibleHints.length) {
+                                                        selectHint(selectedHintIndex);
+                                                    } else {
+                                                        await handleEnter($event, uid, getValue(translation, uid), translation, originalValue);
+                                                    }
+                                                ">
+                                            </textarea>
+                                        </div>
+
+                                        <!-- Translation hints dropdown -->
+                                        <div class="translation-cell__hints"
+                                            tabindex="-1"
                                             x-cloak
-                                            class="fields__label__cancel"
-                                            x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null">❌
-                                        </span>
+                                            x-show="hints.length > 0 && showHints && !translation.isSource">
+                                            <ul class="translation-cell__hints-list">
+                                                <template x-for="(hint, hintIndex) in visibleHints" :key="hint.uid">
+                                                    <li class="translation-cell__hints-item"
+                                                        :class="{ 'translation-cell__hints-item--selected': selectedHintIndex === hintIndex }"
+                                                        tabindex="-1"
+                                                        @click="selectHint(hintIndex); $el.closest('.translation-cell').querySelector('textarea').focus();"
+                                                        @mouseenter="selectedHintIndex = hintIndex">
+                                                        <span class="translation-cell__hints-uid" x-text="hint.uid"></span>
+                                                        <div class="translation-cell__hints-content">
+                                                            <div class="translation-cell__hints-source" x-text="hint.segment"></div>
+                                                            <div class="translation-cell__hints-translation">
+                                                                <span class="translation-cell__hints-text" x-text="hint.translation_hints"></span>
+                                                                <span class="translation-cell__hints-strength" x-text="'(' + hint.strength + ')'"></span>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Tag suggestions dropdown -->
+                                        <div class="translation-cell__hints translation-cell__tag-suggestions"
+                                            tabindex="-1"
+                                            x-cloak
+                                            x-show="isTag && showTagSuggestions && translation.canEdit && (tagSuggestions.length > 0 || (isAdmin && isActive))">
+                                            <ul class="translation-cell__hints-list">
+                                                <template x-for="(tagItem, tagIdx) in tagSuggestions.slice(0, tagSuggestionLimit)" :key="tagItem.tag">
+                                                    <li class="translation-cell__hints-item"
+                                                        :class="{ 'translation-cell__hints-item--selected': selectedTagIndex === tagIdx }"
+                                                        tabindex="-1"
+                                                        @mousedown.prevent="selectTag(tagIdx)"
+                                                        @mouseenter="selectedTagIndex = tagIdx">
+                                                        <span class="translation-cell__hints-uid" x-text="tagItem.tag"></span>
+                                                        <div class="translation-cell__hints-content">
+                                                            <div class="translation-cell__hints-source" x-text="tagItem.expansion || tagItem.tag"></div>
+                                                            <div class="translation-cell__hints-translation" x-show="tagItem.definition">
+                                                                <span class="translation-cell__hints-text" x-text="tagItem.definition"></span>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </template>
+                                                <li class="translation-cell__hints-item translation-cell__hints-item--manage"
+                                                    x-show="isAdmin && isActive"
+                                                    tabindex="-1"
+                                                    @mousedown.prevent="window.open('/tags', '_blank')">
+                                                    <a href="/tags" target="_blank" rel="noopener noreferrer" class="translation-cell__tag-manage-link">
+                                                        <i class="bi bi-tags"></i>
+                                                        <span>Manage tags</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Cell Resizer (Not displayed in the last column) -->
+                                        <div x-show="colIndex < translations.length - 1"
+                                             class="translation-cell__resizer"
+                                             :class="{ 'translation-cell__resizer--dragging': isDragging && dragIndex === colIndex, 'translation-cell__resizer--hovered': hoveredResizerIndex === colIndex }"
+                                             @mousedown.prevent="startResize(colIndex, $event)"
+                                             @mouseenter="hoveredResizerIndex = colIndex"
+                                             @mouseleave="if (!isDragging) hoveredResizerIndex = -1">
+                                        </div>
                                     </div>
-                                    <input
-                                        class="fields__input"
-                                        type="text"
-                                        x-bind:id="'search-'+key"
-                                        :placeholder="key === 'uid' ? 'an1.1:0.1' : ''"
-                                        x-model="fields[key]"/>
-                                </div>
-                            </template>
+                                </template>
+                            </div>
                         </div>
-                        <div class="page-size">
-                            <label class="page-size__label" for="size">Page Size:</label>
-                            <select
-                                    name="size"
-                                    id="size"
-                                    x-model="size"
-                                    class="page-size__select">
-                                <template x-for="pageSize in [1,5,10,25,50,100]">
-                                    <option
-                                            x-text="pageSize"
+                    </template>
+                </div>
+            </div>
+
+            <!-- Panel Resizer -->
+            <div class="project-container__resizer"
+                :class="{ 'project-container__resizer--dragging': isPanelDragging }"
+                @mousedown.prevent="startPanelResize($event)">
+            </div>
+
+            <div class="project-container__detail-panel"
+                :style="`width: ${searchPanelWidth}px;`"
+                x-data="{ detailPanelActive: null }"
+                @toggle-detail-panel.window="detailPanelActive === $event.detail.panel ? detailPanelActive = 'none' : detailPanelActive = $event.detail.panel">
+
+                <!-- Related Projects Panel -->
+                <div class="project-container__detail-panel__related"
+                    x-cloak
+                    x-show="detailPanelActive === 'related'"
+                    @click.outside="detailPanelActive = null"
+                    :class="{'active': detailPanelActive === 'related'}"
+                    x-data="{selectedProjects: {}}"
+                    @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
+                    <h3 class="detail-panel__title">Related Projects</h3>
+                    <template x-for="project in relatedProjects" :key="project">
+                        <div x-text="selectedProjects[project] ? '✓ ' + project : project"
+                            class="project-container__detail-panel__related-item"
+                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
+                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }">
+                        </div>
+                    </template>
+                </div>
+
+                <div class="project-container__detail-panel__search search active"
+                    x-data="{...search(), optionsExpanded: true}"
+                    @toggle-search-field.window="if ($event.detail.selected && !fields[$event.detail.project]) toggleSelectedProjects($event.detail.project); else if (!$event.detail.selected && fields[$event.detail.project] !== undefined) toggleSelectedProjects($event.detail.project);">
+                    <div class="search__container">
+                        <div class="detail-panel__title-row">
+                            <button class="search__toggle-btn"
+                                @click="optionsExpanded = !optionsExpanded"
+                                :title="optionsExpanded ? 'Collapse options' : 'Expand options'">
+                                <i class="bi" :class="optionsExpanded ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </div>
+
+                        <!-- Collapsible Search Options -->
+                        <div class="search__options" x-show="optionsExpanded" x-collapse>
+                            <!-- Search Bar -->
+                            <div class="search__bar">
+                                <i class="bi bi-search search__bar__icon" x-on:click="$event.target.nextElementSibling.focus()"></i>
+                                <input type="text"
+                                    x-model="projectQuery"
+                                    x-on:input="updateSuggestions"
+                                    class="search__bar__input"
+                                    x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
+                                    id="project-query"/>
+                                <i x-cloak
+                                    x-show="projectQuery.length"
+                                    x-on:click="projectQuery = ''; updateSuggestions()"
+                                    class="bi bi-x-circle search__bar__clear"></i>
+                            </div>
+
+                            <!-- Suggestions -->
+                            <ul class="search__suggestions">
+                                <template x-for="suggestion in suggestions">
+                                    <li x-text="suggestion"
+                                        x-on:click="toggleSelectedProjects(suggestion)"
+                                        :class="{ 'search__suggestion-item--selected': selectedProjects[suggestion] }"
+                                        class="search__suggestion-item">
+                                    </li>
+                                </template>
+                            </ul>
+
+                            <!-- Search Fields -->
+                            <div class="fields">
+                                <template x-for="(value, key) in fields">
+                                    <div class="fields__item">
+                                        <div class="fields__label__container">
+                                            <label x-bind:for="'search-'+key" x-text="key" class="fields__label"></label>
+                                            <i x-show="key !== 'uid'"
+                                                x-cloak
+                                                class="bi bi-x-circle fields__label__cancel"
+                                                x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null"></i>
+                                        </div>
+                                        <input class="fields__input"
+                                            type="text"
+                                            x-bind:id="'search-'+key"
+                                            :placeholder="key === 'uid' ? 'an1.1:0.1' : ''"
+                                            x-model="fields[key]"/>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Replacement -->
+                            <div class="fields__item" style="padding-bottom: 12px;">
+                                <div class="fields__label__container">
+                                    <label for="search-replacement" class="fields__label">Replacement</label>
+                                </div>
+                                <input class="fields__input"
+                                    type="text"
+                                    id="search-replacement"
+                                    x-model="replacementText"/>
+                            </div>
+
+                            <!-- Page Size -->
+                            <div class="page-size">
+                                <label class="page-size__label" for="size">Page Size:</label>
+                                <select name="size" id="size" x-model="size" class="page-size__select">
+                                    <template x-for="pageSize in [1,5,10,25,50,100]">
+                                        <option x-text="pageSize"
                                             x-bind:value="pageSize"
                                             x-bind:selected="pageSize === 100"
                                             class="page-size__select__option">
-                                    </option>
-                                </template>
-                            </select>
+                                        </option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Navigation -->
+                            <div class="search__navigation">
+                                <button x-on:click="await previousHandler(); scrollTop('#resultsContainer')"
+                                    x-cloak
+                                    x-show="currentPage > 0"
+                                    id="previousPage"
+                                    class="search__navigation__previous btn btn--previous">Previous</button>
+                                <button id="search"
+                                    x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); if(Object.keys(results).length) optionsExpanded = false;"
+                                    class="search__navigation__search btn btn--search">Search</button>
+                                <button x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
+                                    x-bind:disabled="!isNextPage"
+                                    x-cloak
+                                    x-show="isNextPage"
+                                    id="nextPage"
+                                    class="search__navigation__next btn btn--next">Next</button>
+                            </div>
                         </div>
-                        <div class="search__navigation">
-                            <button
-                                x-on:click="await previousHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
+
+                        <!-- Collapsed Navigation (shown when collapsed and has results) -->
+                        <div class="search__navigation search__navigation--collapsed"
+                            x-show="!optionsExpanded && Object.keys(results).length"
+                            x-cloak>
+                            <button x-on:click="await previousHandler(); scrollTop('#resultsContainer')"
                                 x-cloak
                                 x-show="currentPage > 0"
-                                id="previousPage"
-                                class="search__navigation__previous btn btn--previous">Previous
-                            </button>
-                            <button
-                                id="search"
-                                x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
-                                class="search__navigation__search btn btn--search">Search
-                            </button>
-                            <button
-                                x-on:click="await nextHandler(); scrollTop('#resultsContainer'); adjustVisibleTextareas()"
+                                class="search__navigation__previous btn btn--previous">Previous</button>
+                            <button x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
                                 x-bind:disabled="!isNextPage"
                                 x-cloak
                                 x-show="isNextPage"
-                                id="nextPage"
-                                class="search__navigation__next btn btn--next">Next
-                            </button>
+                                class="search__navigation__next btn btn--next">Next</button>
                         </div>
+
+                        <!-- Results -->
                         <div x-cloak
-                            x-show="Object.keys(results).length"
-                            x-html="renderResults()"
+                            x-show="resultEntries.length"
                             class="search__results-container"
                             id="resultsContainer">
+                            <template x-for="entry in resultEntries" :key="entry.uid">
+                                <div class="search__results-item"
+                                    x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditMuid(s.muid, isAdmin) && !s.muid.startsWith('root-')); } }">
+                                    <h3 class="search__results-title">
+                                        <a :href="'translation.html?prefix=' + entry.uid.split(':')[0] + '&source=' + new URLSearchParams(window.location.search).get('source') + '&muid=' + new URLSearchParams(window.location.search).get('muid')"
+                                           x-text="entry.uid"
+                                           class="search__results-title-link"
+                                           target="_blank"></a>
+                                    </h3>
+                                    <div class="search__results-actions">
+                                        <template x-for="seg in entry.segments" :key="'btn-' + seg.muid">
+                                            <span>
+                                                <!-- REPLACE button -->
+                                                <button class="btn search__replace-btn"
+                                                    x-show="replacementText && canEditMuid(seg.muid, isAdmin) && !seg.muid.startsWith('root-') && !replacedItems[entry.uid + '::' + seg.muid] && hasReplaceTerm(seg.muid, seg.segment)"
+                                                    x-cloak
+                                                    @click="replaceSegment(entry.uid, seg.muid, seg)"
+                                                >REPLACE</button>
+                                                <!-- SUBMIT button -->
+                                                <button class="btn search__submit-btn"
+                                                    x-show="replacedItems[entry.uid + '::' + seg.muid] && !submittedItems[entry.uid + '::' + seg.muid]"
+                                                    x-cloak
+                                                    @click="await submitReplacement(entry.uid, seg.muid, seg.segment)"
+                                                >SUBMIT</button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <ul class="search__results-list">
+                                        <template x-for="seg in entry.segments" :key="seg.muid">
+                                            <li class="search__results-list-item"
+                                                :class="{ 'search__results-list-item--editable': canEditMuid(seg.muid, isAdmin) }">
+                                                <span class="search__results-key" x-text="seg.muid"></span>
+                                                <!-- Editable textarea for muids user can edit (admin only) -->
+                                                <template x-if="canEditMuid(seg.muid, isAdmin)">
+                                                    <div class="search__results-textarea-wrapper">
+                                                        <div class="search__results-highlight-backdrop"
+                                                            aria-hidden="true"
+                                                            x-html="getHighlightedSegment(seg.segment, entry.uid, seg.muid)"></div>
+                                                        <textarea
+                                                            class="search__results-textarea"
+                                                            :class="{ 'search__results-textarea--readonly': seg.muid.startsWith('root-') }"
+                                                            :id="'search-textarea-' + seg.muid + '-' + entry.uid"
+                                                            :value="seg.segment"
+                                                            :readonly="seg.muid.startsWith('root-')"
+                                                            @focus="searchResultFocus(entry.uid, seg.muid)"
+                                                            @input="searchResultInput(entry.uid, seg.muid, $event.target.value)"
+                                                            @keydown.enter.prevent="await searchResultSave(entry.uid, seg.muid, $event.target.value)"
+                                                        ></textarea>
+                                                    </div>
+                                                </template>
+                                                <!-- Read-only text for non-editable muids -->
+                                                <template x-if="!canEditMuid(seg.muid, isAdmin)">
+                                                    <span class="search__results-text" x-html="getHighlightedSegment(seg.segment, entry.uid, seg.muid)"></span>
+                                                </template>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-
+    <sc-bilara-toast></sc-bilara-toast>
+    <sc-bilara-pali-lookup></sc-bilara-pali-lookup>
     <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
 </body>
-
 </html>

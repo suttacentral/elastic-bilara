@@ -1,0 +1,35 @@
+{
+  "name": "elastic-bilara",
+  "version": "1.0.0",
+  "description": "new version of bilara based on elasticsearch",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "frontend/static/js/**/*.js",
+      "!frontend/static/js/**/*.test.js",
+      "!frontend/static/js/**/__tests__/**"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ]
+  },
+  "keywords": [],
+  "author": "Suttacentral",
+  "license": "CC0-1.0 license",
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0"
+  }
+}

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilara - Unpublished Changes</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./static/css/style.css"/>
+    <link rel="stylesheet" href="./static/css/pages/git_status_panel.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./static/css/main.css">
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.3/dist/cdn.min.js"></script>
+    <script src="./static/js/utils.js"></script>
+    <script src="./static/js/auth.js"></script>
+    <script src="./static/js/pullRequest.js"></script>
+    <script src="./static/js/git_status_panel.js"></script>
+
+    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+</head>
+<body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
+    <header>
+        <sc-bilara-nav-main></sc-bilara-nav-main>
+        <sc-bilara-nav-main-mobile></sc-bilara-nav-main-mobile>
+    </header>
+
+    <main class="main-content">
+        <div class="git-status-page" x-data="gitStatusPanel()" x-init="init()">
+            <header class="page-header">
+                <div class="page-title">
+                    <i class="bi-git"></i>
+                    <h1>Unpublished Changes</h1>
+                    <span class="subtitle">here you can review your unpublished changes</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn header-btn" @click="refresh()" :disabled="loading">
+                        <i class="bi-arrow-clockwise"></i>
+                        Refresh
+                    </button>
+                </div>
+            </header>
+
+        <div class="panel-card file-list-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <i class="bi-files"></i>
+                    <span>Changed Files</span>
+                    <span x-show="!loading && files.length > 0" class="badge" x-text="files.length"></span>
+                </div>
+                <div class="summary-stats" x-show="!loading && files.length > 0">
+                    <div class="stat-chip modified" x-show="stats.modified > 0">
+                        <i class="bi-pencil-fill"></i>
+                        <span x-text="stats.modified"></span>
+                    </div>
+                    <div class="stat-chip untracked" x-show="stats.untracked > 0">
+                        <i class="bi-plus-circle-fill"></i>
+                        <span x-text="stats.untracked"></span>
+                    </div>
+                    <div class="stat-chip deleted" x-show="stats.deleted > 0">
+                        <i class="bi-trash-fill"></i>
+                        <span x-text="stats.deleted"></span>
+                    </div>
+                    <div class="stat-chip staged" x-show="stats.staged > 0">
+                        <i class="bi-check-circle-fill"></i>
+                        <span x-text="stats.staged"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter and Sort Controls -->
+            <div class="filter-controls" x-show="!loading && files.length > 0">
+                <div class="filter-left-section">
+                    <div class="search-box">
+                        <i class="bi-search"></i>
+                        <input type="text"
+                               x-model="filterText"
+                               @input="currentPage = 1"
+                               placeholder="Filter files by path..."
+                               class="filter-input">
+                        <button x-show="filterText"
+                                @click="filterText = ''; currentPage = 1"
+                                class="btn clear-btn"
+                                title="Clear filter">
+                            <i class="bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="sort-switch-wrapper">
+                    <span class="sort-label" :class="{ active: sortMode === 'default' }">
+                        <i class="bi-sort-alpha-down"></i>
+                        Default
+                    </span>
+                    <label class="sort-switch">
+                        <input type="checkbox"
+                               :checked="sortMode === 'date'"
+                               @change="sortMode = $event.target.checked ? 'date' : 'default'; currentPage = 1">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="sort-label" :class="{ active: sortMode === 'date' }">
+                        <i class="bi-clock-history"></i>
+                        Date
+                    </span>
+                </div>
+            </div>
+
+            <div class="batch-actions-bar" x-show="!loading && selectedFiles.length > 0">
+                <div class="batch-info">
+                    <i class="bi-check2-square"></i>
+                    <span x-text="`${selectedFiles.length} file(s) selected`"></span>
+                </div>
+                <div class="batch-buttons">
+                    <button class="btn batch-btn batch-btn-clear" @click="clearSelection()">
+                        <i class="bi-x-circle"></i>
+                        Clear Selection
+                    </button>
+                    <button class="btn batch-btn batch-btn-publish"
+                            :class="{ 'loading': batchPublishing }"
+                            @click="batchPublish()"
+                            :disabled="batchPublishing">
+                        <i :class="batchPublishing ? 'bi-arrow-repeat' : 'bi-cloud-upload'"></i>
+                        <span x-text="batchPublishing ? 'Publishing...' : 'Publish Selected'"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-content">
+                <div x-show="loading" class="skeleton-list">
+                    <template x-for="i in 8">
+                        <div class="skeleton-item">
+                            <div class="skeleton" style="width: 24px; height: 24px;"></div>
+                            <div class="skeleton" style="flex: 1; height: 20px;"></div>
+                            <div class="skeleton" style="width: 60px; height: 20px;"></div>
+                        </div>
+                    </template>
+                </div>
+
+                <div x-show="!loading && files.length === 0" class="empty-state">
+                    <i class="bi-check-circle"></i>
+                    <div>
+                        <strong>Working directory clean</strong>
+                        <p style="font-size: var(--text-sm); margin-top: 4px;">No uncommitted changes detected</p>
+                    </div>
+                </div>
+
+                <div x-show="!loading && files.length > 0" class="file-list">
+                    <!-- Select All Header -->
+                    <div class="file-list-header" x-show="filteredFiles.length > 0">
+                        <label class="checkbox-wrapper select-all">
+                            <input type="checkbox"
+                                   :checked="isAllSelected"
+                                   :indeterminate="isPartiallySelected"
+                                   @change="toggleSelectAll()">
+                            <span class="checkmark"></span>
+                            <span class="select-all-label" x-text="isAllSelected ? 'Deselect All' : 'Select All'"></span>
+                        </label>
+                    </div>
+
+                    <div x-show="filteredFiles.length === 0 && !filterText && !isAdmin" class="empty-state">
+                        <i class="bi-inbox"></i>
+                        <div>
+                            <strong>No files for your user</strong>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;">There are no uncommitted changes in directories related to <strong x-text="username"></strong></p>
+                        </div>
+                    </div>
+
+                    <div x-show="filteredFiles.length === 0 && filterText" class="empty-state">
+                        <i class="bi-search"></i>
+                        <div>
+                            <strong>No files found</strong>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;">No files match your filter criteria</p>
+                        </div>
+                    </div>
+                    <template x-for="(file, index) in paginatedFiles" :key="file.path">
+                        <div class="file-item"
+                             :class="{ 'selected': selectedFile === file.path, 'checked': isFileSelected(file.path) }"
+                             @click="selectFile(file)"
+                             :style="{ animationDelay: (index * 30) + 'ms' }">
+                            <label class="checkbox-wrapper" @click.stop>
+                                <input type="checkbox"
+                                       :checked="isFileSelected(file.path)"
+                                       @change="toggleFileSelection(file.path)">
+                                <span class="checkmark"></span>
+                            </label>
+                            <div class="file-icon" :class="getStatusClass(file.status)">
+                                <i :class="getStatusIcon(file.status)"></i>
+                            </div>
+                            <span class="file-path" x-text="file.path" :title="file.path"></span>
+                            <span class="file-status-badge"
+                                  :class="file.status"
+                                  x-text="formatStatus(file.status)">
+                            </span>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="pagination-controls" x-show="!loading && totalPages > 1">
+                    <div class="pagination-info">
+                        <span x-text="`Showing ${startItem}-${endItem} of ${filteredFiles.length} files`"></span>
+                    </div>
+                    <div class="pagination-buttons">
+                        <button class="page-btn"
+                                @click="currentPage = 1"
+                                :disabled="currentPage === 1"
+                                title="First page">
+                            <i class="bi-chevron-bar-left"></i>
+                        </button>
+                        <button class="page-btn"
+                                @click="currentPage--"
+                                :disabled="currentPage === 1"
+                                title="Previous page">
+                            <i class="bi-chevron-left"></i>
+                        </button>
+                        <span class="page-indicator" x-text="`Page ${currentPage} of ${totalPages}`"></span>
+                        <button class="page-btn"
+                                @click="currentPage++"
+                                :disabled="currentPage === totalPages"
+                                title="Next page">
+                            <i class="bi-chevron-right"></i>
+                        </button>
+                        <button class="page-btn"
+                                @click="currentPage = totalPages"
+                                :disabled="currentPage === totalPages"
+                                title="Last page">
+                            <i class="bi-chevron-bar-right"></i>
+                        </button>
+                    </div>
+                    <div class="page-size-selector">
+                        <label for="pageSize">Items per page:</label>
+                        <select id="pageSize" x-model.number="pageSize" @change="currentPage = 1">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diff Viewer Panel -->
+        <div class="panel-card">
+            <div class="panel-header panel-header-diff">
+                <div class="panel-title">
+                    <i class="bi-file-diff"></i>
+                    <span>Diff Viewer</span>
+                </div>
+                <!-- <span x-show="selectedFile"
+                      style="font-size: 0.75rem; font-family: monospace; color: var(--color-text-secondary);"
+                      x-text="selectedFile">
+                </span> -->
+                <div class="diff-header-actions" x-show="selectedFile">
+                    <button class="diff-action-btn edit-btn"
+                            @click="showEditConfirm(selectedFileData)"
+                            title="Edit file">
+                        <i class="bi-pencil"></i>
+                        Edit
+                    </button>
+                    <button class="diff-action-btn publish-btn"
+                            @click="showPublishConfirm(selectedFileData)"
+                            :disabled="publishing"
+                            title="Publish file">
+                        <i :class="publishing ? 'bi-arrow-repeat spin' : 'bi-cloud-upload'"></i>
+                        <span x-text="publishing ? 'Publishing...' : 'Publish'"></span>
+                    </button>
+                    <button class="diff-action-btn discard-btn"
+                            @click="showDiscardConfirm(selectedFileData)"
+                            title="Discard changes">
+                        <i class="bi-x-circle"></i>
+                        Discard
+                    </button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="diff-viewer">
+                    <div x-show="loadingDiff" class="loading-state">
+                        <div class="spinner"></div>
+                        <span>Loading diff...</span>
+                    </div>
+
+                    <!-- No File Selected -->
+                    <div x-show="!selectedFile && !loadingDiff" class="diff-empty">
+                        <i class="bi-file-earmark-code"></i>
+                        <div>
+                            <strong>Select a file</strong>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;">Click on a file to view its changes</p>
+                        </div>
+                    </div>
+
+                    <!-- Diff Content -->
+                    <div x-show="selectedFile && !loadingDiff && diffContent" class="diff-content">
+                        <template x-for="(line, index) in parseDiff(diffContent)" :key="index">
+                            <div class="diff-line" :class="line.type" x-text="line.text"></div>
+                        </template>
+                    </div>
+
+                    <div x-show="selectedFile && !loadingDiff && diffError" class="empty-state">
+                        <i class="bi-exclamation-triangle" style="color: var(--color-error);"></i>
+                        <div>
+                            <strong>Error loading diff</strong>
+                            <p style="font-size: var(--text-sm); margin-top: 4px;" x-text="diffError"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showConfirmModal" x-cloak class="modal-backdrop" @click.self="closeConfirmModal()">
+            <div class="modal-dialog">
+                <div class="modal-header modal-header-danger">
+                    <i class="bi-exclamation-triangle-fill"></i>
+                    <h3>Discard Changes</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to discard changes to this file? This action cannot be undone.</p>
+                    <div class="file-name" x-text="fileToDiscard?.path"></div>
+                    <label class="dont-show-again">
+                        <input type="checkbox" x-model="skipDiscardConfirm">
+                        <span>Do not show this dialog again</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" @click="closeConfirmModal()">
+                        Cancel
+                    </button>
+                    <button class="modal-btn modal-btn-danger"
+                            @click="confirmDiscard()"
+                            :disabled="discarding">
+                        <template x-if="discarding">
+                            <span>Discarding...</span>
+                        </template>
+                        <template x-if="!discarding">
+                            <span>Discard Changes</span>
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showEditModal" x-cloak class="modal-backdrop" @click.self="closeEditModal()">
+            <div class="modal-dialog">
+                <div class="modal-header modal-header-info">
+                    <i class="bi-pencil-fill"></i>
+                    <h3>Edit File</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Open the translation window in a new tab for editing. If you edit any texts, refresh this page when you return.</p>
+                    <div class="file-name" x-text="fileToEdit?.path"></div>
+                    <label class="dont-show-again">
+                        <input type="checkbox" x-model="skipEditConfirm">
+                        <span>Do not show this dialog again</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" @click="closeEditModal()">
+                        Cancel
+                    </button>
+                    <button class="modal-btn modal-btn-info" @click="confirmEdit(selectedFile)">
+                        Open Editor
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showPublishModal" x-cloak class="modal-backdrop" @click.self="closePublishModal()">
+            <div class="modal-dialog">
+                <div class="modal-header modal-header-success">
+                    <i class="bi-cloud-upload-fill"></i>
+                    <h3>Publish File</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Publish this text. If you change your mind, you can unpublish later.</p>
+                    <div class="file-name" x-text="fileToPublish?.path"></div>
+                    <label class="dont-show-again">
+                        <input type="checkbox" x-model="skipPublishConfirm">
+                        <span>Do not show this dialog again</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" @click="closePublishModal()">
+                        Cancel
+                    </button>
+                    <button class="modal-btn modal-btn-success"
+                            @click="confirmPublish()"
+                            :disabled="publishing">
+                        <template x-if="publishing">
+                            <span>Publishing...</span>
+                        </template>
+                        <template x-if="!publishing">
+                            <span>Publish</span>
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="toast.show" x-cloak
+            class="toast"
+            :class="toast.type"
+            x-transition>
+            <i :class="toast.type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+            <span x-text="toast.message"></span>
+        </div>
+
+        </div>
+    </main>
+    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+</body>
+</html>

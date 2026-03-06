@@ -7,6 +7,7 @@
 @import "variables/shadows.css";
 @import "variables/buttons.css";
 @import "variables/typography.css";
+@import "variables/selects.css";
 
 @import "layout/body.css";
 @import "layout/header.css";
@@ -17,7 +18,6 @@
 @import "components/buttons.css";
 @import "components/modals.css";
 @import "components/pull-request.css";
-@import "components/search.css";
 @import "components/tooltip.css";
 
 @import "pages/index.css";

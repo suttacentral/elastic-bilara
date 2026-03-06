@@ -531,7 +531,7 @@ class Search:
         data = self._process_file(path)
         source: dict[str, Any] = data["_source"]
         try:
-            self._search.index(index=settings.ES_INDEX, id=data["_id"], body=data["_source"])
+            self._search.index(index=settings.ES_INDEX, id=data["_id"], body=data["_source"], refresh=True)
         except RequestError as e:
             return False, e
         segment_actions: list[dict[str, Any]] = []

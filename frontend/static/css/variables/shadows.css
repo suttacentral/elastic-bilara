@@ -2,11 +2,14 @@
 @import "colors.css";
 
 :root {
-    --shadow-xxs: 0 0 var(--space-xxs) var(--color-shadow);
-    --shadow-xs: 0 0 var(--space-xs) var(--color-shadow);
-    --shadow-sm: 0 0 var(--space-sm) var(--color-shadow);
-    --shadow-md: 0 0 var(--space-md) var(--color-shadow);
-    --shadow-lg: 0 0 var(--space-lg) var(--color-shadow);
-    --shadow-xl: 0 0 var(--space-xl) var(--color-shadow);
-    --shadow-xxl: 0 0 var(--space-xxl) var(--color-shadow);
+  --umbra-opacity: rgba(0, 0, 0, 0.1);
+  --penumbra-opacity: rgba(0, 0, 0, 0.07);
+  --ambient-opacity: rgba(0, 0, 0, 0.06);
+  --shadow-xxs: 0px 2px 1px -1px var(--umbra-opacity), 0px 1px 1px 0px var(--penumbra-opacity), 0px 1px 3px 0px var(--ambient-opacity);
+  --shadow-xs: 0px 3px 1px -2px var(--umbra-opacity), 0px 2px 2px 0px var(--penumbra-opacity), 0px 1px 5px 0px var(--ambient-opacity);
+  --shadow-sm: 0px 2px 4px -1px var(--umbra-opacity), 0px 4px 5px 0px var(--penumbra-opacity), 0px 1px 10px 0px var(--ambient-opacity);
+  --shadow-md: 0px 5px 5px -3px var(--umbra-opacity), 0px 8px 10px 1px var(--penumbra-opacity), 0px 3px 14px 2px var(--ambient-opacity);
+  --shadow-lg: 0px 7px 8px -4px var(--umbra-opacity), 0px 12px 17px 2px var(--penumbra-opacity), 0px 5px 22px 4px var(--ambient-opacity);
+  --shadow-xl: 0px 8px 10px -5px var(--umbra-opacity), 0px 16px 24px 2px var(--penumbra-opacity), 0px 6px 30px 5px var(--ambient-opacity);
+  --shadow-xxlp: 0px 11px 15px -7px var(--umbra-opacity), 0px 24px 38px 3px var(--penumbra-opacity), 0px 9px 46px 8px var(--ambient-opacity);
 }

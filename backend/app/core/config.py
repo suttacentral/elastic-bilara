@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = secrets.token_urlsafe(32)
     SERVER_NAME: str = "bilara-v2"
     SERVER_BACKEND_HOST: str = "http://localhost"
-    DOCKER_BACKEND_PORT: str = "8080"
+    DOCKER_BACKEND_PORT: str = "80"
     PROJECT_NAME: str = "bilara-v2"
     BACKEND_CORS_ORIGINS: List[str] = []
     WORK_DIR: Path = Path(__file__).parent.parent.parent / "checkouts" / "unpublished"

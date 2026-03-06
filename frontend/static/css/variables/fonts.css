@@ -1,28 +1,39 @@
 @font-face {
-    font-family: 'Source Sans 3';
-    src: url('/static/fonts/SourceSans3-Regular.otf.woff2') format('woff2-variations');
-    font-weight: 400;
+    font-family: 'Source Sans VF';
+    src: url('/static/fonts/SourceSans3VF-Upright.otf.woff2') format('woff2-variations');
+    font-weight: 100 1000;
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: 'Source Serif 4';
-    src: url('/static/fonts/SourceSerif4-Regular.otf.woff2') format('woff2-variations');
-    font-weight: 400;
+    font-family: 'Source Sans VF';
+    src: url('/static/fonts/SourceSans3VF-Italic.otf.woff2') format('woff2-variations');
+    font-weight: 100 1000;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Source Serif VF';
+    src: url('/static/fonts/SourceSerif4Variable-Roman.otf.woff2') format('woff2-variations');
+    font-weight: 100 1000;
     font-style: normal;
     font-display: swap;
 }
 
-:root {
-    --font-family-source-sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    --font-family-source-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+@font-face {
+    font-family: 'Source Serif VF';
+    src: url('/static/fonts/SourceSerif4Variable-Italic.otf.woff2') format('woff2-variations');
+    font-weight: 100 1000;
+    font-style: italic;
+    font-display: swap;
 }
 
 .font-source-sans {
-    font-family: var(--font-family-source-sans);
+    font-family: var(--font-sans);
 }
 
 .font-source-serif {
-    font-family: var(--font-family-source-serif);
+    font-family: var(--font-serif);
 }

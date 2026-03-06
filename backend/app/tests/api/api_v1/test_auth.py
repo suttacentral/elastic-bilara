@@ -16,7 +16,9 @@ class TestAuth:
         )
 
     @pytest.mark.asyncio
-    async def test_token_endpoint_invalid_code(self, async_client) -> None:
+    @patch("app.api.api_v1.endpoints.auth.utils.get_github_data")
+    async def test_token_endpoint_invalid_code(self, mock_get_github_data, async_client) -> None:
+        mock_get_github_data.return_value = {"error": "bad_verification_code"}
         response = await async_client.get("/token/?code=invalid_code")
         assert response.status_code == 401
         assert "detail" in response.json()

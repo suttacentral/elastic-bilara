@@ -79,3 +79,10 @@ backend/checkouts/
 
 logs/
 /.env.local.dev
+
+
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+coverage/

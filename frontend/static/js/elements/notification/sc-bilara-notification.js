@@ -1,60 +1,57 @@
-import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 
-import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit-html@3.2.0/directives/unsafe-html.js';
+import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit-html@3.3.2/directives/unsafe-html.js';
 
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button/button.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/alert/alert.js';
-import "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/tooltip/tooltip.js";
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/badge/badge.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/button-group/button-group.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/spinner/spinner.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/components/skeleton/skeleton.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/button/button.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/alert/alert.js';
+import "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/tooltip/tooltip.js";
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/button-group/button-group.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/spinner/spinner.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/skeleton/skeleton.js';
 
 import '../addons/sc-bilara-badge.js';
+import '../addons/sc-bilara-circle-badge.js';
 import "../../auth.js";
 import "../../utils.js";
 
 class SCBilaraNotification extends LitElement {
   static styles = css`
     :host {
-      background-color: var(--color-primary-lighter);
+      background-color: var(--color-primary);
       margin: 0;
       padding: 20px;
     }
 
     .notification {
-      background-color: #ffffff;
-      border: 1px solid #e1e4e8;
-      border-radius: 6px;
-      padding: 15px;
-      margin-bottom: 10px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      background-color: var(--color-background-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+      box-shadow: var(--shadow-sm);
     }
 
     .notification-content {
-      margin: 10px 0;
+      margin: var(--space-lg) 0;
     }
 
     .notification {
-      background-color: var(--color-primary-lighter);
+      background-color: var(--color-primary);
     }
 
     .notify-item:hover {
-      background-color: var(--color-primary-light);
+      background-color: var(--color-primary);
     }
 
     .notify-item {
       display: flex;
       flex-direction: row;
       justify-content: space-between;
-      background-color: var(--color-primary-light);
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      padding: 10px;
-      margin: 10px 0;
-      font-family: 'Source Sans 3';
-      font-size: 14px;
-      color: #333;
+      background-color: var(--color-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      margin: var(--space-lg) 0;
     }
 
     .notify-item div {
@@ -63,8 +60,8 @@ class SCBilaraNotification extends LitElement {
     }
 
     .notify-item strong {
-      color: #007bff;
-      font-size: 16px;
+      color: var(--color-text-emphasized);
+      font-size: var(--text-sm);
     }
 
     ul {
@@ -72,10 +69,6 @@ class SCBilaraNotification extends LitElement {
       padding-left: 10px;
       padding-right: 10px;
 
-    }
-
-    li {
-      font-size: var(--text-lg)
     }
 
     .notify-item a {
@@ -96,19 +89,19 @@ class SCBilaraNotification extends LitElement {
     }
 
     .sc-link-button, .notify-item-detail {
-      font-size: 16px;
+      font-size: var(--text-md);
     }
 
     .effected-file div {
-      margin: 10px;
+      margin: var(--space-lg);
     }
 
     .delete {
-      background-color: #ffebe9;
+      background-color: var(--color-error);
     }
 
     .add {
-      background-color: #dafbe1;
+      background-color: var(--color-success);
     }
 
     .spinner {
@@ -163,12 +156,12 @@ class SCBilaraNotification extends LitElement {
 
   render() {
     return html`
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.16.0/cdn/themes/light.css" />
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
       <div class="notification">
         <h2>
           <i class="bi-bell"></i>Notifications
-          <sl-badge variant="danger" pill>${this.notification.length}</sl-badge>
+          <sc-circle-badge variant="danger" content="${this.notification.length}"></sc-circle-badge>
         </h2>
         <div class="spinner">
           ${this.loadingData ? html`<sl-spinner style="font-size: 50px; --track-width: 6px;"></sl-spinner>` : ''}
@@ -191,7 +184,7 @@ class SCBilaraNotification extends LitElement {
             <ul>${notify.effected_files.map(file => html`
               <li class="effected-file">
                 <div>${file.file_name}<sc-bilara-badge text="${file.file_type}" color="badge-${file.file_type}"></sc-bilara-badge></div>
-                <sl-button href="${file.sc_url}" target="_blank" variant="primary">View in SuttaCentral</sl-button>
+                <sl-button href="${file.sc_url}" target="_blank" variant="primary" outline>View in SuttaCentral</sl-button>
               </li>
               <div>
                 <sl-alert variant="primary" open> ${file.file_name.includes('_html') ?  html`<pre>${file.change_detail}</pre>` : unsafeHTML(file.change_detail)} </sl-alert>
@@ -248,6 +241,7 @@ class SCBilaraNotification extends LitElement {
           throw new Error("Invalid data format from the API");
       }
       this.notification = data.git_recent_commits;
+      console.log(this.notification);
       this.requestUpdate();
     } catch (error) {
         throw new Error(error);

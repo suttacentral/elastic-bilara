@@ -1,4 +1,4 @@
-import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 
 export class SCBilaraBadge extends LitElement {
   static styles = css`
@@ -6,7 +6,7 @@ export class SCBilaraBadge extends LitElement {
       padding: 0.1em 0.2em;
       border-radius: 0.6rem;
       color: #ffffff;
-      font-family: 'Source Sans 3',
+      font-family: var(--font-serif);
       font-size: 0.7em;
       font-weight: bold;
     }

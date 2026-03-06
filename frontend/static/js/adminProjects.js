@@ -31,6 +31,7 @@ function addNewProject() {
         directories: [],
         files: [],
         users: [],
+        languages: {},
         user: null,
         languageCode: "",
         validLanguageCode: true,
@@ -39,6 +40,7 @@ function addNewProject() {
         async init() {
             await this.getProjects(this.base);
             await this.getUsers();
+            await this.getLanguages();
         },
         async getProjects(base) {
             try {
@@ -78,8 +80,18 @@ function addNewProject() {
             const data = await response.json();
             this.users = data;
         },
+        async getLanguages() {
+            try {
+                const response = await requestWithTokenRetry("languages/");
+                const data = await response.json();
+                this.languages = data;
+            } catch (error) {
+                console.error("Failed to load languages:", error);
+                this.languages = {};
+            }
+        },
         checkLanguageCode() {
-            this.validLanguageCode = this.languageCode.length === 2 || this.languageCode.length === 3;
+            this.validLanguageCode = this.languageCode && this.languageCode.length > 0;
         },
         clearCreatedData() {
             this.created.status = false;
@@ -89,6 +101,7 @@ function addNewProject() {
         async handleSubmit() {
             this.clearCreatedData();
             if (this.user === null || this.user === "") return (this.invalidData = true);
+            this.checkLanguageCode();
             if (!this.validLanguageCode) return (this.invalidData = true);
             this.loading = true;
             const params = new URLSearchParams({
@@ -105,9 +118,6 @@ function addNewProject() {
             this.created.status = true;
             this.created.username = user;
             this.created.paths = createdPaths;
-            setTimeout(() => {
-                this.clearCreatedData();
-            }, 10000);
         },
     };
 }

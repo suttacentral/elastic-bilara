@@ -1,4 +1,4 @@
-import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 
 export class ScBilaraTranslationProjectActions extends LitElement {
   static styles = [
@@ -16,15 +16,15 @@ export class ScBilaraTranslationProjectActions extends LitElement {
   render() {
     return html`
       <div class="project-container__content-body__action">
-          <p class="project-container__content-body__text"
+          <span class="project-container__content-body__text-uid"
               :class="{'project-container__content-body__text--hide': translation.muid !== new URLSearchParams(window.location.search).get('source')}"
               x-text="uid">
-          </p>
-          <button class="project-header__nav-button btn btn--split"
-              x-data="{ caption: 'Split' }"
+          </span>
+          <button class="project-header__nav-button btn--split"
+              x-data="{ caption: 'split' }"
               x-text="caption"
               @click="
-                  if (splitBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
+                  if (splitBasedOnUid(translations, uid, document.querySelector('span.project-header__message'))) {
                       splitting = true;
                       merging = false;
                       splittingUid = uid;
@@ -33,11 +33,11 @@ export class ScBilaraTranslationProjectActions extends LitElement {
               x-bind:disabled="splitting || merging"
               x-bind:class="{'btn--disabled': splitting || merging}">
           </button>
-          <button class="project-header__nav-button btn btn--merge"
-              x-data="{ caption: 'Merge' }"
+          <button class="project-header__nav-button btn--merge"
+              x-data="{ caption: 'merge' }"
               x-text="caption"
               @click="
-                  if (mergeBasedOnUid(translations, uid, document.querySelector('p.project-header__message'))) {
+                  if (mergeBasedOnUid(translations, uid, document.querySelector('span.project-header__message'))) {
                       splitting = false;
                       merging=true;
                       mergingUid = uid;
@@ -62,11 +62,11 @@ export class ScBilaraTranslationProjectActions extends LitElement {
 
           <button
               x-data="{params: new URLSearchParams(window.location.search)}"
-              class="project-header__nav-button btn btn--split"
+              class="project-header__nav-button btn--split"
               x-show="translation.canEdit && isAdmin && splitting && isRoot && uid === splittingUid"
               @click="
                   splitting = false;
-                  await updateHandlerForSplit(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('p.project-header__message'));
+                  await updateHandlerForSplit(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('span.project-header__message'));
               "
           >
               Check Split, Then Confirm
@@ -74,11 +74,11 @@ export class ScBilaraTranslationProjectActions extends LitElement {
 
           <button
               x-data="{params: new URLSearchParams(window.location.search)}"
-              class="project-header__nav-button btn btn--merge"
+              class="project-header__nav-button btn--merge"
               x-show="translation.canEdit && isAdmin && merging && isRoot && uid === mergingUid"
               @click="
                   merging = false;
-                  await updateHandlerForMerge(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('p.project-header__message'));
+                  await updateHandlerForMerge(translation.muid || sourceMuid, params.get('prefix'), document.querySelector('span.project-header__message'));
               "
           >
               Check Merge, Then Confirm

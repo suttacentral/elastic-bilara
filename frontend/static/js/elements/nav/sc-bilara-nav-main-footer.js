@@ -1,4 +1,4 @@
-import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 
 export class SCBilaraNavMainFooter extends LitElement {
   createRenderRoot() {
@@ -9,12 +9,13 @@ export class SCBilaraNavMainFooter extends LitElement {
     return html`
       <footer class="main-footer">
         <p class="main-footer__description">Computer Assisted Translation for SuttaCentral</p>
+        <div id="theme-selector-container"></div>
         <ul class="main-footer__list">
             <li class="main-footer__list-item">
                 <a href="https://suttacentral.net/" class="main-footer__list-item-link">SuttaCentral</a>
             </li>
             <li class="main-footer__list-item">
-                <a href="https://github.com/suttacentral/bilara" class="main-footer__list-item-link">Github</a>
+                <a href="https://github.com/suttacentral/elastic-bilara" class="main-footer__list-item-link">Github</a>
             </li>
             <li class="main-footer__list-item">
                 <a href="https://discourse.suttacentral.net/" class="main-footer__list-item-link">Forum</a>

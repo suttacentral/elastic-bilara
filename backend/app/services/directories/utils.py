@@ -172,3 +172,53 @@ def get_language(path: Path) -> str:
     if language == "misc":
         language = None
     return language
+
+
+def calculate_file_progress(file_path: Path) -> dict:
+    """
+    Calculate translation progress for a single file.
+
+    Args:
+        file_path: Path to the translation file
+
+    Returns:
+        Dictionary with progress information including name, progress percentage,
+        total_keys, and translated_keys
+    """
+    from search.utils import find_root_path, get_json_data
+
+    result = {
+        "name": file_path.name,
+        "progress": None,
+        "total_keys": 0,
+        "translated_keys": 0
+    }
+
+    try:
+        # Find the corresponding root file
+        source_path = find_root_path(file_path)
+        if not source_path:
+            result["progress"] = -1
+            return result
+
+        # Get JSON data for both files
+        translation_data = get_json_data(file_path)
+        source_data = get_json_data(source_path)
+
+        # Calculate progress
+        total_keys = len(source_data)
+        translated_keys = sum(
+            1 for key in source_data
+            if key in translation_data and translation_data[key] and str(translation_data[key]).strip()
+        )
+
+        progress = (translated_keys / total_keys * 100) if total_keys > 0 else 0.0
+
+        result["progress"] = round(progress, 2)
+        result["total_keys"] = total_keys
+        result["translated_keys"] = translated_keys
+
+    except Exception as e:
+        result["progress"] = -1
+
+    return result

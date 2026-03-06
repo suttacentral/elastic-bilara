@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilara - Tag Management</title>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.3/dist/cdn.min.js"></script>
+    <script src="./static/js/utils.js"></script>
+    <script src="./static/js/auth.js"></script>
+    <script src="./static/js/tags.js"></script>
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/button/button.js"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./static/css/style.css"/>
+    <link rel="stylesheet" href="./static/css/main.css">
+
+    <style>
+        .tags-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .tags-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .tags-header h1 {
+            font-size: 1.5rem;
+            color: var(--color-text);
+        }
+        .tags-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-background);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        .tags-table th,
+        .tags-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .tags-table th {
+            background: var(--color-background-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .tags-table tr:last-child td {
+            border-bottom: none;
+        }
+        .tags-table tr:hover td {
+            background: var(--color-background-secondary);
+        }
+        .tags-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-icon {
+            background: none;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            transition: all 0.15s;
+        }
+        .btn-icon:hover {
+            background: var(--color-background-secondary);
+            color: var(--color-text);
+        }
+        .btn-icon--danger:hover {
+            background: var(--color-error);
+            color: white;
+            border-color: var(--color-error);
+        }
+        .btn-add {
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-add:hover {
+            opacity: 0.9;
+        }
+        .form-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: var(--color-background-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+        }
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+        .form-group input {
+            padding: 0.5rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            background: var(--color-background);
+            color: var(--color-text);
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+        .form-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-save {
+            background: var(--color-success, #16a34a);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        .btn-cancel {
+            background: var(--color-background);
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        .edit-input {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--color-primary);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--color-background);
+            color: var(--color-text);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--color-text-secondary);
+        }
+        .loading-state {
+            text-align: center;
+            padding: 3rem;
+        }
+        .tag-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            background: var(--color-accent, #7c3aed);
+            color: white;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+
+        .tags-how-to{
+            margin: 6em 3em;
+            display: flex;
+            justify-content: center;
+
+        }
+
+        .tags-how-to article{
+            max-width:40em;
+        }
+
+         .tags-how-to article p,
+        .tags-how-to article ul,
+        .tags-how-to article ol, 
+        .tags-how-to article li{
+            all: revert;
+        }
+
+    </style>
+</head>
+<body class="page-layout" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
+    <header x-data="getUserInfo()" x-init="getRole()">
+        <sc-bilara-nav-main></sc-bilara-nav-main>
+    </header>
+
+    <main class="main-content" x-data="tagsManager()" x-init="init()">
+        <div class="tags-container">
+            <div class="tags-header">
+                <h1><i class="bi bi-tags"></i> Tag Management</h1>
+                <button class="btn-add" @click="showAddForm = !showAddForm">
+                    <i class="bi bi-plus-circle"></i>
+                    <span x-text="showAddForm ? 'Cancel' : 'Add Tag'"></span>
+                </button>
+            </div>
+
+            <!-- Add Tag Form -->
+            <div x-show="showAddForm" x-cloak>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new-tag-name">Tag Name</label>
+                        <input id="new-tag-name" type="text" x-model="newTag.tag"
+                            placeholder="e.g. practice" pattern="[a-z0-9\-]+">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-tag-expansion">Expansion</label>
+                        <input id="new-tag-expansion" type="text" x-model="newTag.expansion"
+                            placeholder="e.g. practice">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-tag-definition">Definition</label>
+                        <input id="new-tag-definition" type="text" x-model="newTag.definition"
+                            placeholder="e.g. Related to practice">
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-save" @click="await addTag()">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div x-show="loading" class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading tags...</p>
+            </div>
+
+            <!-- Tags Table -->
+            <table x-show="!loading && tags.length > 0" class="tags-table">
+                <thead>
+                    <tr>
+                        <th>Tag</th>
+                        <th>Expansion</th>
+                        <th>Definition</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="tag in tags" :key="tag.tag">
+                        <tr>
+                            <!-- View mode -->
+                            <template x-if="!editingTag || editingTag._original !== tag.tag">
+                                <td><span class="tag-badge" x-text="tag.tag"></span></td>
+                            </template>
+                            <template x-if="editingTag && editingTag._original === tag.tag">
+                                <td><input class="edit-input" type="text" x-model="editingTag.tag"></td>
+                            </template>
+
+                            <template x-if="!editingTag || editingTag._original !== tag.tag">
+                                <td x-text="tag.expansion"></td>
+                            </template>
+                            <template x-if="editingTag && editingTag._original === tag.tag">
+                                <td><input class="edit-input" type="text" x-model="editingTag.expansion"></td>
+                            </template>
+
+                            <template x-if="!editingTag || editingTag._original !== tag.tag">
+                                <td x-text="tag.definition"></td>
+                            </template>
+                            <template x-if="editingTag && editingTag._original === tag.tag">
+                                <td><input class="edit-input" type="text" x-model="editingTag.definition"></td>
+                            </template>
+
+                            <td class="tags-actions">
+                                <template x-if="!editingTag || editingTag._original !== tag.tag">
+                                    <div class="tags-actions">
+                                        <button class="btn-icon" @click="startEdit(tag)" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn-icon btn-icon--danger" @click="await deleteTag(tag.tag)" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <template x-if="editingTag && editingTag._original === tag.tag">
+                                    <div class="tags-actions">
+                                        <button class="btn-icon" @click="await saveEdit()" title="Save">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button class="btn-icon" @click="cancelEdit()" title="Cancel">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <!-- Empty State -->
+            <div x-show="!loading && tags.length === 0" class="empty-state">
+                <i class="bi bi-tags" style="font-size: 2rem;"></i>
+                <p>No tags defined yet. Click "Add Tag" to create one.</p>
+            </div>
+        </div>
+
+        <section class='tags-how-to'>
+            <article>
+            <h3>How to apply tags</h3>
+            <p>The tagger must first be authorized to create and apply tags. Then they can create a list of tags on this page. This can be edited or deleted at any time. Each tag consists of three elements.</p>
+            <ol>
+                <li><b>tag</b>: this is used for processing, URLs, etc. It must be<ul>
+                    <li>lowercase</li>
+                    <li>alphanumeric</li>
+                    <li>no diacriticals or other fancy characters</li>
+                    <li>no punctuation except hyphen</li>
+                    <li>no spaces</li>
+                </ul>
+                <li><b>expansion</b>: this is shown to the user. It is a short, readable version of the tag. Eg., the tag “4nt” might expand to “four noble truths”. Keep them lowercase, but you may use spaces, punctuation, etc. </li>
+                <li><b>Definition</b>: a short explanation of the tag concept understandable to general readers. Avoid using Pali or technical language.</li>
+            </li></ol>
+            <p>Once the tag list is created, the tagger may begin adding tags to texts. Only valid tags may be entered.</p>
+            <p>If the tagger deletes a tag, all instances of that tag will be deleted from the files.. Likewise, if a tagger edits a tag, all instances will be updated to the new form. </p>
+            <p>The tagger may add as many tags as they like per segment in a comma separated list. </p>
+        </article>
+        </section>
+    </main>
+
+    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+</body>
+</html>

@@ -1,8 +1,10 @@
 .navigation-container {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: var(--text-xxl);
+    justify-content: left;
+    margin: var(--space-xxl) 20vw;
+    padding: var(--space-sm) var(--space-sm) var(--space-sm) 0;
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
 }
 
 .navigation-container--pushdown {
@@ -10,11 +12,22 @@
 }
 
 .navigation-list {
-    padding-left: var(--space-sm);
+    padding: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    margin: var(--space-xs) 0;
+    justify-content: left;
+    width: 100%;
+}
+
+.mdi::before {
+    color: var(--color-primary);
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+.navigation-list  .btn {
+    float: right;
+    margin-left: var(--space-sm);
 }
 
 .navigation-list:first-of-type {
@@ -22,42 +35,38 @@
 }
 
 .navigation-list__item {
-    padding: var(--space-xxs) var(--space-xs);
+    padding: var(--space-xxs) 0 var(--space-xxs) var(--space-md);
     min-width: var(--space-xxl);
-    margin: var(--space-xxs) 0;
+    color: var(--color-text);
 }
 
 .navigation-list__item-link {
+    display: inline-block;
     text-decoration: none;
-    color: var(--color-black);
-    padding: var(--space-xxs) var(--space-xs);
+    color: var(--color-text);
+    padding: var(--space-xxs) var(--space-sm);
     border-radius: var(--radius-sm);
     transition: 0.3s ease;
-    margin: var(--space-xxs) 0;
     margin-right: var(--space-sm);
     cursor: pointer;
 }
 
 .navigation-list__item-link:hover {
-    background-color: var(--color-primary-light);
-    color: var(--color-accent-dark);
-    border: 1px solid var(--color-primary-darker);
-    border-radius: var(--radius-sm);
+    background-color: var(--color-background-secondary);
+    color: var(--color-text-emphasized);
+}
+
+.navigation-list__item-link:active {
+    background-color: var(--color-background-tertiary);
 }
 
 .navigation-list--open {
-    color: var(--color-accent-dark);
-    font-weight: bold;
-}
-
-.navigation-list--open:hover {
-    color: var(--color-black);
-    background-color: var(--color-primary-light);
+    color: var(--color-text-secondary);
 }
 
 @media (max-width: 1199px) {
     .navigation-container {
-        font-size: var(--text-xl);
+        margin: var(--space-xxl);
     }
 }
 
@@ -67,15 +76,12 @@
     }
 
     .navigation-container {
-        font-size: var(--text-xl);
+        font-size: var(--text-md);
+        margin: var(--space-lg) var(--space-xs);
     }
 
     .navigation-list__item-link:has( .mdi-file-document-outline) {
         font-size: var(--text-md);
-    }
-
-    .navigation-container--pushdown {
-        margin-top: var(--space-xxs);
     }
 
     .navigation-list__item {
@@ -109,5 +115,66 @@
         font-size: 12px;
         text-align: center;
         line-height: 20px;
+    }
+}
+
+.show-all-button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.translation-progress {
+    display: inline-flex;
+    align-items: center;
+    width: 80px;
+    height: 18px;
+    background-color: var(--color-background-secondary);
+    border-radius: var(--radius-sm);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    vertical-align: middle;
+    float: right;
+    margin: var(--space-xs) var(--space-sm) 0 var(--space-sm);
+}
+
+.translation-progress .progress-bar {
+    height: 100%;
+    border-radius: var(--radius-sm);
+    transition: width 0.3s ease;
+}
+
+.translation-progress .progress-text {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text);
+    z-index: 1;
+}
+
+.translation-progress.low .progress-bar {
+    background-color: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.translation-progress.medium .progress-bar {
+    background-color: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.translation-progress.high .progress-bar {
+    background-color: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+@media (max-width: 575px) {
+    .translation-progress {
+        width: 60px;
+        height: 14px;
+    }
+
+    .translation-progress .progress-text {
+        font-size: 9px;
     }
 }

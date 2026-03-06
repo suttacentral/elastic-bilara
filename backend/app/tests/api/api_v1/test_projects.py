@@ -196,7 +196,7 @@ class TestProjects:
                     "loc": ["body"],
                     "msg": "Field required",
                     "input": None,
-                    "url": "https://errors.pydantic.dev/2.3/v/missing",
+                    "url": "https://errors.pydantic.dev/2.11/v/missing",
                 }
             ]
         }
@@ -730,6 +730,35 @@ class TestProjects:
 
         assert response.status_code == 409
         assert "No new project files were created" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("invalid_language", ["", "a", "abcd", "abcde"])
+    async def test_create_new_project_invalid_language_code(
+        self,
+        mocker,
+        mock_is_admin_or_superuser_is_active,
+        mock_get_current_user_admin,
+        mock_create_new_project,
+        mock_user,
+        mock_session,
+        async_client,
+        invalid_language,
+    ) -> None:
+        current_user = copy(mock_user)
+        current_user.role = "administrator"
+        mock_session.query.return_value.filter.return_value.first.side_effect = [current_user, mock_user]
+
+        response = await async_client.post(
+            "/projects/create/",
+            params={
+                "user_github_id": 123,
+                "root_path": "root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json",
+                "translation_language": invalid_language,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Translation language code must be 2 or 3 characters long" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_get_source_muid_unauthenticated(self, async_client) -> None:

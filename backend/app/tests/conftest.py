@@ -270,7 +270,6 @@ def mock_user(
     avatar_url: str = "example.com/url",
     role: Role = Role.REVIEWER.value,
     is_active: bool = True,
-    remarks: list = None,
 ):
     return mUser(
         id=id_,
@@ -282,7 +281,6 @@ def mock_user(
         created_on=datetime.datetime.utcnow(),
         last_login=datetime.datetime.utcnow(),
         is_active=is_active,
-        remarks=remarks if remarks else [],
     )
 
 
@@ -299,7 +297,6 @@ def mock_users():
             created_on=datetime.datetime.utcnow(),
             last_login=datetime.datetime.utcnow(),
             is_active=True,
-            remarks=[],
         ),
         User(
             id=2,
@@ -311,7 +308,6 @@ def mock_users():
             created_on=datetime.datetime.utcnow(),
             last_login=datetime.datetime.utcnow(),
             is_active=True,
-            remarks=[],
         ),
     ]
 

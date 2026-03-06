@@ -1,4 +1,5 @@
-import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.2.0/+esm';
+import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
+import '../addons/sc-bilara-settings-dialog.js';
 
 export class SCBilaraNavMainMobile extends LitElement {
   static styles = [
@@ -6,11 +7,24 @@ export class SCBilaraNavMainMobile extends LitElement {
       :host {
         display: block;
       }
+
+      nav {
+        border-bottom: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+        background-color: var(--color-background-tertiary);
+      }
     `
   ];
 
   createRenderRoot() {
     return this;
+  }
+
+  _openSettings() {
+    const dialog = this.querySelector('sc-bilara-settings-dialog');
+    if (dialog) {
+      dialog.show();
+    }
   }
 
   render() {
@@ -27,17 +41,20 @@ export class SCBilaraNavMainMobile extends LitElement {
               </li>
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">
-                  <div class="user-container" x-cloak x-show="!!username">
-                      <img :src="avatarURL"
-                          x-bind:alt="username + 's github profile picture'"
-                          class="user-avatar"/>
-                      <span class="user-welcome">Welcome, <strong x-text="username"></strong>!</span>
-                  </div>
+                <a :href="'https://github.com/' + username" class="username-link">
+                  <figure class="user-container" x-cloak x-show="!!username">
+                      <img
+                        :src="avatarURL"
+                        x-bind:alt="username + 's github profile picture'"
+                        class="user-avatar"
+                        title="profile picture"/>
+                  </figure>
+                </a>
               </li>
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'" x-cloak
                   x-show="isAdmin && isActive">
-                  <a class="main-nav-mobile__item-link btn btn--admin" href="/admin">Admin Area</a>
+                  <a class="main-nav-mobile__item-link btn btn--admin" href="/admin">Admin</a>
               </li>
               <li class="main-nav-mobile__item"
                   :class="isOpen ? 'main-nav-mobile__item--show' : 'main-nav-mobile__item--hide'">

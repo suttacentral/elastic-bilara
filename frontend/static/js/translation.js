@@ -4,23 +4,53 @@ function fetchTranslation() {
         relatedProjects: [],
         htmlProjectName: '',
         htmlProject: null,
+        tagProjectName: '',
+        tagProject: null,
+        availableTags: [],
+        originalTranslations: null,
+        splitter_uid: null,
+        merger_uid: null,
+        mergee_uid: null,
         async init() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
             const muid = params.get("muid");
             const source = params.get("source");
 
+            this.muid = muid;
+
             await this.findOrCreateObject(source, this.prefix, true);
             if (muid) {
                 await this.findOrCreateObject(muid, this.prefix);
             }
             const projects = await this.fetchRelatedProjects(this.prefix);
-            this.relatedProjects = projects.filter(project => project !== muid && project !== source);
 
             this.htmlProjectName = projects.find(project => project.includes('html'));
             if (this.htmlProjectName) {
                 this.htmlProject = await this.createObject(this.htmlProjectName, this.prefix);
             }
+
+            this.tagProjectName = projects.find(project => project.startsWith('tag'));
+            await this.loadAvailableTags();
+
+            this.relatedProjects = projects.filter(project =>
+                project !== muid && project !== source &&
+                project !== this.htmlProjectName
+            );
+
+            // Restore previously saved related project selections
+            const savedRelated = this.getSavedRelatedProjects();
+            const validSaved = savedRelated.filter(p => this.relatedProjects.includes(p));
+            for (const project of validSaved) {
+                try {
+                    await this.findOrCreateObject(project, this.prefix);
+                } catch (error) {
+                    console.error(`Failed to restore related project ${project}:`, error);
+                }
+            }
+            window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: validSaved } }));
+
+            this.updateProgress();
         },
         getValue(translation, uid) {
             return translation.data[uid] || "";
@@ -30,6 +60,60 @@ function fetchTranslation() {
                 translation.data = {};
             }
             translation.data[uid] = value;
+            this.updateProgress();
+        },
+        /**
+         * Calculate translation progress
+         * @returns {Object} { translated: number, total: number, percentage: number }
+         */
+        getTranslationProgress() {
+            const sourceTranslation = this.translations.find(t => t.isSource);
+            const editableTranslation = this.translations.find(t => t.canEdit && !t.isSource);
+
+            if (!sourceTranslation || !editableTranslation) {
+                return { translated: 0, total: 0, percentage: 0 };
+            }
+
+            const sourceData = sourceTranslation.data || {};
+            const translationData = editableTranslation.data || {};
+            const totalKeys = Object.keys(sourceData).length;
+
+            if (totalKeys === 0) {
+                return { translated: 0, total: 0, percentage: 0 };
+            }
+
+            let translatedCount = 0;
+            for (const key of Object.keys(sourceData)) {
+                const value = translationData[key];
+                if (value && value.trim() !== '') {
+                    translatedCount++;
+                }
+            }
+
+            const percentage = Math.round((translatedCount / totalKeys) * 100);
+            return { translated: translatedCount, total: totalKeys, percentage };
+        },
+        updateProgress() {
+            const progressData = this.getTranslationProgress();
+            window.dispatchEvent(new CustomEvent('translation-progress-update', {
+                detail: progressData
+            }));
+        },
+        _backupTranslations() {
+            this.originalTranslations = JSON.parse(
+                JSON.stringify(this.translations)
+            );
+        },
+        _restoreTranslations() {
+            if (this.originalTranslations) {
+                this.translations = JSON.parse(
+                    JSON.stringify(this.originalTranslations)
+                );
+                this.originalTranslations = null;
+            }
+        },
+        hasActiveOperation() {
+            return this.originalTranslations !== null;
         },
         async splitBasedOnUid(translations, uid, element) {
             if (!isMergeSplitConditionMet(uid)) {
@@ -40,15 +124,26 @@ function fetchTranslation() {
                 return false;
             }
 
+            if (this.hasActiveOperation()) {
+                const confirmed = confirm(
+                    'You have an unsaved split/merge operation. ' +
+                    'Do you want to discard it and start a new split?'
+                );
+                if (!confirmed) {
+                    return false;
+                }
+            }
+
             if (localStorage.getItem('enableSplitHintDialog') === null) {
-                localStorage.setItem('enableSplitHintDialog', true);
+                localStorage.setItem('enableSplitHintDialog', 'true');
             }
 
             if (localStorage.getItem('enableSplitHintDialog') === "true") {
                 document.querySelector('.dialog-split-hint')?.show();
             }
 
-            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
+            this._backupTranslations();
+
             if (this.htmlProjectName) {
                 const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
                 if (!existingProject) {
@@ -57,81 +152,107 @@ function fetchTranslation() {
             }
 
             const [sectionUid, sectionNumber] = uid.split(':');
-            const isTwoLevelFormat = countChar(sectionNumber, '.') === 1;
-            const isThreeLevelFormat = /[0-9]+\.[0-9]+\.[0-9]+$/.test(sectionNumber);
+            const isTwoLevelFormat = /^\d+\.\d+$/.test(sectionNumber);
+            const isThreeLevelFormat = /^\d+\.\d+\.\d+$/.test(sectionNumber);
 
             // Processing two-level format: mn1:1.1
             if (isTwoLevelFormat) {
-                const [integerPart, decimalPart] = sectionNumber.split('.');
-                this.splitter_uid = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
-
-                translations.forEach(translation => {
-                    let newObj = {};
-
-                    for (let key in translation.data) {
-                        const [keySectionUid, keySectionNumber] = key.split(':');
-                        const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
-
-                        if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart === decimalPart) {
-                            // The current paragraph to be split
-                            newObj[key] = translation.data[key];
-                            const newKey = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
-                            if (translation.muid.includes('html')) {
-                                newObj[newKey] = "{}";
-                            } else {
-                                newObj[newKey] = "";
-                            }
-                        } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && parseInt(keyDecimalPart) >= parseInt(decimalPart) + 1) {
-                            // The paragraph after the split point needs to be moved
-                            const newKey = `${sectionUid}:${integerPart}.${parseInt(keyDecimalPart) + 1}`;
-                            newObj[newKey] = translation.data[key];
-                        } else {
-                            // Unaffected paragraphs
-                            newObj[key] = translation.data[key];
-                        }
-                    }
-                    translation.data = newObj;
-                });
+                this._handleTwoLevelSplit(
+                    translations,
+                    sectionUid,
+                    sectionNumber
+                );
             }
-
             // Processing level 3 format: dn1:1.1.1
             else if (isThreeLevelFormat) {
-                const sectionMainPart = getBeforeLastDot(sectionNumber);
-                const sectionLastPart = getLastNumber(sectionNumber);
-                this.splitter_uid = `${sectionUid}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
-                translations.forEach(translation => {
-                    let newObj = {};
-                    for (let key in translation.data) {
-                        const [keySectionUid, keySectionNumber] = key.split(':');
-                        const keyMainPart = getBeforeLastDot(keySectionNumber);
-                        const keyLastPart = getLastNumber(keySectionNumber);
-                        if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart === sectionLastPart) {
-                            // The current paragraph to be split
-                            newObj[key] = translation.data[key];
-                            const newKey = `${sectionUid}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
-                            if (translation.muid.includes('html')) {
-                                newObj[newKey] = "{}";
-                            } else {
-                                newObj[newKey] = "";
-                            }
-                        } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && parseInt(keyLastPart) >= parseInt(sectionLastPart) + 1) {
-                            // The paragraph after the split point needs to be moved
-                            const newKey = `${sectionUid}:${sectionMainPart}${parseInt(keyLastPart) + 1}`;
-                            newObj[newKey] = translation.data[key];
-                        } else {
-                            // Unaffected paragraphs
-                            newObj[key] = translation.data[key];
-                        }
-                    }
-                    translation.data = newObj;
-                });
+                this._handleThreeLevelSplit(
+                    translations,
+                    sectionUid,
+                    sectionNumber
+                );
             }
+
             return true;
         },
+        _handleTwoLevelSplit(translations, sectionUid, sectionNumber) {
+            const [integerPart, decimalPart] = sectionNumber.split('.');
+            const splitPointNumber = parseInt(decimalPart);
+            this.splitter_uid = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
+
+            translations.forEach(translation => {
+                const newObj = {};
+
+                for (const key in translation.data) {
+                    const [keySectionUid, keySectionNumber] = key.split(':');
+                    const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
+                    const keyDecimalNumber = parseInt(keyDecimalPart);
+
+                    // Paragraphs that do not match the current section
+                    if (keySectionUid !== sectionUid || keyIntegerPart !== integerPart) {
+                        newObj[key] = translation.data[key];
+                        continue;
+                    }
+
+                    // Process matching paragraphs
+                    if (keyDecimalNumber < splitPointNumber) {
+                        newObj[key] = translation.data[key];
+                    } else if (keyDecimalNumber === splitPointNumber) {
+                        newObj[key] = translation.data[key];
+                        const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
+                        newObj[newKey] = translation.muid.includes('html')
+                            ? "{}"
+                            : "";
+                    } else {
+                        const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
+                        newObj[newKey] = translation.data[key];
+                    }
+                }
+                translation.data = newObj;
+            });
+        },
+        _handleThreeLevelSplit(translations, sectionUid, sectionNumber) {
+            const sectionMainPart = getBeforeLastDot(sectionNumber);
+            const sectionLastPart = parseInt(getLastNumber(sectionNumber));
+            this.splitter_uid = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+
+            translations.forEach(translation => {
+                const newObj = {};
+
+                for (const key in translation.data) {
+                    const [keySectionUid, keySectionNumber] = key.split(':');
+
+                    if (keySectionUid !== sectionUid) {
+                        newObj[key] = translation.data[key];
+                        continue;
+                    }
+
+                    const keyMainPart = getBeforeLastDot(keySectionNumber);
+                    const keyLastPart = parseInt(getLastNumber(keySectionNumber));
+
+                    if (keyMainPart !== sectionMainPart) {
+                        newObj[key] = translation.data[key];
+                        continue;
+                    }
+
+                    if (keyLastPart < sectionLastPart) {
+                        newObj[key] = translation.data[key];
+                    } else if (keyLastPart === sectionLastPart) {
+                        newObj[key] = translation.data[key];
+                        const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+                        newObj[newKey] = translation.muid.includes('html')
+                            ? "{}"
+                            : "";
+                    } else {
+                        const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
+                        newObj[newKey] = translation.data[key];
+                    }
+                }
+                translation.data = newObj;
+            });
+        },
         cancelSplit(translations) {
-            // this.translations = this.OriginalTranslations;
-            // this.translations = JSON.parse(JSON.stringify(this.OriginalTranslations));
-            window.location.reload();
+            this._restoreTranslations();
+            // localStorage.setItem('displayButtonForSplitOrMerge', 'false');
         },
         mergeBasedOnUid(translations, uid, element) {
             if (!isMergeSplitConditionMet(uid)) {
@@ -144,7 +265,7 @@ function fetchTranslation() {
 
             let newObj = {};
             this.merger_uid = uid;
-            this.OriginalTranslations = JSON.parse(JSON.stringify(translations));
+            this.originalTranslations = JSON.parse(JSON.stringify(translations));
             if (this.htmlProjectName) {
                 const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
                 if (!existingProject) {
@@ -153,118 +274,210 @@ function fetchTranslation() {
             }
 
             if (localStorage.getItem('enableMergeHintDialog') === null) {
-                localStorage.setItem('enableMergeHintDialog', true);
+                localStorage.setItem('enableMergeHintDialog', 'true');
             }
 
             if (localStorage.getItem('enableMergeHintDialog') === "true") {
                 document.querySelector('.dialog-merge-hint')?.show();
             }
 
-            const regex = /:([0-9]+(\.[0-9]+)?)$/;
-            if (regex.test(uid) && countChar(uid.split(':')[1], '.') === 1) {
-                const [sectionUid, sectionNumber] = uid.split(':');
-                const [integerPart, decimalPart] = sectionNumber.split('.');
-                this.mergee_uid = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
+            const [sectionUid, sectionNumber] = uid.split(':');
+            const isTwoLevelFormat = /^\d+\.\d+$/.test(sectionNumber);
+            const isThreeLevelFormat = /^\d+\.\d+\.\d+$/.test(sectionNumber);
 
-                let needToMergeNextSection = false;
-                let nextSectionFirstKey = '';
-                this.translations.forEach(translation => {
-                    for (let key in translation.data) {
-                        const [keySectionUid, keySectionNumber] = key.split(':');
-                        const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
-                        if (`${keySectionUid}:${keyIntegerPart}.${keyDecimalPart}` === `${sectionUid}:${integerPart}.${decimalPart}`) {
-                            let nextKey = `${sectionUid}:${integerPart}.${parseInt(decimalPart) + 1}`;
-                            if (translation.data[nextKey]) {
-                                newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
-                            } else {
-                                let nextSectionIntegerPart = `${parseInt(integerPart) + 1}`;
-                                possibleNextKey1 = `${sectionUid}:${nextSectionIntegerPart}.0`;
-                                possibleNextKey2 = `${sectionUid}:${nextSectionIntegerPart}.1`;
-                                nextKey = translation.data[possibleNextKey1] ? possibleNextKey1 : possibleNextKey2;
-                                if (translation.data[nextKey]) {
-                                    this.mergee_uid = nextKey;
-                                    nextSectionFirstKey = nextKey;
-                                    needToMergeNextSection = true;
-                                    newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
-                                } else {
-                                    newObj[key] = translation.data[key];
-                                }
-                            }
-                        } else if (keySectionUid === sectionUid && keyIntegerPart === integerPart && keyDecimalPart >= decimalPart+1) {
-                            let nextKey = `${uid.split(':')[0]}:${integerPart}.${parseInt(keyDecimalPart) + 1}`;
-                            if (translation.data[nextKey]) {
-                                newObj[key] = translation.data[nextKey];
-                            }
-                        } else if (needToMergeNextSection && key.length === nextSectionFirstKey.length && key.split(':')[1].split('.')[0] === nextSectionFirstKey.split(':')[1].split('.')[0]) {
-                            this.mergeSectionByNextKey(key, translation, newObj);
-                        }
-                        else {
-                            newObj[key] = translation.data[key];
-                        }
-                    }
-                    translation.data = newObj;
-                    translation.splitting = true;
-                    newObj = {};
-                });
+            // Two-level format: mn1:1.1
+            if (isTwoLevelFormat) {
+                this._handleTwoLevelMerge(translations, sectionUid, sectionNumber);
+            }
+            // Three-level format: dn1:1.1.1
+            else if (isThreeLevelFormat) {
+                this._handleThreeLevelMerge(translations, sectionUid, sectionNumber);
             }
 
-            // patten: dn1:1.1.1
-            const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
-            if (sectionRegex.test(uid)) {
-                const [sectionUid, sectionNumber] = uid.split(':');
-                const sectionMainPart = getBeforeLastDot(sectionNumber);
-                const sectionLastPart = getLastNumber(sectionNumber);
-                this.mergee_uid = `${sectionUid}:${sectionMainPart}.${parseInt(sectionLastPart) + 1}`;
-                let needToMergeNextSection = false;
-                let nextSectionFirstKey = '';
-                translations.forEach(translation => {
-                    for (let key in translation.data) {
-                        const [keySectionUid, keySectionNumber] = key.split(':');
-                        const keyMainPart = getBeforeLastDot(keySectionNumber);
-                        const keyLastPart = getLastNumber(keySectionNumber);
-
-                        const [keyChapter, keySection, keySubsection] = keySectionNumber.split('.');
-
-                        if (`${keySectionUid}:${keyMainPart}.${keyLastPart}` === `${sectionUid}:${sectionMainPart}.${sectionLastPart}`) {
-                            let nextKey = `${uid.split(':')[0]}:${sectionMainPart}${parseInt(sectionLastPart) + 1}`;
-                            if (translation.data[nextKey]) {
-                                newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
-                            } else {
-                                let SectionNumberParts = sectionNumber.split('.');
-                                nextKey = keySectionUid + ':' + SectionNumberParts[0] + '.' + (parseInt(SectionNumberParts[1]) + 1) + '.1';
-                                if (translation.data[nextKey]) {
-                                    this.mergee_uid = nextKey;
-                                    nextSectionFirstKey = nextKey;
-                                    needToMergeNextSection = true;
-                                    newObj[key] = translation.data[key] + ' ' + translation.data[nextKey];
-                                } else {
-                                    newObj[key] = translation.data[key];
-                                }
-                            }
-                        } else if (keySectionUid === sectionUid && keyMainPart === sectionMainPart && keyLastPart >= sectionLastPart+1) {
-                            let newKey = `${uid.split(':')[0]}:${sectionMainPart}${parseInt(keyLastPart) + 1}`;
-                            if (translation.data[newKey]) {
-                                newObj[key] = translation.data[newKey];
-                            }
-                        }  else if (needToMergeNextSection && key.length === nextSectionFirstKey.length && key.split(':')[1].split('.')[0] === nextSectionFirstKey.split(':')[1].split('.')[0]
-                            && key.split(':')[1].split('.')[1] === nextSectionFirstKey.split(':')[1].split('.')[1]) {
-                            this.mergeSectionByNextSubsectionKey(key, translation, newObj);
-                        } else {
-                            newObj[key] = translation.data[key];
-                        }
-                    }
-                    translation.data = newObj;
-                    newObj = {};
-                });
-            }
             return true;
+        },
+        /**
+         * Handle two-level format merge (e.g., mn1:1.1 + mn1:1.2)
+         * @param {Array} translations - Translation objects array
+         * @param {string} sectionUid - Section UID (e.g., 'mn1')
+         * @param {string} sectionNumber - Section number (e.g., '1.1')
+         */
+        _handleTwoLevelMerge(translations, sectionUid, sectionNumber) {
+            const [integerPart, decimalPart] = sectionNumber.split('.');
+            const decimalNumber = parseInt(decimalPart);
+            this.mergee_uid = `${sectionUid}:${integerPart}.${decimalNumber + 1}`;
+
+            let needToMergeNextSection = false;
+            let nextSectionFirstKey = '';
+
+            translations.forEach(translation => {
+                const newObj = {};
+
+                for (const key in translation.data) {
+                    const [keySectionUid, keySectionNumber] = key.split(':');
+
+                    // If it does not match the current section, keep it directly.
+                    if (keySectionUid !== sectionUid) {
+                        newObj[key] = translation.data[key];
+                        continue;
+                    }
+
+                    const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
+                    const keyDecimalNumber = parseInt(keyDecimalPart);
+
+                    // If it does not match the current section, keep it directly.
+                    if (keyIntegerPart !== integerPart) {
+                        // If cross-section merging is needed, check if it is a paragraph of the target section
+                        if (needToMergeNextSection) {
+                            const nextSectionNumber = parseInt(nextSectionFirstKey.split(':')[1].split('.')[0]);
+                            const currentSectionNumber = parseInt(keyIntegerPart);
+
+                            if (currentSectionNumber === nextSectionNumber) {
+                                this.mergeSectionByNextKey(key, translation, newObj);
+                                continue;
+                            }
+                        }
+                        newObj[key] = translation.data[key];
+                        continue;
+                    }
+
+                    // Process the paragraph of the current section
+                    if (keyDecimalNumber < decimalNumber) {
+                        // Paragraphs before the merge point remain unchanged.
+                        newObj[key] = translation.data[key];
+                    } else if (keyDecimalNumber === decimalNumber) {
+                        // Merge point: merge current paragraph with next one
+                        const nextKey = `${sectionUid}:${integerPart}.${decimalNumber + 1}`;
+
+                        if (translation.data[nextKey]) {
+                            // The next paragraph within the same section exists
+                            newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
+                        } else {
+                            // Try to merge across sections
+                            const nextSectionIntegerPart = parseInt(integerPart) + 1;
+                            const possibleNextKey1 = `${sectionUid}:${nextSectionIntegerPart}.0`;
+                            const possibleNextKey2 = `${sectionUid}:${nextSectionIntegerPart}.1`;
+                            const crossSectionNextKey = translation.data[possibleNextKey1]
+                                ? possibleNextKey1
+                                : possibleNextKey2;
+
+                            if (translation.data[crossSectionNextKey]) {
+                                this.mergee_uid = crossSectionNextKey;
+                                nextSectionFirstKey = crossSectionNextKey;
+                                needToMergeNextSection = true;
+                                newObj[key] = `${translation.data[key]} ${translation.data[crossSectionNextKey]}`;
+                            } else {
+                                // No mergeable paragraph exists, keep it unchanged
+                                newObj[key] = translation.data[key];
+                            }
+                        }
+                    } else {
+                        // Paragraphs after the merge point: shift down by decrementing the number
+                        const nextKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
+                        if (translation.data[nextKey]) {
+                            newObj[key] = translation.data[nextKey];
+                        }
+                        // If no next key exists, this paragraph is deleted (merged into previous)
+                    }
+                }
+
+                translation.data = newObj;
+                translation.splitting = true;
+            });
+        },
+
+        /**
+         * Handle three-level format merge (e.g., dn1:1.1.1 + dn1:1.1.2)
+         * @param {Array} translations - Translation objects array
+         * @param {string} sectionUid - Section UID (e.g., 'dn1')
+         * @param {string} sectionNumber - Section number (e.g., '1.1.1')
+         */
+        _handleThreeLevelMerge(translations, sectionUid, sectionNumber) {
+            const sectionMainPart = getBeforeLastDot(sectionNumber);
+            const sectionLastPart = parseInt(getLastNumber(sectionNumber));
+            this.mergee_uid = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+
+            let needToMergeNextSection = false;
+            let nextSectionFirstKey = '';
+
+            translations.forEach(translation => {
+                const newObj = {};
+
+                for (const key in translation.data) {
+                    const [keySectionUid, keySectionNumber] = key.split(':');
+
+                    // If it does not match the current section, keep it directly.
+                    if (keySectionUid !== sectionUid) {
+                        newObj[key] = translation.data[key];
+                        continue;
+                    }
+
+                    const keyMainPart = getBeforeLastDot(keySectionNumber);
+                    const keyLastPart = parseInt(getLastNumber(keySectionNumber));
+
+                    // If it does not match the current subsection, keep it directly.
+                    if (keyMainPart !== sectionMainPart) {
+                        // If cross-subsection merging is needed, check if it is a paragraph of the target subsection
+                        if (needToMergeNextSection) {
+                            const [nextChapter, nextSection] = nextSectionFirstKey.split(':')[1].split('.');
+                            const [keyChapter, keySection] = keySectionNumber.split('.');
+
+                            if (keyChapter === nextChapter && keySection === nextSection) {
+                                this.mergeSectionByNextSubsectionKey(key, translation, newObj);
+                                continue;
+                            }
+                        }
+                        newObj[key] = translation.data[key];
+                        continue;
+                    }
+
+                    // Process the paragraph of the current subsection
+                    if (keyLastPart < sectionLastPart) {
+                        // Paragraphs before the merge point remain unchanged.
+                        newObj[key] = translation.data[key];
+                    } else if (keyLastPart === sectionLastPart) {
+                        // Merge point: merge current paragraph with next one
+                        const nextKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
+
+                        if (translation.data[nextKey]) {
+                            // The next paragraph within the same subsection exists
+                            newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
+                        } else {
+                            // Try to merge across subsections
+                            const [chapter, section] = sectionNumber.split('.');
+                            const nextSection = parseInt(section) + 1;
+                            const crossSubsectionNextKey = `${sectionUid}:${chapter}.${nextSection}.1`;
+
+                            if (translation.data[crossSubsectionNextKey]) {
+                                this.mergee_uid = crossSubsectionNextKey;
+                                nextSectionFirstKey = crossSubsectionNextKey;
+                                needToMergeNextSection = true;
+                                newObj[key] = `${translation.data[key]} ${translation.data[crossSubsectionNextKey]}`;
+                            } else {
+                                // No mergeable paragraph exists, keep it unchanged
+                                newObj[key] = translation.data[key];
+                            }
+                        }
+                    } else {
+                        // Paragraphs after the merge point: shift down by decrementing the number
+                        const nextKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
+                        if (translation.data[nextKey]) {
+                            newObj[key] = translation.data[nextKey];
+                        }
+                        // If no next key exists, this paragraph is deleted (merged into previous)
+                    }
+                }
+
+                translation.data = newObj;
+                translation.splitting = true;
+            });
         },
         mergeSectionByNextKey(key, translation, newObj) {
             let nextSectionKeySectionUid = key.split(':')[0];
             let nextSectionKeySectionNumber = key.split(':')[1];
             let nextSectionKeyIntegerPart = nextSectionKeySectionNumber.split('.')[0];
             let nextSectionKeyDecimalPart = nextSectionKeySectionNumber.split('.')[1];
-            nextKey = nextSectionKeySectionUid + ':' + nextSectionKeyIntegerPart + '.' + (parseInt(nextSectionKeyDecimalPart) + 1);
+            let nextKey = nextSectionKeySectionUid + ':' + nextSectionKeyIntegerPart + '.' + (parseInt(nextSectionKeyDecimalPart) + 1);
             if (translation.data[nextKey]) {
                 newObj[key] = translation.data[nextKey];
             }
@@ -273,14 +486,13 @@ function fetchTranslation() {
             let nextSectionKeySectionUid = key.split(':')[0];
             let nextSectionKeySectionNumber = key.split(':')[1];
             let SectionNumberParts = nextSectionKeySectionNumber.split('.');
-            nextKey = nextSectionKeySectionUid + ':' + SectionNumberParts[0] + '.' + SectionNumberParts[1] + '.' + (parseInt(SectionNumberParts[2]) + 1);
+            let nextKey = nextSectionKeySectionUid + ':' + SectionNumberParts[0] + '.' + SectionNumberParts[1] + '.' + (parseInt(SectionNumberParts[2]) + 1);
             if (translation.data[nextKey]) {
                 newObj[key] = translation.data[nextKey];
             }
         },
         cancelMerge(translations) {
-            // this.translations = this.OriginalTranslations;
-            window.location.reload();
+            this._restoreTranslations();
         },
         redirectToHtml() {
             const params = new URLSearchParams(window.location.search);
@@ -290,7 +502,7 @@ function fetchTranslation() {
             return (window.location.href = `/translation?prefix=${prefix}&muid=${muid}&source=${source}`);
         },
         async findOrCreateObject(key, prefix, source = false) {
-            let obj = this.translations.find(item => key in item);
+            let obj = this.translations.find(item => item.muid === key);
             if (!obj) {
                 try {
                     const data = await this.fetchData(key, prefix);
@@ -308,7 +520,7 @@ function fetchTranslation() {
             return obj;
         },
         async createObject(key, prefix, source = false) {
-            let obj = this.translations.find(item => key in item);
+            let obj = this.translations.find(item => item.muid === key);
             if (!obj) {
                 try {
                     const data = await this.fetchData(key, prefix);
@@ -336,28 +548,50 @@ function fetchTranslation() {
                 throw new Error(error);
             }
         },
-        async handleEnter(event, uid, segment, translation) {
+        async handleEnter(event, uid, segment, translation, originalValue = '') {
             if (translation.canEdit) {
                 if (event.shiftKey) {
                     event.target.value += "\n";
                     return;
                 }
-                const nextSection = event.target.parentElement.nextElementSibling;
-                if (nextSection) {
-                    const nextTextarea = nextSection.querySelector("textarea");
+                // Find the textarea in the next row of the same column.
+                const currentTextarea = event.target;
+                const currentCell = currentTextarea.closest('.translation-cell');
+                const currentRow = currentTextarea.closest('.translation-row');
+                const nextRow = currentRow?.nextElementSibling;
+                if (nextRow && currentCell) {
+                    const colIndex = Array.from(currentCell.parentElement.children).indexOf(currentCell);
+                    const nextTextarea = nextRow.querySelector('.translation-row__cells')?.children[colIndex]?.querySelector('textarea');
                     if (nextTextarea) {
                         nextTextarea.focus();
+                        // Move cursor to the end of the text
+                        const textLength = nextTextarea.value.length;
+                        nextTextarea.setSelectionRange(textLength, textLength);
                     }
                 }
-                try {
-                    const muid = translation.muid;
-                    await this.updateHandler(
-                        muid,
-                        { [uid]: segment },
-                        document.querySelector("p.project-header__message"),
-                    );
-                } catch (error) {
-                    throw new Error(error);
+
+                // Save only when content is modified.
+                if (segment !== originalValue) {
+                    // Validate tag values before saving
+                    if (translation.muid && translation.muid.startsWith('tag')) {
+                        const invalidTags = this.getInvalidTags(segment);
+                        if (invalidTags.length > 0) {
+                            const toast = document.querySelector('sc-bilara-toast');
+                            if (toast) {
+                                toast.show(`Invalid tags: ${invalidTags.join(', ')}`, 'warning');
+                            }
+                            return;
+                        }
+                    }
+                    try {
+                        await this.updateHandler(
+                            translation.muid,
+                            { [uid]: segment },
+                            document.querySelector("span.project-header__message"),
+                        );
+                    } catch (error) {
+                        throw new Error(error);
+                    }
                 }
             }
         },
@@ -365,12 +599,9 @@ function fetchTranslation() {
             const badgeId = `translation-badge-${muid}-${Object.keys(data)[0]}`;
             if (Object.keys(data).length === 1) {
                 hideBadge(badgeId);
-                insertSpinner(badgeId);
-            } else {
-                addLoadingAttribute(btnId);
             }
-            addLoadingAttribute(btnId);
             try {
+                displayBadge(badgeId, BadgeStatus.PENDING);
                 const response = await requestWithTokenRetry(`projects/${muid}/${this.prefix}/`, {
                     credentials: "include",
                     method: "PATCH",
@@ -378,33 +609,32 @@ function fetchTranslation() {
                     body: JSON.stringify(data),
                 });
                 const { task_id: taskID } = await response.json();
-                if (!taskID) {
-                    displayMessage(
-                        element,
-                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
-                        "failure",
-                    );
-                }
+                // if (!taskID) {
+                //     displayMessage(
+                //         element,
+                //         "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
+                //         "failure",
+                //     );
+                // }
                 if (Object.keys(data).length > 1) {
-                    displayMessage(
-                        element,
-                        "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
-                    );
+                    // displayMessage(
+                    //     element,
+                    //     "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
+                    // );
+                    const toast = document.querySelector('sc-bilara-toast');
+                    toast.show('Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.', 'success');
                 }
                 if (Object.keys(data).length === 1) {
-                    removeSpinner();
                     displayBadge(badgeId, BadgeStatus.COMMITTED);
                 }
             } catch (error) {
                 displayBadge(badgeId, BadgeStatus.ERROR);
                 throw new Error(error);
-            } finally {
-                removeLoadingAttribute(btnId);
             }
         },
         async updateHandlerForSplit(muid, prefix, element) {
             try {
-                payload = {
+                let payload = {
                     muid: muid,
                     prefix: prefix,
                     splitter_uid: this.splitter_uid,
@@ -436,7 +666,7 @@ function fetchTranslation() {
         },
         async updateHandlerForMerge(muid, prefix, element) {
             try {
-                payload = {
+                let payload = {
                     muid: muid,
                     prefix: prefix,
                     merger_uid: this.merger_uid,
@@ -479,88 +709,59 @@ function fetchTranslation() {
                 throw new Error(error);
             }
         },
+        async loadAvailableTags() {
+            try {
+                const response = await requestWithTokenRetry('tags/');
+                const data = await response.json();
+                this.availableTags = Array.isArray(data) ? data : [];
+            } catch (error) {
+                this.availableTags = [];
+            }
+        },
+        validateTagValue(value) {
+            if (!value || !value.trim()) return true;
+            const tags = value.split(',').map(t => t.trim()).filter(t => t);
+            const validNames = new Set(this.availableTags.map(t => t.tag));
+            return tags.every(t => validNames.has(t));
+        },
+        getInvalidTags(value) {
+            if (!value || !value.trim()) return [];
+            const tags = value.split(',').map(t => t.trim()).filter(t => t);
+            const validNames = new Set(this.availableTags.map(t => t.tag));
+            return tags.filter(t => !validNames.has(t));
+        },
         async toggleRelatedProject(project) {
             const index = this.translations.findIndex(t => t.muid === project);
             if (index > -1) {
                 this.translations.splice(index, 1);
+                const saved = this.getSavedRelatedProjects().filter(p => p !== project);
+                this.saveRelatedProjects(saved);
             } else {
                 try {
                     await this.findOrCreateObject(project, this.prefix);
+                    const saved = this.getSavedRelatedProjects();
+                    if (!saved.includes(project)) {
+                        saved.push(project);
+                        this.saveRelatedProjects(saved);
+                    }
                 } catch (error) {
                     throw new Error(error);
                 }
             }
         },
-    };
-}
-
-function textareaAdjuster() {
-    return {
-        observer: null,
-        init() {
-            const options = { threshold: [0.1] };
-            const callback = entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const index = entry.target.getAttribute("data-index");
-                        const sections = Array.from(
-                            document.querySelectorAll(
-                                `.project-container__content-body__section[data-index="${index}"]`,
-                            ),
-                        );
-                        setMaxHeight(sections.map(section => section.querySelector("textarea")));
-                    }
-                });
-            };
-            this.observer = new IntersectionObserver(callback, options);
-            this.observeSections();
+        getSavedRelatedProjects() {
+            try {
+                const key = `relatedProjects_${this.muid}`;
+                return JSON.parse(localStorage.getItem(key)) || [];
+            } catch {
+                return [];
+            }
         },
-        observeSections() {
-            const sections = document.querySelectorAll(".project-container__content-body__section");
-
-            sections.forEach(section => {
-                if (!this.observer) return;
-                this.observer.unobserve(section);
-                this.observer.observe(section);
-            });
+        saveRelatedProjects(projects) {
+            const key = `relatedProjects_${this.muid}`;
+            localStorage.setItem(key, JSON.stringify(projects));
         },
     };
-}
-
-function adjustTextareas(element) {
-    const parent = element.parentElement;
-    const index = parent.getAttribute("data-index");
-    const sections = Array.from(
-        document.querySelectorAll(`.project-container__content-body__section[data-index="${index}"]`),
-    );
-    setMaxHeight(sections.map(section => section.querySelector("textarea")));
-}
-
-function* generateUniqueVisibleElements() {
-    const body = document.querySelector(".project-container__content-body");
-    const elements = body.querySelectorAll(".project-container__content-body__section");
-    for (const el of elements) {
-        if (isInViewPort(el)) {
-            yield el;
-        } else {
-            break;
-        }
-    }
-}
-
-function adjustVisibleTextareas() {
-    const uniqueVisibleElements = generateUniqueVisibleElements();
-    for (const el of uniqueVisibleElements) {
-        adjustTextareas(el.querySelector("textarea"));
-    }
-}
-
-function moveContentDetails() {
-    const contentDetails = Array.from(document.querySelectorAll('.project-container__content-details'));
-    const translationTemplate = document.querySelector('#translation-template');
-    contentDetails.forEach(detail => {
-        translationTemplate.appendChild(detail);
-    });
 }
 
 function countChar(str, char) {

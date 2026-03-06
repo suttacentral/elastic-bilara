@@ -1,11 +1,15 @@
 from app.api.api_v1.endpoints import (
     auth,
+    dictionary,
     directories,
     git_ops,
+    languages,
     projects,
     pull_request,
     remarks,
     search,
+    settings,
+    tags,
     tasks,
     users,
     notifications
@@ -22,6 +26,7 @@ api_router.include_router(pull_request.router, tags=["pull_request"])
 api_router.include_router(git_ops.router, tags=["git_ops"])
 api_router.include_router(tasks.router, tags=["tasks"])
 api_router.include_router(directories.router, tags=["directories"])
+api_router.include_router(languages.router, tags=["languages"])
 api_router.include_router(
     users.router,
     tags=["users"],
@@ -30,3 +35,6 @@ api_router.include_router(
 api_router.include_router(users.router_exposed, tags=["users"])
 api_router.include_router(remarks.router, tags=["remarks"])
 api_router.include_router(notifications.router, tags=["notifications"])
+api_router.include_router(dictionary.router, tags=["dictionary"])
+api_router.include_router(settings.router, tags=["settings"])
+api_router.include_router(tags.router, tags=["tags"])
