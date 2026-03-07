@@ -7,7 +7,7 @@ from app.core.text_types import TextType
 from app.db.schemas.user import User, UserBase
 from app.services.git import utils
 from app.services.users.utils import get_user
-from app.tasks import commit
+# from app.tasks import commit
 from search.search import Search
 from search.utils import find_root_path, get_json_data
 
@@ -47,10 +47,10 @@ def update_file(
         return False, elastic_error, task_id
 
     written, file_error = write_json_data(path, file_data)
-    cleaned_path_string = str(utils.clean_path(str(path)))
-    if written:
-        result = commit.delay(user.model_dump(), str(path), f"Translations by {user.username} to {cleaned_path_string}")
-        task_id = result.id
+    # cleaned_path_string = str(utils.clean_path(str(path)))
+    # if written:
+    #     result = commit.delay(user.model_dump(), str(path), f"Translations by {user.username} to {cleaned_path_string}")
+    #     task_id = result.id
 
     if file_error:
         updated = False
