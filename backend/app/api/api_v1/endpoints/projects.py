@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from app.core.config import settings
 from app.db.schemas.user import User, UserBase
@@ -202,7 +202,7 @@ async def get_paths_for_project(
     user: Annotated[UserBase, Depends(utils.get_current_user)],
     muid: str,
     prefix: str | None = None,
-    _type: Annotated[str, Query(enum=["root_path", "file_path"], min_length=9, max_length=9)] = "root_path",
+    _type: Literal["root_path", "file_path"] = "root_path",
 ) -> PathsOut:
     data: list[str] = sort_paths(search.get_file_paths(muid=muid, _type=_type, prefix=prefix))
     if not data:
@@ -215,9 +215,7 @@ async def get_paths_for_project2(
     user: Annotated[UserBase, Depends(utils.get_current_user)],
     muid: str,
     prefix: str | None = None,
-    _type: Annotated[
-        str, Query(enum=["root_path", "file_path"], min_length=9, max_length=9)
-    ] = "root_path",
+    _type: Literal["root_path", "file_path"] = "root_path",
 ) -> PathsOut:
     data: list[str] = sort_paths(
         search.get_file_paths_for_split_merge(muid=muid, _type=_type, prefix=prefix)
