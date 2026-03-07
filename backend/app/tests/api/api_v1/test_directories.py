@@ -9,7 +9,9 @@ from app.services.directories.models import FilesAndDirsOut
 
 class TestDirectories:
     @pytest.mark.asyncio
-    async def test_get_root_content(self, async_client, mock_get_current_user):
+    @patch("pathlib.Path.iterdir")
+    async def test_get_root_content(self, mock_iterdir, async_client, mock_get_current_user, mock_path_obj):
+        mock_iterdir.return_value = [mock_path_obj(True, text_type.value) for text_type in TextType]
         response = await async_client.get("/directories/")
         assert response.status_code == status.HTTP_200_OK
         assert FilesAndDirsOut(**response.json())
@@ -23,8 +25,10 @@ class TestDirectories:
         assert response.json()["detail"] == "Could not validate credentials"
 
     @pytest.mark.asyncio
+    @patch("pathlib.Path.is_dir", return_value=True)
+    @patch("pathlib.Path.exists", return_value=True)
     @patch("pathlib.Path.iterdir")
-    async def test_get_dir_content(self, mock_iterdir, async_client, mock_get_current_user, mock_path_obj):
+    async def test_get_dir_content(self, mock_iterdir, mock_exists, mock_is_dir, async_client, mock_get_current_user, mock_path_obj):
         mock_iterdir.return_value = [
             mock_path_obj(True, "dir1"),
             mock_path_obj(True, "dir2"),

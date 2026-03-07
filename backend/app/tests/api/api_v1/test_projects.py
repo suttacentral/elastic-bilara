@@ -189,17 +189,10 @@ class TestProjects:
         response = await async_client.patch("/projects/translation-en-test/an1.1-10/")
         assert response.status_code == 422
         assert "detail" in response.json()
-        assert response.json() == {
-            "detail": [
-                {
-                    "type": "missing",
-                    "loc": ["body"],
-                    "msg": "Field required",
-                    "input": None,
-                    "url": "https://errors.pydantic.dev/2.11/v/missing",
-                }
-            ]
-        }
+        detail = response.json()["detail"][0]
+        assert detail["type"] == "missing"
+        assert detail["loc"] == ["body"]
+        assert detail["msg"] == "Field required"
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.projects.can_edit_translation")

@@ -3,6 +3,9 @@ import hmac
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch, Mock
+import datetime
+from app.db.models.user import Role
+from app.db.schemas.user import User
 
 import pytest
 from app.core.config import settings
@@ -15,6 +18,23 @@ from pygit2 import (
     GIT_STATUS_WT_NEW,
     GIT_STATUS_WT_DELETED,
 )
+
+
+@pytest.fixture(autouse=True)
+def mock_get_user_for_endpoints():
+    mock_user = User(
+        id=1,
+        github_id=123,
+        username="test_admin",
+        email="test_admin@example.com",
+        avatar_url="some_url.com",
+        role=Role.ADMIN.value,
+        created_on=datetime.datetime.utcnow(),
+        last_login=datetime.datetime.utcnow(),
+        is_active=True,
+    )
+    with patch("app.api.api_v1.endpoints.git_ops.get_user", return_value=mock_user) as mock_get_user:
+        yield mock_get_user
 
 
 @pytest.mark.asyncio

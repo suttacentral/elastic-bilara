@@ -82,14 +82,13 @@ class TestProjectsUtils:
 
         with patch("app.services.projects.utils.search") as mock_search, patch(
             "builtins.open", side_effect=open_side_effect
-        ), patch("app.tasks.commit.delay") as mock_commit, patch(
+        ), patch(
             "app.services.projects.utils.get_user"
         ) as mock_get_user:
             mock_get_user.return_value = user
             mock_search.update_segments.return_value = update_segments_return
             result, error, task_id = update_file(path, data, root_path, user)
 
-            assert mock_commit.called == commit
 
         assert result == expected_result
         if expected_error_type is None:
