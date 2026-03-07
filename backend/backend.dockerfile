@@ -2,9 +2,9 @@ FROM python:3.11.3
 
 ENV PYTHONUNBUFFERED 1
 
-# Upgrade pip and install Poetry
+# Upgrade pip and install Poetry (virtualenv pinned to avoid LogCmd ImportError in 20.27+)
 RUN pip install --upgrade pip && \
-    pip install "virtualenv<20.27.0" poetry==1.8.5
+    pip install "virtualenv==20.26.6" "poetry==1.8.5"
 
 RUN poetry config virtualenvs.create false
 
