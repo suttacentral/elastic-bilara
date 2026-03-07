@@ -97,6 +97,16 @@ def pr(user, file_paths) -> str:
     if not paths:
         return ""
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
+
+    # Step 1: commit any uncommitted working-tree changes to the unpublished branch first,
+    # so that process_files / has_changes can detect the latest content.
+    commit_msg = f"Translations by {user_data.username}"
+    if GitManager.add(manager.unpublished, paths):
+        if GitManager.commit(manager.unpublished, manager.author, manager.committer, commit_msg, paths):
+            manager.pull(manager.unpublished)
+            GitManager.push(manager.unpublished, "origin", "unpublished")
+
+    # Step 2: create PR from unpublished → published
     branch = utils.get_branch_name(manager, paths)
     commit_message = utils.get_pr_commit_message(branch)
     pr_title = utils.get_pr_title(branch)

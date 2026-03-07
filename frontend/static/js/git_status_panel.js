@@ -528,48 +528,65 @@ function gitStatusPanel() {
                 return;
             }
 
-            const selectedFilePaths = [...this.selectedFiles];
+            // Group files by project head (same logic as backend get_project_head)
+            // so that each /pr/ call only contains files from the same project.
+            const groupByProject = (paths) => {
+                const groups = {};
+                for (const path of paths) {
+                    const parts = path.split('/').filter(Boolean);
+                    const dirParts = parts.slice(0, -1);
+                    let head;
+                    if (dirParts.length === 6 && !dirParts[dirParts.length - 2].includes(dirParts[dirParts.length - 3])) {
+                        head = dirParts.slice(0, -1).join('_');
+                    } else if (dirParts.length > 6 && dirParts[dirParts.length - 3] && dirParts[dirParts.length - 2].includes(dirParts[dirParts.length - 3])) {
+                        head = dirParts.slice(0, -2).join('_');
+                    } else {
+                        head = dirParts.join('_');
+                    }
+                    if (!groups[head]) groups[head] = [];
+                    groups[head].push(path);
+                }
+                return Object.values(groups);
+            };
 
-            const fileCount = selectedFilePaths.length;
-            const commitMessage = `Batch commit: ${fileCount} file${fileCount > 1 ? 's' : ''} updated`;
+            const fileGroups = groupByProject([...this.selectedFiles]);
+            const totalGroups = fileGroups.length;
 
             this.batchPublishing = true;
-            try {
-                const response = await fetch('/api/v1/git/commit', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        file_paths: selectedFilePaths,
-                        message: commitMessage
-                    })
-                });
+            let successCount = 0;
+            let errorMessages = [];
 
-                if (response.ok) {
-                    const data = await response.json();
+            try {
+                for (const groupPaths of fileGroups) {
+                    try {
+                        const response = await requestWithTokenRetry('pr/', {
+                            credentials: 'include',
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ paths: groupPaths })
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            errorMessages.push(errorData.detail?.error || errorData.detail || `HTTP ${response.status}`);
+                        } else {
+                            successCount++;
+                        }
+                    } catch (err) {
+                        errorMessages.push(err.message);
+                    }
+                }
+
+                if (errorMessages.length === 0) {
                     this.showToast(
-                        `Successfully started publishing ${fileCount} file${fileCount > 1 ? 's' : ''}. Task ID: ${data.task_id}`,
+                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${this.selectedFiles.length} file(s) across ${totalGroups} project${totalGroups > 1 ? 's' : ''}.`,
                         'success'
                     );
                     this.clearSelection();
-                    setTimeout(async () => {
-                        await this.fetchStatus();
-                    }, 2000);
+                    setTimeout(async () => { await this.fetchStatus(); }, 2000);
                 } else {
-                    const errorData = await response.json();
-                    this.showToast(
-                        `Error: ${errorData.detail || 'Failed to publish files'}`,
-                        'error'
-                    );
+                    const succeeded = successCount > 0 ? `${successCount}/${totalGroups} succeeded. ` : '';
+                    this.showToast(`${succeeded}Errors: ${errorMessages.join('; ')}`, 'error');
                 }
-            } catch (error) {
-                console.error('Error publishing files:', error);
-                this.showToast(
-                    `Error publishing files: ${error.message}`,
-                    'error'
-                );
             } finally {
                 this.batchPublishing = false;
             }
