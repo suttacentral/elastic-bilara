@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Annotated
 
 from app.core.config import settings
+from app.db.models.user import Role
 from app.db.schemas.user import UserBase
 from app.services.auth import utils
+from app.services.auth.schema import TokenData
 from app.services.git.manager import GitManager
 from app.services.users import permissions
 from app.services.users.utils import get_user
@@ -44,12 +46,20 @@ router = APIRouter(prefix="/git")
     "/status",
     response_model=GitStatusResponse,
     description="Get the git status of the unpublished repository",
-    dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
+    dependencies=[Depends(permissions.is_user_active)],
 )
-async def get_git_status() -> GitStatusResponse:
-    """Get the status of all modified files in the unpublished repository"""
+async def get_git_status(
+    token_data: Annotated[TokenData, Depends(utils.get_current_user)],
+) -> GitStatusResponse:
+    """Get the status of all modified files in the unpublished repository.
+    Admins see all files; regular users only see files whose path contains their username.
+    """
     repo_path = settings.WORK_DIR
     ensure_safe_directory(repo_path)
+
+    current_user: UserBase = get_user(int(token_data.github_id))
+    is_admin = current_user.role in [Role.ADMIN.value, Role.SUPERUSER.value]
+
     try:
         repo = Repository(str(repo_path))
 
@@ -58,6 +68,9 @@ async def get_git_status() -> GitStatusResponse:
 
         for filepath, status_code in status_dict.items():
             if status_code != 0 and fileFilter(Path(filepath)):  # 0 means unmodified
+                # Non-admin users can only see files in their own namespace
+                if not is_admin and current_user.username.lower() not in filepath.lower():
+                    continue
                 files.append(FileStatus(
                     path=filepath,
                     status=get_status_name(status_code),
@@ -94,10 +107,24 @@ def fileFilter(filepath: Path) -> bool:
     "/diff/{file_path:path}",
     response_model=FileDiffResponse,
     description="Get the diff content of the specified file",
-    dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
+    dependencies=[Depends(permissions.is_user_active)],
 )
-async def get_file_diff(file_path: str) -> FileDiffResponse:
-    """Get the diff of the specified file relative to HEAD"""
+async def get_file_diff(
+    file_path: str,
+    token_data: Annotated[TokenData, Depends(utils.get_current_user)],
+) -> FileDiffResponse:
+    """Get the diff of the specified file relative to HEAD.
+    Non-admin users can only view diffs of files in their own namespace.
+    """
+    current_user: UserBase = get_user(int(token_data.github_id))
+    is_admin = current_user.role in [Role.ADMIN.value, Role.SUPERUSER.value]
+
+    if not is_admin and current_user.username.lower() not in file_path.lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this file's diff",
+        )
+
     try:
         repo_path = settings.WORK_DIR
         repo = Repository(str(repo_path))
@@ -165,10 +192,24 @@ async def get_file_diff(file_path: str) -> FileDiffResponse:
     "/discard",
     response_model=DiscardResponse,
     description="Discard changes of the specified file",
-    dependencies=[Depends(permissions.is_admin_or_superuser), Depends(permissions.is_user_active)],
+    dependencies=[Depends(permissions.is_user_active)],
 )
-async def discard_file_changes(request: DiscardRequest) -> DiscardResponse:
-    """Discard changes of the specified file, restoring it to the HEAD state"""
+async def discard_file_changes(
+    request: DiscardRequest,
+    token_data: Annotated[TokenData, Depends(utils.get_current_user)],
+) -> DiscardResponse:
+    """Discard changes of the specified file, restoring it to the HEAD state.
+    Non-admin users can only discard files in their own namespace.
+    """
+    current_user: UserBase = get_user(int(token_data.github_id))
+    is_admin = current_user.role in [Role.ADMIN.value, Role.SUPERUSER.value]
+
+    if not is_admin and current_user.username.lower() not in request.file_path.lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to discard changes to this file",
+        )
+
     try:
         repo_path = settings.WORK_DIR
         repo = Repository(str(repo_path))
