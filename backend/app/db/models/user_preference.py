@@ -9,7 +9,9 @@ class UserPreference(Base):
     __tablename__ = "user_preferences"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    github_id: Mapped[int] = mapped_column(unique=True, nullable=False)
+    github_id: Mapped[int] = mapped_column(
+        unique=True, nullable=False, index=True
+    )
     notification_authors: Mapped[Optional[dict]] = mapped_column(
         JSON, nullable=True
     )
