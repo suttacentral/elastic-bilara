@@ -131,15 +131,20 @@
 .admin-btn-primary {
     background-color: var(--color-primary);
     color: var(--color-text-on-strong);
+    border-color: var(--color-primary);
 }
 
 .admin-btn-secondary {
-width: 120px;
+    width: 120px;
+    background-color: var(--color-background-secondary);
+    color: var(--color-text-emphasized);
+    border-color: var(--color-border);
 }
 
 .admin-btn-danger {
     background-color: var(--color-warning);
     color: var(--color-white);
+    border-color: var(--color-warning);
 }
 
 .admin-btn-success {
@@ -783,6 +788,25 @@ width: 120px;
     margin-bottom: var(--space-lg);
 }
 
+.admin-projects-toggle .admin-btn {
+    min-width: 120px;
+    border-width: 2px;
+}
+
+.admin-projects-toggle .admin-btn:hover {
+    filter: brightness(0.96);
+    border-style: solid;
+}
+
+.admin-projects-toggle .admin-btn:focus-visible {
+    outline: 2px solid var(--color-text-emphasized);
+    outline-offset: 2px;
+}
+
+.admin-projects-toggle .admin-btn-secondary:hover {
+    border-color: var(--color-primary);
+}
+
 .admin-projects-shell {
     display: flex;
     flex-direction: column;
@@ -791,6 +815,15 @@ width: 120px;
 
 .admin-project-toggle-active {
     box-shadow: var(--shadow-xs);
+    filter: saturate(1.05);
+}
+
+.admin-projects-toggle .admin-btn-primary.admin-project-toggle-active {
+    border-color: var(--color-text-on-strong);
+}
+
+.admin-projects-toggle .admin-btn-danger.admin-project-toggle-active {
+    border-color: var(--color-text-on-strong);
 }
 
 .admin-project-remove-btn {
