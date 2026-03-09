@@ -58,15 +58,18 @@ class Search:
             self._process_data(index, segments_index)
             self._search.indices.put_settings(
                 index=index,
-                body={"index": {"refresh_interval": "1s", "number_of_replicas": 1}},
+                body={"index": {"refresh_interval": "30s", "number_of_replicas": 0}},
             )
             self._search.indices.put_settings(
                 index=segments_index,
-                body={"index": {"refresh_interval": "1s", "number_of_replicas": 1}},
+                body={"index": {"refresh_interval": "30s", "number_of_replicas": 0}},
             )
 
     def _get_es_settings(self) -> dict:
         return {
+            "number_of_shards": 1,  # 单节点只需要1个分片
+            "number_of_replicas": 0,  # 单节点不需要副本
+            "refresh_interval": "30s",  # 默认30秒刷新
             "analysis": {
                 "analyzer": {
                     "lowercase_analyzer": {
@@ -271,11 +274,13 @@ class Search:
                 segments_dict[uid] = {"uid": uid, "segment": new_segment}
 
         doc["segments"] = list(segments_dict.values())
-        self._search.index(index=settings.ES_INDEX, id=doc_id, body=doc)
+        self._search.index(index=settings.ES_INDEX, id=doc_id, body=doc, refresh=False)
 
     def update_segments_segments_index(self, file_path: Path, data: dict[str, str]) -> None:
         uids: list[str] = list(data.keys())
         doc_ids: list[str] = [utils.create_doc_id(file_path, uid) for uid in uids]
+        
+        actions = []
         for uid, doc_id in zip(uids, doc_ids):
             try:
                 doc: dict[str, Any] = self._search.get(index=settings.ES_SEGMENTS_INDEX, id=doc_id)["_source"]
@@ -286,7 +291,16 @@ class Search:
                     "uid": uid,
                 }
             doc["segment"] = data[uid]
-            self._search.index(index=settings.ES_SEGMENTS_INDEX, id=doc_id, body=doc)
+            
+            actions.append({
+                "_index": settings.ES_SEGMENTS_INDEX,
+                "_id": doc_id,
+                "_source": doc
+            })
+        
+        # 批量索引，不等待刷新
+        if actions:
+            helpers.bulk(self._search, actions, chunk_size=self._batch_size, refresh=False)
 
     def get_segments(self, size: int, page: int, muids: dict[str, str]) -> dict[str, dict[str, str]] | dict:
         from_: int = page * size
@@ -531,7 +545,7 @@ class Search:
         data = self._process_file(path)
         source: dict[str, Any] = data["_source"]
         try:
-            self._search.index(index=settings.ES_INDEX, id=data["_id"], body=data["_source"], refresh=True)
+            self._search.index(index=settings.ES_INDEX, id=data["_id"], body=data["_source"], refresh=False)
         except RequestError as e:
             return False, e
         segment_actions: list[dict[str, Any]] = []
@@ -552,6 +566,7 @@ class Search:
                 self._search,
                 segment_actions,
                 chunk_size=self._batch_size,
+                refresh=False,
                 raise_on_error=True,
             )
         except RequestError as e:
