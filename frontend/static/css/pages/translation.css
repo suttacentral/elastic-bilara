@@ -163,6 +163,9 @@
 }
 
 .project-container__detail-panel__related-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 8px 16px;
     margin: 0;
     font-size: 0.9rem;
@@ -186,6 +189,30 @@
 
 .project-container__detail-panel__related-item--selected:hover {
     background-color: var(--color-background-tertiary);
+}
+
+.project-container__detail-panel__related-item-check {
+    min-width: 10px;
+    font-weight: 600;
+    color: var(--color-text-emphasized);
+}
+
+.project-container__detail-panel__related-item-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.project-container__detail-panel__related-item--remarks {
+    background-color: color-mix(in srgb, var(--color-info) 12%, transparent);
+}
+
+.project-container__detail-panel__related-item--remarks:hover {
+    background-color: color-mix(in srgb, var(--color-info) 18%, transparent);
+}
+
+.project-container__detail-panel__related-item--remarks.project-container__detail-panel__related-item--selected {
+    background-color: color-mix(in srgb, var(--color-info) 24%, transparent);
 }
 
 /* ===== Search Panel ===== */

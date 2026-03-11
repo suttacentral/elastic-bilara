@@ -1,4 +1,5 @@
 function fetchTranslation() {
+    const REMARKS_PROJECT = "remarks";
     return {
         translations: [],
         relatedProjects: [],
@@ -18,6 +19,7 @@ function fetchTranslation() {
             const source = params.get("source");
 
             this.muid = muid;
+            this.sourceMuid = source;
 
             await this.findOrCreateObject(source, this.prefix, true);
             if (muid) {
@@ -37,6 +39,10 @@ function fetchTranslation() {
                 project !== muid && project !== source &&
                 project !== this.htmlProjectName
             );
+
+            if (!this.relatedProjects.includes(REMARKS_PROJECT)) {
+                this.relatedProjects.push(REMARKS_PROJECT);
+            }
 
             // Restore previously saved related project selections
             const savedRelated = this.getSavedRelatedProjects();
@@ -68,7 +74,9 @@ function fetchTranslation() {
          */
         getTranslationProgress() {
             const sourceTranslation = this.translations.find(t => t.isSource);
-            const editableTranslation = this.translations.find(t => t.canEdit && !t.isSource);
+            const editableTranslation = this.translations.find(
+                t => t.canEdit && !t.isSource && t.muid !== REMARKS_PROJECT
+            );
 
             if (!sourceTranslation || !editableTranslation) {
                 return { translated: 0, total: 0, percentage: 0 };
@@ -505,7 +513,10 @@ function fetchTranslation() {
             let obj = this.translations.find(item => item.muid === key);
             if (!obj) {
                 try {
-                    const data = await this.fetchData(key, prefix);
+                    const remarksMuid = this.sourceMuid || this.muid;
+                    const data = key === REMARKS_PROJECT
+                        ? await this.fetchRemarksData(remarksMuid, prefix)
+                        : await this.fetchData(key, prefix);
                     obj = { canEdit: false, muid: key, prefix: prefix };
                     obj["data"] = data.data;
                     obj["canEdit"] = data["can_edit"];
@@ -523,7 +534,10 @@ function fetchTranslation() {
             let obj = this.translations.find(item => item.muid === key);
             if (!obj) {
                 try {
-                    const data = await this.fetchData(key, prefix);
+                    const remarksMuid = this.sourceMuid || this.muid;
+                    const data = key === REMARKS_PROJECT
+                        ? await this.fetchRemarksData(remarksMuid, prefix)
+                        : await this.fetchData(key, prefix);
                     obj = { canEdit: false, muid: key, prefix: prefix };
                     obj["data"] = data.data;
                     obj["canEdit"] = data["can_edit"];
@@ -544,6 +558,27 @@ function fetchTranslation() {
                     throw new Error("Invalid data format from the API");
                 }
                 return data;
+            } catch (error) {
+                throw new Error(error);
+            }
+        },
+        async fetchRemarksData(muid, prefix) {
+            try {
+                const response = await requestWithTokenRetry(`remarks/${muid}/${prefix}/`);
+                const data = await response.json();
+                if (!Array.isArray(data)) {
+                    throw new Error("Invalid remarks data format from the API");
+                }
+                const normalizedData = data.reduce((acc, item) => {
+                    if (item && item.segment_id) {
+                        acc[item.segment_id] = item.remark_value || "";
+                    }
+                    return acc;
+                }, {});
+                return {
+                    data: normalizedData,
+                    can_edit: true,
+                };
             } catch (error) {
                 throw new Error(error);
             }
@@ -584,15 +619,59 @@ function fetchTranslation() {
                         }
                     }
                     try {
-                        await this.updateHandler(
-                            translation.muid,
-                            { [uid]: segment },
-                            document.querySelector("span.project-header__message"),
-                        );
+                        if (translation.muid === REMARKS_PROJECT) {
+                            await this.updateRemarkHandler(uid, segment);
+                        } else {
+                            await this.updateHandler(
+                                translation.muid,
+                                { [uid]: segment },
+                                document.querySelector("span.project-header__message"),
+                            );
+                        }
                     } catch (error) {
                         throw new Error(error);
                     }
                 }
+            }
+        },
+        async updateRemarkHandler(uid, value) {
+            const remarksMuid = this.sourceMuid || this.muid;
+            const remarkPayload = {
+                muid: remarksMuid,
+                prefix: this.prefix,
+                segment_id: uid,
+                remark_value: value,
+            };
+            try {
+                let response = await requestWithTokenRetry("remarks/", {
+                    credentials: "include",
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(remarkPayload),
+                });
+
+                // PUT updates existing remarks; fallback to POST for first-time creation.
+                if (response.status === 404) {
+                    response = await requestWithTokenRetry("remarks/", {
+                        credentials: "include",
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(remarkPayload),
+                    });
+                }
+
+                if (!response.ok) {
+                    let detail = "Failed to save remark";
+                    try {
+                        const body = await response.json();
+                        detail = body?.detail || detail;
+                    } catch {
+                        // Keep default detail when response body is not JSON.
+                    }
+                    throw new Error(detail);
+                }
+            } catch (error) {
+                throw new Error(error);
             }
         },
         async updateHandler(muid, data, element, btnId='btn-translation-commit') {

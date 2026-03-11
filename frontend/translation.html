@@ -282,7 +282,7 @@
 
                                         <!-- Action buttons (split/merge) -->
                                         <sc-bilara-translation-project-actions
-                                            x-show="translation.canEdit"
+                                            x-show="translation.canEdit && translation.muid !== 'remarks'"
                                             class="translation-cell__actions">
                                         </sc-bilara-translation-project-actions>
 
@@ -473,10 +473,18 @@
                     @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
                     <h3 class="detail-panel__title">Related Projects</h3>
                     <template x-for="project in relatedProjects" :key="project">
-                        <div x-text="selectedProjects[project] ? '✓ ' + project : project"
+                        <div
                             class="project-container__detail-panel__related-item"
                             @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
-                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project] }">
+                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': project === 'remarks' }">
+                            <span class="project-container__detail-panel__related-item-check"
+                                x-text="selectedProjects[project] ? '✓' : ''"></span>
+                            <span class="project-container__detail-panel__related-item-label">
+                                <i class="bi bi-chat-left-text"
+                                    x-show="project === 'remarks'"
+                                    aria-hidden="true"></i>
+                                <span x-text="project"></span>
+                            </span>
                         </div>
                     </template>
                 </div>
