@@ -45,6 +45,8 @@ function gitStatusPanel() {
         // Multi-selection state
         selectedFiles: [],
         batchPublishing: false,
+        // Performance optimization: diff cache
+        diffCache: new Map(),
 
         async init() {
             // Parse URL parameters
@@ -148,6 +150,7 @@ function gitStatusPanel() {
             this.diffContent = '';
             this.diffError = null;
             this.selectedFiles = []; // Clear selection on refresh
+            this.diffCache.clear(); // Clear diff cache on refresh
             await this.fetchStatus();
         },
 
@@ -196,6 +199,14 @@ function gitStatusPanel() {
 
             this.selectedFile = file.path;
             this.selectedFileData = file;
+
+            // Check cache first (performance optimization)
+            if (this.diffCache.has(file.path)) {
+                this.diffContent = this.diffCache.get(file.path);
+                this.diffError = null;
+                return;
+            }
+
             this.loadingDiff = true;
             this.diffContent = '';
             this.diffError = null;
@@ -213,6 +224,8 @@ function gitStatusPanel() {
                 }
 
                 const data = await response.json();
+                // Cache the diff for future use
+                this.diffCache.set(file.path, data.diff);
                 this.diffContent = data.diff;
             } catch (error) {
                 console.error('Error fetching diff:', error);
@@ -313,6 +326,9 @@ function gitStatusPanel() {
                 const data = await response.json();
 
                 this.showToast(data.message, 'success');
+
+                // Clear cache for the discarded file
+                this.diffCache.delete(this.fileToDiscard.path);
 
                 // Clear selection if discarded file was selected
                 if (this.selectedFile === this.fileToDiscard.path) {

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch, Mock
 import datetime
+from app.api.api_v1.endpoints import git_ops
 from app.db.models.user import Role
 from app.db.schemas.user import User
 
@@ -43,6 +44,28 @@ async def test_github_webhook_invalid_signature(async_client):
         "/git/sync",
         headers={"x-hub-signature-256": "sha256=1234", "Content-Type": "application/x-www-form-urlencoded"},
     )
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid signature"}
+
+
+@pytest.mark.asyncio
+async def test_github_webhook_missing_signature_header(async_client):
+    response = await async_client.post("/git/sync")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid signature"}
+
+
+@pytest.mark.asyncio
+async def test_github_webhook_invalid_signature_format(async_client):
+    response = await async_client.post(
+        "/git/sync",
+        headers={
+            "x-hub-signature-256": "invalid-format",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid signature"}
 
@@ -251,6 +274,50 @@ class TestGetGitStatus:
         assert response.status_code == 500
         assert "OS error" in response.json()["detail"]
 
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.git_ops.get_status_name")
+    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.ensure_safe_directory")
+    async def test_get_git_status_non_admin_exact_namespace_match(
+        self,
+        mock_ensure_safe,
+        mock_repository_class,
+        mock_get_status_name,
+        async_client,
+        mock_get_current_user,
+        mock_is_admin_or_superuser_is_active,
+    ):
+        mock_repo = MagicMock()
+        mock_repository_class.return_value = mock_repo
+        mock_repo.status.return_value = {
+            "translation/en/joann/s1.json": GIT_STATUS_WT_MODIFIED,
+            "translation/en/ann/s2.json": GIT_STATUS_WT_MODIFIED,
+        }
+        mock_get_status_name.return_value = "modified"
+
+        non_admin_user = User(
+            id=2,
+            github_id=123,
+            username="ann",
+            email="ann@example.com",
+            avatar_url="some_url.com",
+            role=Role.WRITER.value,
+            created_on=datetime.datetime.utcnow(),
+            last_login=datetime.datetime.utcnow(),
+            is_active=True,
+        )
+
+        with patch(
+            "app.api.api_v1.endpoints.git_ops.get_user",
+            return_value=non_admin_user,
+        ):
+            response = await async_client.get("/git/status")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["files"][0]["path"] == "translation/en/ann/s2.json"
+
 
 # Tests for get_file_diff endpoint
 class TestGetFileDiff:
@@ -263,67 +330,58 @@ class TestGetFileDiff:
         assert response.status_code == 401
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.get_status_name")
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
     async def test_get_file_diff_new_file(
-        self, mock_repository_class, mock_get_status_name, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test diff for a new file"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.return_value = GIT_STATUS_WT_NEW
-        mock_get_status_name.return_value = "new"
+        mock_status = MagicMock(stdout="?? test.json\n")
+        mock_diff = MagicMock(stdout="diff --git a/test.json b/test.json\n+line1\n")
+        mock_run.side_effect = [mock_status, mock_diff]
 
-        file_content = "line1\nline2\nline3"
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.read_text.return_value = file_content
-
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.get("/git/diff/test.json")
+        response = await async_client.get("/git/diff/test.json")
 
         assert response.status_code == 200
         data = response.json()
         assert data["path"] == "test.json"
-        assert data["status"] == "new"
-        assert "+++ test.json" in data["diff"]
+        assert data["status"] == "untracked"
         assert "+line1" in data["diff"]
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.get_status_name")
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
-    async def test_get_file_diff_new_file_not_exists(
-        self, mock_repository_class, mock_get_status_name, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
+    async def test_get_file_diff_no_changes(
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
-        """Test diff for a new file that doesn't exist"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.return_value = GIT_STATUS_WT_NEW
-        mock_get_status_name.return_value = "new"
+        """Unchanged file should return 400 (no status output)."""
+        mock_status = MagicMock(stdout="")
+        mock_run.return_value = mock_status
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = False
+        response = await async_client.get("/git/diff/test.json")
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.get("/git/diff/test.json")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["diff"] == "New file: test.json"
+        assert response.status_code == 400
+        assert "File has no changes" in response.json()["detail"]
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.get_status_name")
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
     async def test_get_file_diff_deleted_file(
-        self, mock_repository_class, mock_get_status_name, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test diff for a deleted file"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.return_value = GIT_STATUS_WT_DELETED
-        mock_get_status_name.return_value = "deleted"
+        mock_status = MagicMock(stdout=" D test.json\n")
+        mock_diff = MagicMock(stdout="diff --git a/test.json b/test.json\n-deleted\n")
+        mock_run.side_effect = [mock_status, mock_diff]
 
         response = await async_client.get("/git/diff/test.json")
 
@@ -331,34 +389,23 @@ class TestGetFileDiff:
         data = response.json()
         assert data["path"] == "test.json"
         assert data["status"] == "deleted"
-        assert data["diff"] == "--- test.json\nFile deleted"
+        assert "-deleted" in data["diff"]
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.get_status_name")
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
     async def test_get_file_diff_modified_file_with_diff(
-        self, mock_repository_class, mock_get_status_name, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test diff for a modified file with diff content"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.return_value = GIT_STATUS_WT_MODIFIED
-        mock_get_status_name.return_value = "modified"
-
-        # Mock diff
-        mock_patch = MagicMock()
-        mock_patch.delta.new_file.path = "test.json"
-        mock_patch.delta.old_file.path = "test.json"
-        mock_patch.text = "diff --git a/test.json b/test.json\n-old line\n+new line"
-
-        mock_diff = MagicMock()
-        mock_diff.__iter__.return_value = [mock_patch]
-        mock_repo.diff.return_value = mock_diff
-
-        mock_head = MagicMock()
-        mock_tree = MagicMock()
-        mock_head.peel.return_value.tree = mock_tree
-        mock_repo.head = mock_head
+        mock_status = MagicMock(stdout=" M test.json\n")
+        mock_diff = MagicMock(
+            stdout="diff --git a/test.json b/test.json\n-old line\n+new line"
+        )
+        mock_run.side_effect = [mock_status, mock_diff]
 
         response = await async_client.get("/git/diff/test.json")
 
@@ -369,65 +416,56 @@ class TestGetFileDiff:
         assert "diff --git" in data["diff"]
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.get_status_name")
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
     async def test_get_file_diff_modified_file_no_diff(
-        self, mock_repository_class, mock_get_status_name, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
-        """Test diff for a modified file when diff is empty"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.return_value = GIT_STATUS_WT_MODIFIED
-        mock_get_status_name.return_value = "modified"
+        """Empty diff output is still a successful response with empty diff."""
+        mock_status = MagicMock(stdout=" M test.json\n")
+        mock_diff = MagicMock(stdout="")
+        mock_run.side_effect = [mock_status, mock_diff]
 
-        # Mock empty diff
-        mock_diff = MagicMock()
-        mock_diff.__iter__.return_value = []
-        mock_repo.diff.return_value = mock_diff
-
-        mock_head = MagicMock()
-        mock_tree = MagicMock()
-        mock_head.peel.return_value.tree = mock_tree
-        mock_repo.head = mock_head
-
-        file_content = "modified content"
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.read_text.return_value = file_content
-
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.get("/git/diff/test.json")
+        response = await async_client.get("/git/diff/test.json")
 
         assert response.status_code == 200
         data = response.json()
-        assert "Modified file content:" in data["diff"]
-        assert file_content in data["diff"]
+        assert data["status"] == "modified"
+        assert data["diff"] == ""
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
     async def test_get_file_diff_file_not_found(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
-        """Test diff for a file that doesn't exist in repository"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.side_effect = KeyError("File not found")
+        """Non-existing file in git status flow returns 400 (no changes)."""
+        mock_status = MagicMock(stdout="")
+        mock_run.return_value = mock_status
 
         response = await async_client.get("/git/diff/nonexistent.json")
 
-        assert response.status_code == 404
-        assert "File not found" in response.json()["detail"]
+        assert response.status_code == 400
+        assert "File has no changes" in response.json()["detail"]
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
     async def test_get_file_diff_no_changes(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test diff for a file with no changes"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.return_value = 0  # No changes
+        mock_status = MagicMock(stdout="")
+        mock_run.return_value = mock_status
 
         response = await async_client.get("/git/diff/test.json")
 
@@ -435,19 +473,61 @@ class TestGetFileDiff:
         assert "File has no changes" in response.json()["detail"]
 
     @pytest.mark.asyncio
-    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
     async def test_get_file_diff_git_error(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_run,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
-        """Test diff handling of GitError"""
-        mock_repo = MagicMock()
-        mock_repository_class.return_value = mock_repo
-        mock_repo.status_file.side_effect = GitError("Git error")
+        """Unexpected exception in diff flow returns 500."""
+        mock_run.side_effect = Exception("Git error")
 
         response = await async_client.get("/git/diff/test.json")
 
         assert response.status_code == 500
-        assert "Git error" in response.json()["detail"]
+        assert "Error generating diff" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.git_ops.subprocess.run")
+    async def test_get_file_diff_non_admin_rejects_substring_match(
+        self,
+        mock_subprocess_run,
+        async_client,
+        mock_get_current_user,
+        mock_is_admin_or_superuser_is_active,
+    ):
+        non_admin_user = User(
+            id=2,
+            github_id=123,
+            username="ann",
+            email="ann@example.com",
+            avatar_url="some_url.com",
+            role=Role.WRITER.value,
+            created_on=datetime.datetime.utcnow(),
+            last_login=datetime.datetime.utcnow(),
+            is_active=True,
+        )
+
+        with patch(
+            "app.api.api_v1.endpoints.git_ops.get_user",
+            return_value=non_admin_user,
+        ):
+            response = await async_client.get("/git/diff/translation/en/joann/s1.json")
+
+        assert response.status_code == 403
+        assert "permission" in response.json()["detail"].lower()
+        mock_subprocess_run.assert_not_called()
+
+
+def test_validate_file_path_returns_normalized_relative_path():
+    normalized = git_ops._validate_file_path(
+        "translation/en/ann/../ann/s1.json",
+        Path("/tmp/repo"),
+    )
+
+    assert normalized == "translation/en/ann/s1.json"
 
 
 # Tests for discard_file_changes endpoint
@@ -463,45 +543,54 @@ class TestDiscardFileChanges:
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_new_file(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test discarding a new untracked file"""
         mock_repo = MagicMock()
         mock_repository_class.return_value = mock_repo
         mock_repo.status_file.return_value = GIT_STATUS_WT_NEW
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.unlink.return_value = None
-        mock_path.parent.exists.return_value = False
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
+        file_path = work_dir / "test.json"
+        file_path.write_text("temp")
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.post("/git/discard", json={"file_path": "test.json"})
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert "Deleted untracked file" in data["message"]
         assert data["file_path"] == "test.json"
-        mock_path.unlink.assert_called_once()
+        assert not file_path.exists()
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_new_file_not_exists(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test discarding a new file that doesn't exist on disk"""
         mock_repo = MagicMock()
         mock_repository_class.return_value = mock_repo
         mock_repo.status_file.return_value = GIT_STATUS_WT_NEW
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.unlink.side_effect = FileNotFoundError("File not found")
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
+        (work_dir / "test.json").write_text("temp")
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            with patch("pathlib.Path.unlink", side_effect=FileNotFoundError("File not found")):
                 response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 404
@@ -510,19 +599,24 @@ class TestDiscardFileChanges:
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_new_file_os_error(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test discarding a new file with OSError"""
         mock_repo = MagicMock()
         mock_repository_class.return_value = mock_repo
         mock_repo.status_file.return_value = GIT_STATUS_WT_NEW
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.unlink.side_effect = OSError("Permission denied")
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
+        (work_dir / "test.json").write_text("temp")
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            with patch("pathlib.Path.unlink", side_effect=OSError("Permission denied")):
                 response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 500
@@ -531,7 +625,12 @@ class TestDiscardFileChanges:
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_deleted_file(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test restoring a deleted file from HEAD"""
         mock_repo = MagicMock()
@@ -547,24 +646,27 @@ class TestDiscardFileChanges:
         mock_commit.tree = mock_tree
         mock_repo.head.peel.return_value = mock_commit
 
-        mock_path = MagicMock()
-        mock_path.parent.mkdir.return_value = None
-        mock_path.write_bytes.return_value = None
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.post("/git/discard", json={"file_path": "test.json"})
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert "Restored deleted file" in data["message"]
-        mock_path.write_bytes.assert_called_once_with(b"file content")
+        assert (work_dir / "test.json").read_bytes() == b"file content"
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_deleted_file_not_in_head(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test restoring a deleted file that doesn't exist in HEAD"""
         mock_repo = MagicMock()
@@ -577,11 +679,11 @@ class TestDiscardFileChanges:
         mock_commit.tree = mock_tree
         mock_repo.head.peel.return_value = mock_commit
 
-        mock_path = MagicMock()
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.post("/git/discard", json={"file_path": "test.json"})
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 404
         assert "File not found in HEAD" in response.json()["detail"]
@@ -589,7 +691,12 @@ class TestDiscardFileChanges:
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_modified_file(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test discarding changes in a modified file"""
         mock_repo = MagicMock()
@@ -605,23 +712,28 @@ class TestDiscardFileChanges:
         mock_commit.tree = mock_tree
         mock_repo.head.peel.return_value = mock_commit
 
-        mock_path = MagicMock()
-        mock_path.write_bytes.return_value = None
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
+        (work_dir / "test.json").write_text("modified")
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.post("/git/discard", json={"file_path": "test.json"})
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert "Discarded changes in" in data["message"]
-        mock_path.write_bytes.assert_called_once_with(b"original content")
+        assert (work_dir / "test.json").read_bytes() == b"original content"
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_staged_new_file(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test discarding a staged new file"""
         mock_repo = MagicMock()
@@ -631,13 +743,13 @@ class TestDiscardFileChanges:
         mock_index = MagicMock()
         mock_repo.index = mock_index
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.unlink.return_value = None
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
+        file_path = work_dir / "test.json"
+        file_path.write_text("temp")
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.post("/git/discard", json={"file_path": "test.json"})
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 200
         data = response.json()
@@ -645,12 +757,17 @@ class TestDiscardFileChanges:
         assert "Discarded staged changes" in data["message"]
         mock_index.remove.assert_called_once_with("test.json")
         mock_index.write.assert_called_once()
-        mock_path.unlink.assert_called_once()
+        assert not file_path.exists()
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     async def test_discard_staged_modified_file(
-        self, mock_repository_class, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
+        self,
+        mock_repository_class,
+        async_client,
+        tmp_path,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
     ):
         """Test discarding a staged modified file"""
         mock_repo = MagicMock()
@@ -669,13 +786,11 @@ class TestDiscardFileChanges:
         mock_commit.tree = mock_tree
         mock_repo.head.peel.return_value = mock_commit
 
-        mock_path = MagicMock()
-        mock_path.parent.mkdir.return_value = None
-        mock_path.write_bytes.return_value = None
+        work_dir = tmp_path / "repo"
+        work_dir.mkdir()
 
-        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", Path("/mock/repo")):
-            with patch("pathlib.Path.__truediv__", return_value=mock_path):
-                response = await async_client.post("/git/discard", json={"file_path": "test.json"})
+        with patch("app.api.api_v1.endpoints.git_ops.settings.WORK_DIR", work_dir):
+            response = await async_client.post("/git/discard", json={"file_path": "test.json"})
 
         assert response.status_code == 200
         data = response.json()
@@ -683,7 +798,7 @@ class TestDiscardFileChanges:
         assert "Discarded staged changes" in data["message"]
         mock_index.remove.assert_called_once_with("test.json")
         mock_index.write.assert_called_once()
-        mock_path.write_bytes.assert_called_once_with(b"original content")
+        assert (work_dir / "test.json").read_bytes() == b"original content"
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
