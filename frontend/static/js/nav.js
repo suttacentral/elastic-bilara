@@ -4,6 +4,9 @@ function tree() {
         showAllContent: false,
         filterUsername: "",
         data: [],
+        directoryCache: new Map(),
+        cacheTTL: 5 * 60 * 1000,
+        maxCacheEntries: 200,
         // Publish Modal State
         showPublishModal: false,
         publishingFile: null,
@@ -69,12 +72,74 @@ function tree() {
         },
         toggleShowAll() {
             this.showAllContent = !this.showAllContent;
+            this.directoryCache.clear();
             this.data = [];
             this.init();
         },
-        async addData(element) {
-            const response = await requestWithTokenRetry(`directories/${element.fullName}`);
-            const { base, directories, files, files_with_progress } = await response.json();
+        evictDirectoryCacheIfNeeded() {
+            while (this.directoryCache.size > this.maxCacheEntries) {
+                const oldestKey = this.directoryCache.keys().next().value;
+                this.directoryCache.delete(oldestKey);
+            }
+        },
+        isCacheFresh(cacheEntry) {
+            if (!cacheEntry || !cacheEntry.data) {
+                return false;
+            }
+            return Date.now() - cacheEntry.timestamp < this.cacheTTL;
+        },
+        hasOpenDescendants(element) {
+            for (const child of element.children) {
+                if (child.isOpen || this.hasOpenDescendants(child)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        async fetchDirectoryData(fullName, { force = false } = {}) {
+            const existing = this.directoryCache.get(fullName);
+
+            if (!force && existing && existing.data) {
+                return existing.data;
+            }
+
+            if (existing && existing.inflightPromise) {
+                return existing.inflightPromise;
+            }
+
+            const requestPromise = (async () => {
+                const response = await requestWithTokenRetry(`directories/${fullName}`);
+                return response.json();
+            })();
+
+            this.directoryCache.set(fullName, {
+                data: existing ? existing.data : null,
+                timestamp: existing ? existing.timestamp : 0,
+                inflightPromise: requestPromise,
+            });
+
+            try {
+                const data = await requestPromise;
+                this.directoryCache.set(fullName, {
+                    data,
+                    timestamp: Date.now(),
+                    inflightPromise: null,
+                });
+                this.evictDirectoryCacheIfNeeded();
+                return data;
+            } catch (error) {
+                this.directoryCache.set(fullName, {
+                    data: existing ? existing.data : null,
+                    timestamp: existing ? existing.timestamp : 0,
+                    inflightPromise: null,
+                });
+                throw error;
+            }
+        },
+        hydrateElementFromData(element, data) {
+            const { base, directories, files, files_with_progress } = data;
+            element.children = [];
+
             for (const directory of directories) {
                 element.add(new Element(directory, base, false, false));
             }
@@ -99,14 +164,52 @@ function tree() {
                 element.add(fileElement);
             }
         },
+        async addData(element, { force = false } = {}) {
+            const data = await this.fetchDirectoryData(element.fullName, { force });
+            this.hydrateElementFromData(element, data);
+        },
+        async revalidateDirectory(fullName) {
+            try {
+                const latestData = await this.fetchDirectoryData(fullName, { force: true });
+                const target = this.getElementByName(fullName);
+
+                // Avoid clobbering nested interaction if user has opened descendants.
+                if (target && target.isOpen && !this.hasOpenDescendants(target)) {
+                    this.hydrateElementFromData(target, latestData);
+                }
+            } catch (error) {
+                console.error(`Background refresh failed for ${fullName}:`, error);
+            }
+        },
         async open(element) {
             element.loading = true;
             element.isOpen = true;
 
-            if (!element.children.length) {
-                await this.addData(element);
+            if (element.children.length) {
+                element.loading = false;
+                return;
             }
-            element.loading = false;
+
+            const cacheEntry = this.directoryCache.get(element.fullName);
+            if (this.isCacheFresh(cacheEntry)) {
+                this.hydrateElementFromData(element, cacheEntry.data);
+                element.loading = false;
+                return;
+            }
+
+            if (cacheEntry && cacheEntry.data) {
+                // Stale-while-revalidate: show stale data immediately, refresh in background.
+                this.hydrateElementFromData(element, cacheEntry.data);
+                element.loading = false;
+                this.revalidateDirectory(element.fullName);
+                return;
+            }
+
+            try {
+                await this.addData(element);
+            } finally {
+                element.loading = false;
+            }
         },
         renderNode(element) {
             if (!element) return "";
