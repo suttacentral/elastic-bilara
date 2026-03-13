@@ -1,13 +1,12 @@
-import pytest
 from unittest.mock import MagicMock, patch, Mock
-from fastapi import HTTPException
 
 from app.api.api_v1.endpoints.notifications import (
     format_diff_as_html,
     parse_git_show_details,
     get_change_detail,
-    mark_notification_as_done,
-    get_unread_git_updates
+    get_notification_authors_or_default,
+    get_unread_git_updates,
+    get_user_preferences,
 )
 from app.services.notifications.models import GitCommitInfoOut
 
@@ -25,6 +24,7 @@ def test_format_diff_as_html_normal_file():
 
     result = format_diff_as_html(change_detail, file_name)
     assert result == expected
+
 
 def test_format_diff_as_html_html_file():
     """测试 HTML 文件的变更格式化（特殊处理）"""
@@ -74,3 +74,71 @@ def test_get_change_detail():
     ]
     assert get_change_detail('file1.json', parsed_details) == 'detail1'
     assert get_change_detail('file3.json', parsed_details) is None
+
+
+def test_get_notification_authors_or_default_returns_default_for_none():
+    assert get_notification_authors_or_default(None) == ["sujato"]
+
+
+def test_get_notification_authors_or_default_returns_default_for_empty_list():
+    assert get_notification_authors_or_default([]) == ["sujato"]
+
+
+def test_get_user_preferences_returns_default_authors_when_missing():
+    user = Mock(github_id=123)
+    preference = Mock(
+        id=1,
+        github_id=123,
+        notification_authors=None,
+        notification_days=None,
+    )
+    mock_session = MagicMock()
+    mock_session.query.return_value.filter.return_value.first.return_value = (
+        preference
+    )
+    mock_get_sess = MagicMock()
+    mock_get_sess.return_value.__enter__.return_value = mock_session
+    mock_get_sess.return_value.__exit__.return_value = None
+
+    with patch(
+        "app.api.api_v1.endpoints.notifications.get_sess",
+        mock_get_sess,
+    ):
+        result = get_user_preferences(user=user)
+
+    assert result.notification_authors == ["sujato"]
+    assert result.notification_days == 360
+
+
+def test_get_unread_git_updates_handles_missing_authors_preference():
+    user = Mock(github_id=123)
+    preference = Mock(
+        notification_authors=None,
+        notification_days=30,
+    )
+    mock_session = MagicMock()
+    mock_session.query.return_value.filter.return_value.first.return_value = (
+        preference
+    )
+    mock_get_sess = MagicMock()
+    mock_get_sess.return_value.__enter__.return_value = mock_session
+    mock_get_sess.return_value.__exit__.return_value = None
+
+    mock_process = MagicMock()
+    mock_process.communicate.return_value = (b"", b"")
+    mock_process.returncode = 0
+
+    with patch(
+        "app.api.api_v1.endpoints.notifications.get_sess",
+        mock_get_sess,
+    ), patch(
+        "app.api.api_v1.endpoints.notifications.subprocess.Popen",
+        return_value=mock_process,
+    ), patch(
+        "app.api.api_v1.endpoints.notifications.get_all_commit_ids_in_db",
+        return_value=[],
+    ):
+        result = get_unread_git_updates(user=user)
+
+    assert isinstance(result, GitCommitInfoOut)
+    assert result.git_recent_commits == []

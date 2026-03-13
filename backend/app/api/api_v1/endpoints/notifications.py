@@ -5,8 +5,6 @@ from pydantic_core import ValidationError
 
 from app.db.database import get_sess
 from app.core.config import settings
-from app.api.api_v1.endpoints.projects import get_paths_for_project
-from app.services.users import permissions
 from app.services.auth import utils as auth_utils
 from app.services.notifications.models import (
     GitCommitInfoOut,
@@ -18,6 +16,10 @@ from app.db.schemas.user_preference import UserPreference, UserPreferenceUpdate
 
 
 router = APIRouter(prefix="/notifications")
+
+
+def get_notification_authors_or_default(notification_authors):
+    return notification_authors or ["sujato"]
 
 
 @router.get("/git", response_model=GitCommitInfoOut)
@@ -35,15 +37,14 @@ def get_unread_git_updates(
         )
 
         if preference:
-            selected_authors = preference.notification_authors
+            selected_authors = get_notification_authors_or_default(
+                preference.notification_authors
+            )
             selected_days = preference.notification_days or 360
         else:
             # Use default values
             selected_authors = ["sujato"]
             selected_days = 360
-
-    # Build author regex pattern for git log
-    author_pattern = "|".join(selected_authors)
 
     git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
     git_log_cmd = git_base_cmd + [
@@ -344,7 +345,7 @@ def get_user_preferences(
             return UserPreference(
                 id=preference.id,
                 github_id=preference.github_id,
-                notification_authors=(
+                notification_authors=get_notification_authors_or_default(
                     preference.notification_authors
                 ),
                 notification_days=preference.notification_days or 360
