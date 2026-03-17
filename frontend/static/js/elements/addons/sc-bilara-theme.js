@@ -185,6 +185,57 @@ export const themes = {
       --color-error: initial;
       --color-success: initial;
       --color-info: initial;
+  `,
+  /* Calm, Precise, Introspective — Light mode */
+  'pañña': css`
+      --color-primary: #4a7c9e;
+      --color-secondary: #7a9e8a;
+      --color-background: #f7f5f0;
+      --color-background-secondary: #edeae3;
+      --color-background-tertiary: #e0dbd1;
+      --color-text: #2e2e2e;
+      --color-text-emphasized: #1a1a1a;
+      --color-text-secondary: #6b6b6b;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(0, 0, 0, 0.12);
+      --color-warning: #b85c00;
+      --color-error: #c0392b;
+      --color-success: #2d7a4f;
+      --color-info: #2c6b8a;
+  `,
+  /* Calm, Precise, Introspective — Dark mode */
+  'samādhi': css`
+      --color-primary: #c8a96e;
+      --color-secondary: #7a9e8a;
+      --color-background: #1a1e1c;
+      --color-background-secondary: #242924;
+      --color-background-tertiary: #2e352e;
+      --color-text: #cfd5cb;
+      --color-text-emphasized: #eaede7;
+      --color-text-secondary: #8a9685;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(255, 255, 255, 0.08);
+      --color-warning: #e0933a;
+      --color-error: #e05c5c;
+      --color-success: #5dab6d;
+      --color-info: #5b9fbf;
+  `,
+  /* High contrast — Low vision accessibility (WCAG AAA) */
+  'dīpā': css`
+      --color-primary: #005fcc;
+      --color-secondary: #7a3800;
+      --color-background: #ffffff;
+      --color-background-secondary: #f0f0f0;
+      --color-background-tertiary: #dcdcdc;
+      --color-text: #000000;
+      --color-text-emphasized: #000000;
+      --color-text-secondary: #333333;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(0, 0, 0, 0.5);
+      --color-warning: #7a3800;
+      --color-error: #cc0000;
+      --color-success: #006600;
+      --color-info: #005fcc;
   `
 }
 
