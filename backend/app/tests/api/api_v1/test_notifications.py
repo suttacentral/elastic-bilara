@@ -1,14 +1,20 @@
+import asyncio
 from unittest.mock import MagicMock, patch, Mock
 
 from app.api.api_v1.endpoints.notifications import (
     format_diff_as_html,
+    get_notifications_feed,
     parse_git_show_details,
     get_change_detail,
     get_notification_authors_or_default,
     get_unread_git_updates,
     get_user_preferences,
+    mark_notification_as_done_by_type,
 )
-from app.services.notifications.models import GitCommitInfoOut
+from app.services.notifications.models import (
+    GitCommitInfoOut,
+    NotificationDonePayload,
+)
 
 
 def test_format_diff_as_html_normal_file():
@@ -142,3 +148,64 @@ def test_get_unread_git_updates_handles_missing_authors_preference():
 
     assert isinstance(result, GitCommitInfoOut)
     assert result.git_recent_commits == []
+
+
+def test_get_notifications_feed_merges_and_sorts():
+    user = Mock(github_id=123)
+    commit_notifications = [
+        {
+            "author": "commit-author",
+            "commit": "abc123",
+            "date": "Mon Mar 10 10:00:00 2025 +0000",
+            "effected_files": [],
+        }
+    ]
+    remark_notifications = [
+        {
+            "notification_type": "remark",
+            "notification_ref": "7",
+            "author": "remark-author",
+            "date": "2026-03-13T12:00:00",
+            "uid": "mn1",
+            "segment_id": "mn1:1.1",
+            "action": "updated",
+            "source_file_path": "/tmp/mn1_translation-en-a.json",
+            "remark_value": "new remark",
+            "effected_files": [],
+        }
+    ]
+
+    with patch(
+        "app.api.api_v1.endpoints.notifications.get_unread_git_update_items",
+        return_value=commit_notifications,
+    ), patch(
+        "app.api.api_v1.endpoints.notifications._build_remark_notification_items",
+        return_value=remark_notifications,
+    ):
+        result = get_notifications_feed(user=user)
+
+    assert len(result.notifications) == 2
+    assert result.notifications[0]["notification_type"] == "remark"
+    assert result.notifications[1]["notification_type"] == "commit"
+
+
+def test_mark_notification_as_done_by_type_commit_uses_legacy_endpoint():
+    user = Mock(github_id=123)
+    payload = NotificationDonePayload(
+        notification_type="commit",
+        notification_ref="abc123",
+    )
+
+    async def fake_done(*args, **kwargs):
+        return {"success": True}
+
+    with patch(
+        "app.api.api_v1.endpoints.notifications.mark_notification_as_done",
+        side_effect=fake_done,
+    ) as mocked:
+        result = asyncio.run(
+            mark_notification_as_done_by_type(payload=payload, user=user)
+        )
+
+    assert mocked.called
+    assert result["success"] is True

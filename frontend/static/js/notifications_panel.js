@@ -26,6 +26,42 @@ function notificationsPanel() {
         selectedDays: 360,
         authorSearchText: '',
 
+        getNotificationKey(notification) {
+            return notification.notification_ref || notification.commit;
+        },
+
+        getNotificationType(notification) {
+            return notification.notification_type || 'commit';
+        },
+
+        isNotificationRead(notification) {
+            return Boolean(notification.isRead);
+        },
+
+        getNotificationBadgeText(notification) {
+            if (this.getNotificationType(notification) === 'remark') {
+                return `remark ${notification.action || 'updated'}`;
+            }
+            return `${notification.effected_files?.length || 0} file(s)`;
+        },
+
+        getNotificationIconClass(notification) {
+            return this.getNotificationType(notification) === 'remark'
+                ? 'bi-chat-square-text'
+                : 'bi-git';
+        },
+
+        getNotificationTitle(notification) {
+            if (this.getNotificationType(notification) === 'remark') {
+                return `${notification.author} changed a remark`;
+            }
+            return notification.author;
+        },
+
+        isCommitNotification(notification) {
+            return this.getNotificationType(notification) === 'commit';
+        },
+
         async init() {
             await this.loadPreferences();
             await this.fetchNotifications();
@@ -49,7 +85,9 @@ function notificationsPanel() {
                 filtered = filtered.filter(notification =>
                     notification.author?.toLowerCase().includes(searchText) ||
                     notification.commit?.toLowerCase().includes(searchText) ||
-                    notification.date?.toLowerCase().includes(searchText)
+                    notification.date?.toLowerCase().includes(searchText) ||
+                    notification.uid?.toLowerCase().includes(searchText) ||
+                    notification.segment_id?.toLowerCase().includes(searchText)
                 );
             }
 
@@ -110,18 +148,27 @@ function notificationsPanel() {
             await this.fetchNotifications();
         },
 
+        notifyNotificationCountChanged() {
+            window.dispatchEvent(new CustomEvent('notifications-updated'));
+        },
+
         async fetchNotifications() {
             this.loading = true;
             try {
-                const response = await fetch('/api/v1/notifications/git');
+                const response = await requestWithTokenRetry(
+                    'notifications/feed?include_read=true'
+                );
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
-                if (!data.git_recent_commits) {
+                if (!data.notifications) {
                     throw new Error("Invalid data format from the API");
                 }
-                this.notifications = data.git_recent_commits;
+                this.notifications = data.notifications.map(notification => ({
+                    ...notification,
+                    isRead: Boolean(notification.is_done || notification.isRead)
+                }));
             } catch (error) {
                 console.error('Error fetching notifications:', error);
                 this.notifications = [];
@@ -131,13 +178,23 @@ function notificationsPanel() {
             }
         },
 
-        selectNotification(notification) {
-            if (this.selectedNotification === notification.commit) return;
+        async selectNotification(notification) {
+            const notificationKey = this.getNotificationKey(notification);
+            if (this.selectedNotification === notificationKey) return;
 
-            this.selectedNotification = notification.commit;
+            this.selectedNotification = notificationKey;
             this.selectedNotificationData = notification;
             this.loadingDetail = false;
             this.detailError = null;
+
+            if (!this.isNotificationRead(notification)) {
+                await this.markAsDone(notification, {
+                    silent: true,
+                    preserveSelection: true,
+                    skipIfAlreadyProcessing: true,
+                    refreshList: false
+                });
+            }
         },
 
         formatDate(dateStr) {
@@ -156,31 +213,59 @@ function notificationsPanel() {
             }
         },
 
-        async markAsDone(notification) {
+        async markAsDone(notification, options = {}) {
+            const {
+                silent = false,
+                preserveSelection = false,
+                skipIfAlreadyProcessing = false,
+                refreshList = true
+            } = options;
+
+            if (this.markingDone && skipIfAlreadyProcessing) return;
             if (this.markingDone) return;
 
-            this.markingDone = notification.commit;
+            const notificationKey = this.getNotificationKey(notification);
+            this.markingDone = notificationKey;
             try {
-                const response = await requestWithTokenRetry(`notifications/done/${notification.commit}`);
+                const response = await requestWithTokenRetry('notifications/done', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        notification_type: this.getNotificationType(notification),
+                        notification_ref: notificationKey
+                    })
+                });
                 const data = await response.json();
 
                 if (data.success) {
-                    this.showToast('Notification marked as done', 'success');
+                    notification.isRead = true;
+
+                    if (!silent) {
+                        this.showToast('Notification marked as done', 'success');
+                    }
 
                     // Clear selection if this was the selected notification
-                    if (this.selectedNotification === notification.commit) {
+                    if (!preserveSelection && this.selectedNotification === notificationKey) {
                         this.selectedNotification = null;
                         this.selectedNotificationData = null;
                     }
 
-                    // Refresh the list
-                    await this.fetchNotifications();
+                    if (refreshList) {
+                        await this.fetchNotifications();
+                    }
+
+                    this.notifyNotificationCountChanged();
                 } else {
                     throw new Error(data.message || 'Failed to mark as done');
                 }
             } catch (error) {
                 console.error('Error marking notification as done:', error);
-                this.showToast(error.message || 'Failed to mark as done', 'error');
+                if (!silent) {
+                    this.showToast(error.message || 'Failed to mark as done', 'error');
+                }
             } finally {
                 this.markingDone = null;
             }

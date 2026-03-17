@@ -37,6 +37,17 @@ def get_remark_by_source_file_path_and_segment_id(source_file_path: Path, segmen
         )
 
 
+def get_remark_or_none(source_file_path: Path, segment_id: str) -> Remark | None:
+    with get_sess() as sess:
+        remark = (
+            sess.query(mRemark)
+            .filter(mRemark.source_file_path == str(source_file_path))
+            .filter(mRemark.segment_id == segment_id)
+            .first()
+        )
+        return Remark.model_validate(remark) if remark else None
+
+
 def update_or_create_remark(remark_data: RemarkBase | dict[str, Any]) -> Remark:
     remark_data: RemarkBase = RemarkBase.model_validate(remark_data)
     try:

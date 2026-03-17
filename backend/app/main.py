@@ -1,9 +1,9 @@
 from app.api.api_v1.api import api_router
 from app.core.config import settings
 from app.db.database import Base, engine
+from app.db.models.notification import Notification, RemarkNotification
 from app.db.models.remark import Remark
 from app.db.models.user import User
-from app.db.models.notification import Notification
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 

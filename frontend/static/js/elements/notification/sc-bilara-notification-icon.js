@@ -49,11 +49,17 @@ class SCBilaraNotificationIcon extends LitElement {
   };
 
   static POLL_INTERVAL = 30 * 60 * 1000;
+  static SSE_RECONNECT_DELAY = 10000;
 
   constructor() {
     super();
     this.count = 0;
     this._pollIntervalId = null;
+    this._eventSource = null;
+    this._sseReconnectTimer = null;
+    this._handleNotificationsUpdated = this._handleNotificationsUpdated.bind(this);
+    this._handleUnreadCountEvent = this._handleUnreadCountEvent.bind(this);
+    this._handleStreamError = this._handleStreamError.bind(this);
   }
 
   render() {
@@ -75,15 +81,81 @@ class SCBilaraNotificationIcon extends LitElement {
 
   async fetchNotification() {
     try {
-      const response = await fetch(`api/v1/notifications/git`);
-      const data = await response.json();
-      if (!data.git_recent_commits) {
-          throw new Error("Invalid data format from the API");
+      const response = await fetch('/api/v1/notifications/feed');
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return data.git_recent_commits;
+
+      const data = await response.json();
+
+      if (!data.notifications) {
+        throw new Error('Invalid data format from the API');
+      }
+
+      return data.notifications;
     } catch (error) {
-        throw new Error(error);
+      throw new Error(error);
     }
+  }
+
+  _handleUnreadCountEvent(event) {
+    try {
+      const payload = JSON.parse(event.data || '{}');
+      if (typeof payload.unread_count === 'number') {
+        this.count = payload.unread_count;
+      }
+    } catch (error) {
+      console.error('Failed to parse unread_count event:', error);
+    }
+  }
+
+  _clearSseReconnectTimer() {
+    if (this._sseReconnectTimer) {
+      clearTimeout(this._sseReconnectTimer);
+      this._sseReconnectTimer = null;
+    }
+  }
+
+  _startRealtimeStream() {
+    this._stopRealtimeStream();
+
+    this._eventSource = new EventSource('/api/v1/notifications/stream');
+    this._eventSource.addEventListener(
+      'unread_count',
+      this._handleUnreadCountEvent
+    );
+    this._eventSource.addEventListener(
+      'stream_error',
+      this._handleStreamError
+    );
+    this._eventSource.onerror = this._handleStreamError;
+  }
+
+  _stopRealtimeStream() {
+    this._clearSseReconnectTimer();
+
+    if (this._eventSource) {
+      this._eventSource.removeEventListener(
+        'unread_count',
+        this._handleUnreadCountEvent
+      );
+      this._eventSource.removeEventListener(
+        'stream_error',
+        this._handleStreamError
+      );
+      this._eventSource.close();
+      this._eventSource = null;
+    }
+  }
+
+  _handleStreamError() {
+    this._stopRealtimeStream();
+    this._clearSseReconnectTimer();
+
+    this._sseReconnectTimer = setTimeout(() => {
+      this._startRealtimeStream();
+    }, SCBilaraNotificationIcon.SSE_RECONNECT_DELAY);
   }
 
   async _updateNotificationCount() {
@@ -110,14 +182,28 @@ class SCBilaraNotificationIcon extends LitElement {
     }
   }
 
+  _handleNotificationsUpdated() {
+    this._updateNotificationCount();
+  }
+
   connectedCallback() {
     super.connectedCallback();
     this._startPolling();
+    this._startRealtimeStream();
+    window.addEventListener(
+      'notifications-updated',
+      this._handleNotificationsUpdated
+    );
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     this._stopPolling();
+    this._stopRealtimeStream();
+    window.removeEventListener(
+      'notifications-updated',
+      this._handleNotificationsUpdated
+    );
   }
 
   firstUpdated() {

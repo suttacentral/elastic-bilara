@@ -51,7 +51,7 @@
                 <div class="panel-header">
                     <div class="panel-title">
                         <i class="bi-git"></i>
-                        <span>Commits</span>
+                        <span>Notifications</span>
                         <span x-show="!loading && notifications.length > 0" class="badge" x-text="notifications.length"></span>
                     </div>
                     <div class="summary-stats" x-show="!loading && notifications.length > 0">
@@ -130,29 +130,45 @@
                             </div>
                         </div>
 
-                        <template x-for="(notification, index) in paginatedNotifications" :key="notification.commit">
+                        <template x-for="(notification, index) in paginatedNotifications" :key="getNotificationKey(notification)">
                             <div class="notification-item"
-                                 :class="{ 'selected': selectedNotification === notification.commit }"
+                                 :class="{
+                                    'selected': selectedNotification === getNotificationKey(notification),
+                                    'notification-remark': getNotificationType(notification) === 'remark',
+                                                'notification-commit': getNotificationType(notification) === 'commit',
+                                                'checked': isNotificationRead(notification),
+                                                'unread': !isNotificationRead(notification)
+                                 }"
                                  @click="selectNotification(notification)"
                                  :style="{ animationDelay: (index * 30) + 'ms' }">
                                 <div class="notification-icon">
-                                    <i class="bi-git"></i>
+                                    <i :class="getNotificationIconClass(notification)"></i>
                                 </div>
                                 <div class="notification-info">
-                                    <span class="notification-author" x-text="notification.author"></span>
+                                    <span class="notification-author" x-text="getNotificationTitle(notification)"></span>
                                     <span class="notification-date" x-text="formatDate(notification.date)"></span>
+                                    <span x-show="getNotificationType(notification) === 'remark'" class="notification-meta" x-text="notification.uid + ' • ' + notification.segment_id"></span>
                                 </div>
-                                <span class="notification-badge" x-text="notification.effected_files?.length + ' file(s)'"></span>
+                                <span class="notification-badge" x-text="getNotificationBadgeText(notification)"></span>
                                 <div class="notification-actions">
                                     <button class="action-btn done-btn"
+                                            x-show="!isNotificationRead(notification)"
                                             @click.stop="markAsDone(notification)"
-                                            :disabled="markingDone === notification.commit"
+                                            :disabled="markingDone === getNotificationKey(notification)"
                                             title="Mark as done">
-                                        <i :class="markingDone === notification.commit ? 'bi-arrow-repeat spinning' : 'bi-check-circle'"></i>
+                                        <i :class="markingDone === getNotificationKey(notification) ? 'bi-arrow-repeat spinning' : 'bi-check-circle'"></i>
                                         Done
                                     </button>
+                                    <span class="action-btn done-btn"
+                                          x-show="isNotificationRead(notification)"
+                                          style="cursor: default; opacity: 0.7;"
+                                          title="Already read">
+                                        <i class="bi-check2-all"></i>
+                                        Read
+                                    </span>
                                     <a class="action-btn github-btn"
                                        :href="'https://github.com/ihongda/bilara-data/commit/' + notification.commit"
+                                       x-show="isCommitNotification(notification)"
                                        target="_blank"
                                        @click.stop
                                        title="View on GitHub">
@@ -212,11 +228,11 @@
                 <div class="panel-header">
                     <div class="panel-title">
                         <i class="bi-file-earmark-diff"></i>
-                        <span>Affected Files</span>
+                        <span>Details</span>
                     </div>
                     <span x-show="selectedNotification"
                           style="font-size: var(--text-xs); font-family: monospace; color: var(--color-text-secondary);"
-                          x-text="selectedNotification ? 'Commit: ' + selectedNotification.substring(0, 8) + '...' : ''">
+                          x-text="selectedNotification ? (selectedNotificationData?.notification_type === 'remark' ? 'Remark: ' + selectedNotification : 'Commit: ' + selectedNotification.substring(0, 8) + '...') : ''">
                     </span>
                 </div>
                 <div class="panel-content">
@@ -245,10 +261,18 @@
                                         <i class="bi-calendar"></i>
                                         <span x-text="selectedNotificationData?.date"></span>
                                     </span>
+                                    <span class="meta-item" x-show="selectedNotificationData?.notification_type === 'remark'">
+                                        <i class="bi-bookmark"></i>
+                                        <span x-text="selectedNotificationData?.uid + ' • ' + selectedNotificationData?.segment_id"></span>
+                                    </span>
+                                    <span class="meta-item" x-show="selectedNotificationData?.notification_type === 'remark'">
+                                        <i class="bi-tag"></i>
+                                        <span x-text="'Remark ' + (selectedNotificationData?.action || 'updated')"></span>
+                                    </span>
                                 </div>
                             </div>
 
-                            <div class="files-list">
+                            <div class="files-list" x-show="selectedNotificationData?.notification_type !== 'remark'">
                                 <template x-for="(file, index) in selectedNotificationData?.effected_files || []" :key="index">
                                     <div class="file-detail-item">
                                         <div class="file-detail-header">
@@ -275,6 +299,24 @@
                                         </div>
                                     </div>
                                 </template>
+                            </div>
+
+                            <div class="remark-detail" x-show="selectedNotificationData?.notification_type === 'remark'">
+                                <div class="file-detail-item">
+                                    <div class="file-detail-header">
+                                        <div class="file-name-section">
+                                            <i class="bi-chat-square-text"></i>
+                                            <span class="file-name" x-text="selectedNotificationData?.source_file_path"></span>
+                                            <span class="file-type-badge badge-comment">remark</span>
+                                        </div>
+                                    </div>
+                                    <div class="change-detail">
+                                        <div class="change-html">
+                                            <p><strong>Latest Remark Content</strong></p>
+                                            <p x-text="selectedNotificationData?.remark_value || '[empty]'" style="white-space: pre-wrap;"></p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

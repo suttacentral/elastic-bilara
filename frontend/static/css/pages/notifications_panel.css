@@ -133,6 +133,14 @@ body {
     animation: fadeIn 0.2s ease forwards;
 }
 
+.notification-item.notification-remark {
+    border-left: 3px solid var(--color-warning);
+}
+
+.notification-item.notification-commit {
+    border-left: 3px solid var(--color-info);
+}
+
 .notification-item:hover {
     background-color: var(--color-background-secondary);
 }
@@ -143,6 +151,10 @@ body {
 }
 
 .notification-item.checked {
+    background-color: transparent;
+}
+
+.notification-item.unread {
     background-color: var(--color-primary);
 }
 
@@ -177,6 +189,11 @@ body {
     color: var(--color-text-secondary);
 }
 
+.notification-meta {
+    font-size: var(--text-xs);
+    color: var(--color-warning);
+}
+
 .notification-badge {
     font-size: 0.6875rem;
     padding: 2px 8px;
@@ -185,6 +202,15 @@ body {
     background-color: var(--color-background-secondary);
     color: var(--color-text);
     white-space: nowrap;
+}
+
+.notification-remark .notification-badge {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.notification-remark .notification-icon {
+    color: var(--color-warning);
 }
 
 .notification-actions {
