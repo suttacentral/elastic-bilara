@@ -56,6 +56,25 @@ function fetchTranslation() {
             }
             window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: validSaved } }));
 
+            // Apply saved column order after all translations are loaded
+            try {
+                const orderKey = `bilara:col-order:${this.prefix}:${source}:${muid}`;
+                const saved = JSON.parse(localStorage.getItem(orderKey));
+                if (Array.isArray(saved) && saved.length > 0) {
+                    const byMuid = {};
+                    this.translations.forEach(t => byMuid[t.muid] = t);
+                    const reordered = [];
+                    const used = new Set();
+                    saved.forEach(m => {
+                        if (byMuid[m] && !used.has(m)) { reordered.push(byMuid[m]); used.add(m); }
+                    });
+                    reordered.push(...this.translations.filter(t => !used.has(t.muid)));
+                    if (reordered.length === this.translations.length) {
+                        this.translations.splice(0, this.translations.length, ...reordered);
+                    }
+                }
+            } catch(e) { /* ignore corrupt data */ }
+
             this.updateProgress();
         },
         getValue(translation, uid) {
@@ -661,14 +680,8 @@ function fetchTranslation() {
                 }
 
                 if (!response.ok) {
-                    let detail = "Failed to save remark";
-                    try {
-                        const body = await response.json();
-                        detail = body?.detail || detail;
-                    } catch {
-                        // Keep default detail when response body is not JSON.
-                    }
-                    throw new Error(detail);
+                    const body = await response.json().catch(() => null);
+                    throw new Error(body?.detail ?? "Failed to save remark");
                 }
             } catch (error) {
                 throw new Error(error);
@@ -687,6 +700,10 @@ function fetchTranslation() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data),
                 });
+                if (!response.ok) {
+                    const body = await response.json().catch(() => null);
+                    throw new Error(body?.detail ?? `Server error (${response.status})`);
+                }
                 const { task_id: taskID } = await response.json();
                 // if (!taskID) {
                 //     displayMessage(
