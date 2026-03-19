@@ -236,7 +236,126 @@ export const themes = {
       --color-error: #cc0000;
       --color-success: #006600;
       --color-info: #005fcc;
-  `
+  `,
+  /* Zhongguose - Palace Vermilion */
+  'gongque-danqing': css`
+      --color-primary: #c93a12;
+      --color-secondary: #8b2f1a;
+      --color-background: #fff1d6;
+      --color-background-secondary: #ffe3b0;
+      --color-background-tertiary: #f7c77a;
+      --color-text: #3b1f0f;
+      --color-text-emphasized: #221007;
+      --color-text-secondary: #744a2f;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(95, 49, 24, 0.28);
+      --color-warning: #d79b00;
+      --color-error: #b91f00;
+      --color-success: #3f7d1e;
+      --color-info: #1f5f9c;
+  `,
+  /* Zhongguose - Misty Jiangnan */
+  'jiangnan-yanyu': css`
+      --color-primary: #0b4f9f;
+      --color-secondary: #008ea8;
+      --color-background: #eef7f6;
+      --color-background-secondary: #d6eced;
+      --color-background-tertiary: #b8d8db;
+      --color-text: #132734;
+      --color-text-emphasized: #071620;
+      --color-text-secondary: #3e5a69;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(7, 22, 32, 0.24);
+      --color-warning: #b88600;
+      --color-error: #ad3a31;
+      --color-success: #1e7a52;
+      --color-info: #1670c5;
+  `,
+  /* Zhongguose - Spring Bamboo */
+  'chunshan-xincha': css`
+      --color-primary: #008f5a;
+      --color-secondary: #7fcf72;
+      --color-background: #f0fae4;
+      --color-background-secondary: #dbf2c6;
+      --color-background-tertiary: #c2e7a5;
+      --color-text: #11301f;
+      --color-text-emphasized: #061a10;
+      --color-text-secondary: #3f624d;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(6, 26, 16, 0.22);
+      --color-warning: #a97a00;
+      --color-error: #c94a2a;
+      --color-success: #067a4b;
+      --color-info: #1f6f96;
+  `,
+  /* Zhongguose - Academy Ink */
+  'shuyuan-yamo': css`
+      --color-primary: #d4a24c;
+      --color-secondary: #7f8ea3;
+      --color-background: #1f252d;
+      --color-background-secondary: #2a323d;
+      --color-background-tertiary: #36414f;
+      --color-text: #dfe5eb;
+      --color-text-emphasized: #f7fafc;
+      --color-text-secondary: #afbcc9;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(255, 255, 255, 0.18);
+      --color-warning: #d08f2f;
+      --color-error: #c65b4a;
+      --color-success: #4c8b62;
+      --color-info: #4f88c6;
+  `,
+  /* Zhongguose - Celadon Ru Ware */
+  'tianqing-ruci': css`
+      --color-primary: #3a7d8c;
+      --color-secondary: #6fa3a3;
+      --color-background: #eef4f4;
+      --color-background-secondary: #dae9e9;
+      --color-background-tertiary: #c3d9d9;
+      --color-text: #1a2e2e;
+      --color-text-emphasized: #0d1f1f;
+      --color-text-secondary: #436060;
+      --color-text-on-strong: #ffffff;
+      --color-border: rgba(26, 46, 46, 0.22);
+      --color-warning: #a07020;
+      --color-error: #b53030;
+      --color-success: #266b4a;
+      --color-info: #1f5d9c;
+    `,
+    /* Buddhist Kasaya - Huai Se */
+    'kasaya': css`
+            --color-primary: #8c5a2b;
+            --color-secondary: #6f6a60;
+            --color-background: #1f2a3a;
+            --color-background-secondary: #2c3848;
+            --color-background-tertiary: #3f2f24;
+            --color-text: #e7dfd2;
+            --color-text-emphasized: #f6efe3;
+            --color-text-secondary: #b9b1a5;
+            --color-text-on-strong: #ffffff;
+            --color-border: rgba(231, 223, 210, 0.22);
+            --color-warning: #9b6b2f;
+            --color-error: #8b3a2a;
+            --color-success: #5f6f3a;
+            --color-info: #2f4f79;
+    `,
+    /* Buddhist Five-Color Flag - Pancavanna */
+    'pancavanna': css`
+        --color-primary: #a55b2a;
+        --color-secondary: #1f5aa6;
+        --color-background: #f3f1ea;
+        --color-background-secondary: #e8e2d4;
+        --color-background-tertiary: #f0df9d;
+        --color-text: #2f251e;
+        --color-text-emphasized: #1a130f;
+        --color-text-secondary: #5c4e42;
+        --color-text-on-strong: #ffffff;
+        --color-border: rgba(47, 37, 30, 0.2);
+        --color-warning: #d4a017;
+        --color-error: #b8322a;
+        --color-success: #4f7a5c;
+        --color-info: #1f5aa6;
+    `
 }
 
 export function getThemeNames() {
