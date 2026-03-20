@@ -14,4 +14,10 @@ do
   fi
 done
 
-exec poetry run uvicorn app.main:app --host 0.0.0.0 --port $DOCKER_BACKEND_PORT --ssl-keyfile=/app/certs/key.pem --ssl-certfile=/app/certs/cert.pem --reload
+exec poetry run uvicorn app.main:app \
+  --host 0.0.0.0 \
+  --port $DOCKER_BACKEND_PORT \
+  --ssl-keyfile=/app/certs/key.pem \
+  --ssl-certfile=/app/certs/cert.pem \
+  --workers 8 \
+  --timeout-keep-alive 5
