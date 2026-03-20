@@ -492,6 +492,7 @@
                                                     } else if (hints.length === 0 && muid.startsWith('translation')) {
                                                         hints = await getHints(uid, muid, sourceMuid, sourceValue);
                                                     }
+                                                    if (document.activeElement !== $event.target) return;
                                                     showHints = true;
                                                 "
                                                 x-on:blur="
