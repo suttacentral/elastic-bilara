@@ -743,7 +743,7 @@ sl-dialog::part(title) {
     flex: 1;
     min-width: 0;
     margin: 0 4px 48px 8px;
-    overflow: hidden;
+    overflow: clip;
     position: relative;
     min-height: 100vh;
 }
