@@ -661,7 +661,10 @@ class Search:
         query = {
             "query": {
                 "bool": {
-                    "should": [{"bool": {"must": [{"match": {"uid": uid}}, {"match": {"muid": muid}}]}} for uid in uids]
+                    "must": [
+                        {"terms": {"uid": uids}},
+                        {"term": {"muid": muid}},
+                    ]
                 }
             },
             "_source": ["segment", "uid", "muid"],
@@ -684,11 +687,13 @@ class Search:
 
     @staticmethod
     def merge_segments_with_translation_hints(similar_phrases: list[dict], translation_hints: list[dict]) -> list[dict]:
+        hints_by_uid: dict[str, list[dict]] = {}
+        for hint in translation_hints:
+            hints_by_uid.setdefault(hint["uid"], []).append(hint)
         return [
-            {**phrase, **{"translation_hints": hint["segment"]}}
+            {**phrase, "translation_hints": hint["segment"]}
             for phrase in similar_phrases
-            for hint in translation_hints
-            if phrase["uid"] == hint["uid"]
+            for hint in hints_by_uid.get(phrase["uid"], [])
         ]
 
     def get_uids(self, muid: str, prefix: str) -> list[str]:
