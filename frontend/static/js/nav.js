@@ -11,6 +11,7 @@ function tree() {
         showPublishModal: false,
         publishingFile: null,
         isPublishing: false,
+        userRole: "",
         async loadAllDirectories() {
             const response = await requestWithTokenRetry("directories/");
             const { directories, base } = await response.json();
@@ -22,6 +23,7 @@ function tree() {
             const userInfo = getUserInfo();
             await userInfo.getRole();
             this.filterUsername = userInfo.username;
+            this.userRole = userInfo.role;
 
             if (!this.showAllContent) {
                 const response = await requestWithTokenRetry(`directories/search/${this.filterUsername}/`);
@@ -234,7 +236,15 @@ function tree() {
             }
 
             if (element.muid && (element.fullName.split('/').length >= 5 || element.isFile)) {
-                result += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
+                let showPublish = false;
+                if (this.userRole === ROLES.admin || this.userRole === ROLES.superuser) {
+                    showPublish = true;
+                } else if (this.userRole === ROLES.writer) {
+                    showPublish = element.fullName.includes(this.filterUsername);
+                }
+                if (showPublish) {
+                    result += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
+                }
             }
 
             if (element.loading) {
@@ -319,33 +329,69 @@ function tree() {
                 return;
             }
 
-            // this.isPublishing = true;
-            // try {
-            //     const response = await fetch('pr/', {
-            //         credentials: 'include',
-            //         method: 'POST',
-            //         headers: {
-            //             'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            //             'Content-Type': 'application/json'
-            //         },
-            //         body: JSON.stringify({ paths: pathsToPublish })
-            //     });
+            // Group files by project head so each PR only contains files from one project
+            const groupByProject = (paths) => {
+                const groups = {};
+                for (const path of paths) {
+                    const parts = path.split('/').filter(Boolean);
+                    const dirParts = parts.slice(0, -1);
+                    let head;
+                    if (dirParts.length === 6 && !dirParts[dirParts.length - 2].includes(dirParts[dirParts.length - 3])) {
+                        head = dirParts.slice(0, -1).join('_');
+                    } else if (dirParts.length > 6 && dirParts[dirParts.length - 3] && dirParts[dirParts.length - 2].includes(dirParts[dirParts.length - 3])) {
+                        head = dirParts.slice(0, -2).join('_');
+                    } else {
+                        head = dirParts.join('_');
+                    }
+                    if (!groups[head]) groups[head] = [];
+                    groups[head].push(path);
+                }
+                return Object.values(groups);
+            };
 
-            //     if (!response.ok) {
-            //         const errorData = await response.json();
-            //         this.showToast(`Error: ${errorData.detail?.error || errorData.detail || 'Failed to publish file'}`, 'error');
-            //     } else {
-            //         console.log('Publish request sent successfully');
-            //         const fileCount = pathsToPublish.length;
-            //         this.showToast(`Pull Request scheduled for ${fileCount} modified file(s)`, 'success');
-            //     }
-            // } catch (error) {
-            //     console.error('Error publishing file:', error);
-            //     this.showToast(`Error: ${error.message}`, 'error');
-            // } finally {
-            //     this.isPublishing = false;
-            //     this.closePublishModal();
-            // }
+            const fileGroups = groupByProject(pathsToPublish);
+            const totalGroups = fileGroups.length;
+
+            this.isPublishing = true;
+            let successCount = 0;
+            let errorMessages = [];
+
+            try {
+                for (const groupPaths of fileGroups) {
+                    try {
+                        const response = await requestWithTokenRetry('pr/', {
+                            credentials: 'include',
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ paths: groupPaths })
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            errorMessages.push(errorData.detail?.error || errorData.detail || `HTTP ${response.status}`);
+                        } else {
+                            successCount++;
+                        }
+                    } catch (err) {
+                        errorMessages.push(err.message);
+                    }
+                }
+
+                if (errorMessages.length === 0) {
+                    this.showToast(
+                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${pathsToPublish.length} file(s)`,
+                        'success'
+                    );
+                } else {
+                    const succeeded = successCount > 0 ? `${successCount}/${totalGroups} succeeded. ` : '';
+                    this.showToast(`${succeeded}Errors: ${errorMessages.join('; ')}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error publishing:', error);
+                this.showToast(`Error: ${error.message}`, 'error');
+            } finally {
+                this.isPublishing = false;
+                this.closePublishModal();
+            }
         },
 
         showToast(message, type = 'success') {

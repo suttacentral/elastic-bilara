@@ -36,6 +36,7 @@ function getUserInfo() {
         isActive: false,
         username: "",
         avatarURL: "",
+        role: "",
         async getRole() {
             try {
                 const response = await requestWithTokenRetry("users/me");
@@ -43,6 +44,7 @@ function getUserInfo() {
                 if (data.role === ROLES.admin || data.role === ROLES.superuser) {
                     this.isAdmin = true;
                 }
+                this.role = data.role;
                 this.isActive = data.is_active;
                 this.username = data.username;
                 this.avatarURL = data.avatar_url;

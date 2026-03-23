@@ -28,8 +28,16 @@ global.requestWithTokenRetry = jest.fn();
 global.getUserInfo = jest.fn(() => ({
     getRole: jest.fn().mockResolvedValue(),
     username: 'testuser',
-    isAdmin: false
+    isAdmin: false,
+    role: ''
 }));
+
+global.ROLES = {
+    admin: 'administrator',
+    superuser: 'superuser',
+    writer: 'writer',
+    reviewer: 'reviewer'
+};
 
 // Mock getMuid and getPrefix
 global.getMuid = jest.fn((fullName) => {
@@ -97,6 +105,7 @@ function createMockTree(overrides = {}) {
         showPublishModal: false,
         publishingFile: null,
         isPublishing: false,
+        userRole: "",
 
         toggleShowAll() {
             this.showAllContent = !this.showAllContent;
@@ -163,7 +172,15 @@ function createMockTree(overrides = {}) {
             }
 
             if (element.muid && (element.fullName.split('/').length >= 5 || element.isFile)) {
-                result += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
+                let showPublish = false;
+                if (this.userRole === ROLES.admin || this.userRole === ROLES.superuser) {
+                    showPublish = true;
+                } else if (this.userRole === ROLES.writer) {
+                    showPublish = element.fullName.includes(this.filterUsername);
+                }
+                if (showPublish) {
+                    result += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
+                }
             }
 
             if (element.loading) {
@@ -668,8 +685,9 @@ describe('renderNode', () => {
         expect(result).not.toContain('<ul class="navigation-list">');
     });
 
-    test('should render publish button for deep paths with muid', () => {
+    test('should render publish button for admin with deep paths with muid', () => {
         const tree = createMockTree();
+        tree.userRole = ROLES.admin;
         getMuid.mockReturnValue('en-sujato');
         const element = new Element('file.json', 'translation/en/sujato/sutta/', false, true);
         element.muid = 'en-sujato';
@@ -678,6 +696,44 @@ describe('renderNode', () => {
         
         expect(result).toContain('btn--publish');
         expect(result).toContain('Publish');
+    });
+
+    test('should not render publish button for reviewer', () => {
+        const tree = createMockTree();
+        tree.userRole = ROLES.reviewer;
+        getMuid.mockReturnValue('en-sujato');
+        const element = new Element('file.json', 'translation/en/sujato/sutta/', false, true);
+        element.muid = 'en-sujato';
+        
+        const result = tree.renderNode(element);
+        
+        expect(result).not.toContain('btn--publish');
+    });
+
+    test('should render publish button for writer on own project', () => {
+        const tree = createMockTree();
+        tree.userRole = ROLES.writer;
+        tree.filterUsername = 'sujato';
+        getMuid.mockReturnValue('en-sujato');
+        const element = new Element('file.json', 'translation/en/sujato/sutta/', false, true);
+        element.muid = 'en-sujato';
+        
+        const result = tree.renderNode(element);
+        
+        expect(result).toContain('btn--publish');
+    });
+
+    test('should not render publish button for writer on other project', () => {
+        const tree = createMockTree();
+        tree.userRole = ROLES.writer;
+        tree.filterUsername = 'sujato';
+        getMuid.mockReturnValue('en-brahmali');
+        const element = new Element('file.json', 'translation/en/brahmali/vinaya/', false, true);
+        element.muid = 'en-brahmali';
+        
+        const result = tree.renderNode(element);
+        
+        expect(result).not.toContain('btn--publish');
     });
 });
 
