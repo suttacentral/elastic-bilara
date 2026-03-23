@@ -877,6 +877,7 @@ sl-dialog::part(title) {
     flex-direction: column;
     min-width: 0;
     flex: 1;
+    background-color: var(--color-background);
 }
 
 .translation-cell:last-child {
