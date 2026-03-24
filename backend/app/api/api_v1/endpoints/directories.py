@@ -244,6 +244,11 @@ async def get_dir_content(
                 else:
                     progress_info = utils.calculate_file_progress(p)
                     files_with_progress.append(progress_info)
+                    if progress_info["progress"] is not None and progress_info["progress"] >= 0:
+                        from app.tasks import update_file_translation_progress
+                        update_file_translation_progress.delay(
+                            str(p.relative_to(settings.WORK_DIR))
+                        )
 
     directories.sort(key=lambda s: [int(c) if c.isdigit() else c for c in re.split('(\d+)', s)])
     files.sort(key=lambda s: [int(c) if c.isdigit() else c for c in re.split('(\d+)', s)])

@@ -354,8 +354,8 @@ async def get_translation_progress(
             TranslationProgress.file_path == relative_path
         ).first()
 
-        # Return cached data if exists and not too old (< 24 hours)
-        if cached and cached.updated_at > datetime.utcnow() - timedelta(hours=24):
+        # Return cached data if exists and not too old (< 48 hours)
+        if cached and cached.updated_at > datetime.utcnow() - timedelta(hours=48):
             return {
                 "total_keys": cached.total_keys,
                 "translated_keys": cached.translated_keys,
