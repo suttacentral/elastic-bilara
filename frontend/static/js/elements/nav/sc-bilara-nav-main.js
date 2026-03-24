@@ -71,6 +71,9 @@ export class SCBilaraNavMain extends LitElement {
                     <sl-menu-item x-show="isAdmin && isActive">
                       <a href="/tags" target="_blank" rel="noopener noreferrer" class="menu-item-link">Tags</a>
                     </sl-menu-item>
+                    <sl-menu-item>
+                      <a href="/dictionary" target="_blank" rel="noopener noreferrer" class="menu-item-link">Lexicon</a>
+                    </sl-menu-item>
                     <sl-menu-item @click=${this._openSettings}>
                       <span class="menu-item-link">Settings</span>
                     </sl-menu-item>

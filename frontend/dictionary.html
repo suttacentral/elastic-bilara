@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilara - Lexicon</title>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.3/dist/cdn.min.js"></script>
+    <script src="./static/js/utils.js"></script>
+    <script src="./static/js/auth.js"></script>
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/button/button.js"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+
+    <!-- Dictionary Component -->
+    <script src="./static/js/elements/dictionary/sc-bilara-dictionary.js?v=2" type="module"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./static/css/style.css"/>
+    <link rel="stylesheet" href="./static/css/main.css">
+</head>
+<body class="page-layout">
+    <header x-data="getUserInfo()" x-init="getRole()">
+        <sc-bilara-nav-main></sc-bilara-nav-main>
+    </header>
+
+    <main class="main-content" style="height: calc(100vh - 120px);">
+        <sc-bilara-dictionary></sc-bilara-dictionary>
+    </main>
+
+    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+</body>
+</html>
