@@ -48,7 +48,7 @@ function tree() {
 
                         if (i === 0) {
                             if (!rootElementsMap.has(pathPart)) {
-                                const newElement = new Element(pathPart + "/", null, false, false);
+                                const newElement = new Element(pathPart + "/", null, true, false);
                                 rootElementsMap.set(pathPart, newElement);
                                 this.data.push(newElement);
                             }
@@ -60,7 +60,7 @@ function tree() {
                             );
 
                             if (!childElement) {
-                                childElement = new Element(pathPart + "/", currentBase, false, false);
+                                childElement = new Element(pathPart + "/", currentBase, i < 4, false);
                                 currentElement.add(childElement);
                             }
                             currentElement = childElement;
@@ -68,6 +68,23 @@ function tree() {
                         }
                     }
                 }
+
+                const expandNodes = async (elements) => {
+                    for (const el of elements) {
+                        if (el.isOpen && el.children.length === 0 && !el.isFile) {
+                            try {
+                                await this.addData(el);
+                            } catch (e) {
+                                console.error('Failed to auto-expand directory', el.fullName, e);
+                            }
+                        }
+                        if (el.children.length > 0) {
+                            await expandNodes(el.children);
+                        }
+                    }
+                };
+                await expandNodes(this.data);
+
             } else {
                 await this.loadAllDirectories();
             }

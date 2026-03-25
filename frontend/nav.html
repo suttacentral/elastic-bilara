@@ -38,13 +38,24 @@
 
       <div x-cloak x-show="isActive" x-data="tree()">
         <div class="show-all-button-container">
-          <button
-            @click="toggleShowAll()"
-            :disabled="loading"
-            class="btn btn--admin"
-          >
-            <span x-text="showAllContent ? 'Show my texts' : 'Show all texts'"></span>
-          </button>
+          <div class="segmented-control">
+            <button
+              @click="if(showAllContent) toggleShowAll()"
+              :disabled="loading"
+              class="btn segmented-control__btn"
+              :class="{ 'active': !showAllContent }"
+            >
+              Show my texts
+            </button>
+            <button
+              @click="if(!showAllContent) toggleShowAll()"
+              :disabled="loading"
+              class="btn segmented-control__btn"
+              :class="{ 'active': showAllContent }"
+            >
+              Show all texts
+            </button>
+          </div>
         </div>
         <div class="navigation-container navigation-container--pushdown">
           <div x-cloak x-show="loading" class="modal">
