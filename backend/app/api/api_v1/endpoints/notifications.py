@@ -23,8 +23,8 @@ from app.db.schemas.user_preference import UserPreference, UserPreferenceUpdate
 
 router = APIRouter(prefix="/notifications")
 
-# '60 seconds balances server load with real-time updates; 3600 seconds prevents indefinite connections'
-NOTIFICATION_STREAM_POLL_SECONDS = 60
+# '30 seconds balances server load with real-time updates and prevents Nginx 60s timeout'
+NOTIFICATION_STREAM_POLL_SECONDS = 30
 NOTIFICATION_STREAM_MAX_RUNTIME_SECONDS = 3600
 
 
@@ -142,7 +142,6 @@ async def stream_notification_count(
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )
