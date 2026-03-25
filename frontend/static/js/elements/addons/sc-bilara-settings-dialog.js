@@ -22,14 +22,29 @@ export class SCBilaraSettingsDialog extends LitElement {
       max-width: 480px;
       width: 100%;
       border-radius: 12px;
+      background-color: var(--color-background);
+      border: 1px solid var(--color-border);
     }
 
     sl-dialog::part(header) {
       padding: 20px 24px 12px;
     }
 
+    sl-dialog::part(title) {
+      color: var(--color-text-emphasized);
+    }
+
+    sl-dialog::part(close-button) {
+      color: var(--color-text-secondary);
+    }
+
+    sl-dialog::part(close-button):hover {
+      color: var(--color-text-emphasized);
+    }
+
     sl-dialog::part(body) {
       padding: 12px 24px 20px;
+      color: var(--color-text);
     }
 
     sl-dialog::part(footer) {
@@ -42,11 +57,12 @@ export class SCBilaraSettingsDialog extends LitElement {
       gap: 8px;
       font-size: 1.125rem;
       font-weight: 600;
+      color: var(--color-text-emphasized);
     }
 
     .dialog-title sl-icon {
       font-size: 1.25rem;
-      color: var(--sl-color-primary-600);
+      color: var(--color-primary);
     }
 
     .settings-section {
@@ -60,14 +76,14 @@ export class SCBilaraSettingsDialog extends LitElement {
       align-items: center;
       justify-content: space-between;
       padding: 14px 16px;
-      background: var(--sl-color-neutral-50);
+      background: var(--color-background-secondary);
       border-radius: 8px;
-      border: 1px solid var(--sl-color-neutral-200);
+      border: 1px solid var(--color-border);
       transition: background-color 0.2s ease;
     }
 
     .setting-row:hover {
-      background: var(--sl-color-neutral-100);
+      background: var(--color-background-tertiary);
     }
 
     .setting-label {
@@ -82,17 +98,17 @@ export class SCBilaraSettingsDialog extends LitElement {
       gap: 6px;
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--sl-color-neutral-900);
+      color: var(--color-text-emphasized);
     }
 
     .setting-label .title sl-icon {
       font-size: 1rem;
-      color: var(--sl-color-primary-600);
+      color: var(--color-primary);
     }
 
     .setting-label .description {
       font-size: 0.75rem;
-      color: var(--sl-color-neutral-500);
+      color: var(--color-text-secondary);
       margin-left: 22px;
     }
 
@@ -107,12 +123,14 @@ export class SCBilaraSettingsDialog extends LitElement {
       justify-content: center;
       padding: 40px 0;
       gap: 12px;
-      color: var(--sl-color-neutral-500);
+      color: var(--color-text-secondary);
     }
 
     .loading-container sl-spinner {
       font-size: 2rem;
       --track-width: 3px;
+      --indicator-color: var(--color-primary);
+      --track-color: var(--color-background-tertiary);
     }
 
     .footer-buttons {
@@ -120,6 +138,35 @@ export class SCBilaraSettingsDialog extends LitElement {
       gap: 8px;
       justify-content: flex-end;
       width: 100%;
+    }
+
+    sl-switch {
+      --sl-color-primary-600: var(--color-primary);
+      --sl-color-primary-500: var(--color-primary);
+      --sl-color-neutral-300: var(--color-border);
+      --sl-color-neutral-600: var(--color-text-secondary);
+    }
+
+    sl-button[variant="primary"]::part(base) {
+      background-color: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-text-on-strong);
+    }
+
+    sl-button[variant="primary"]::part(base):hover {
+      opacity: 0.9;
+    }
+
+    sl-button[variant="default"]::part(base) {
+      background-color: var(--color-background-secondary);
+      border-color: var(--color-border);
+      color: var(--color-text-emphasized);
+    }
+
+    sl-button[variant="default"]::part(base):hover {
+      background-color: var(--color-background-tertiary);
+      border-color: var(--color-border);
+      color: var(--color-text-emphasized);
     }
   `;
 
