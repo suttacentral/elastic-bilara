@@ -190,8 +190,7 @@ def get_git_update_items(user: str, include_done: bool = False):
         "--abbrev-commit",
         "--pretty=format:%h %s (%cr)",
         f"--since={selected_days} days ago",
-        "--no-merges",
-        "--name-only"
+        "--no-merges"
     ]
 
     try:
