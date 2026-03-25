@@ -238,6 +238,10 @@ def get_git_update_items(user: str, include_done: bool = False):
             author = author_match[1] if author_match else None
             date = date_match[1] if date_match else None
 
+            # Skip if this line was a file path (not a real commit) — author will be None
+            if not author or not commit:
+                continue
+
             # Check if author is in selected authors list
             author_match_found = any(
                 selected_author in author
@@ -258,9 +262,6 @@ def get_git_update_items(user: str, include_done: bool = False):
             parsed_git_show_details = parse_git_show_details(git_show_details)
 
             json_files = re.findall(r'[\w/.-]+\.json', git_show_stdout)
-
-            if json_files:
-                json_files.pop(0)
 
             formatted_json_files = []
             for json_file in json_files:
