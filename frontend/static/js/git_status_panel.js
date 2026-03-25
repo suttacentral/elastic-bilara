@@ -476,6 +476,14 @@ function gitStatusPanel() {
                     throw new Error('Failed to schedule pull request');
                 }
                 this.showToast(`Pull Request scheduled for: ${file.path}`, 'success');
+
+                // Clear selection if published file was currently selected
+                if (this.selectedFile === file.path) {
+                    this.selectedFile = null;
+                    this.diffContent = '';
+                    this.diffError = null;
+                }
+
                 setTimeout(async () => {
                     await this.fetchStatus();
                 }, 1000);
@@ -597,6 +605,14 @@ function gitStatusPanel() {
                         `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${this.selectedFiles.length} file(s) across ${totalGroups} project${totalGroups > 1 ? 's' : ''}.`,
                         'success'
                     );
+
+                    // Clear selection if the single selected file was among the batch published files
+                    if (this.selectedFile && this.selectedFiles.includes(this.selectedFile)) {
+                        this.selectedFile = null;
+                        this.diffContent = '';
+                        this.diffError = null;
+                    }
+
                     this.clearSelection();
                     setTimeout(async () => { await this.fetchStatus(); }, 2000);
                 } else {
