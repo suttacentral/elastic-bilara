@@ -4,26 +4,43 @@
     border: 2px solid transparent;
     font-size: var(--btn-font-size);
     cursor: pointer;
-    transition: background-color 0.3s ease, color 0.3s ease, border 0.3s ease;
-    font-weight: var(--font-weight-medium);
+    transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+    font-weight: var(--font-weight-medium, 600);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-xs);
     line-height: 1;
     height: var(--text-xxl);
+    text-decoration: none !important;
 }
 
 .btn:hover {
     border: 2px solid var(--color-secondary);
+    text-decoration: none !important;
 }
 
 .btn:active {
     border: 2px dashed var(--color-secondary);
+    transform: translateY(1px);
+    text-decoration: none !important;
 }
 
 .btn--main, .btn--admin {
     background-color: var(--color-background-secondary);
+    color: var(--color-text);
+}
+
+.btn--highlight {
+    background-color: var(--color-primary);
+    color: var(--color-text-on-strong, #ffffff);
+    border-color: transparent;
+    box-shadow: 0 4px 10px var(--color-shadow-medium);
+}
+
+.btn--highlight:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px var(--color-shadow-medium);
 }
 
 .btn i {

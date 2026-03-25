@@ -65,7 +65,7 @@ export class SCBilaraNavMain extends LitElement {
                         Unpublished Changes
                       </a>
                     </sl-menu-item>
-                    <sl-menu-item>
+                    <sl-menu-item x-show="isAdmin && isActive">
                       <a href="/admin" target="_blank" rel="noopener noreferrer" class="menu-item-link">Admin</a>
                     </sl-menu-item>
                     <sl-menu-item x-show="isAdmin && isActive">

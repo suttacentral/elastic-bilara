@@ -355,6 +355,40 @@ export const themes = {
         --color-error: #b8322a;
         --color-success: #4f7a5c;
         --color-info: #1f5aa6;
+    `,
+    /* Zhongguose - Zen Forest */
+    'chanlin': css`
+        --color-primary: #78846c;
+        --color-secondary: #ddba9a;
+        --color-background: #f8f7f4;
+        --color-background-secondary: #eeeadd;
+        --color-background-tertiary: #e3dcc8;
+        --color-text: #2a3024;
+        --color-text-emphasized: #131710;
+        --color-text-secondary: #4a5441;
+        --color-text-on-strong: #ffffff;
+        --color-border: rgba(120, 132, 108, 0.25);
+        --color-warning: #c0843c;
+        --color-error: #bf4545;
+        --color-success: #4e874e;
+        --color-info: #3b7b9c;
+    `,
+    /* Zhongguose - Ruihe */
+    'ruihe': css`
+        --color-primary: #5c6d5a;
+        --color-secondary: #7f6345;
+        --color-background: #fdfbf5;
+        --color-background-secondary: #f1ebd8;
+        --color-background-tertiary: #decd99;
+        --color-text: #45493b;
+        --color-text-emphasized: #23251e;
+        --color-text-secondary: #696f5a;
+        --color-text-on-strong: #ffffff;
+        --color-border: #af9261;
+        --color-warning: #7f6345;
+        --color-error: #a84242;
+        --color-success: #5c6d5a;
+        --color-info: #4c82a3;
     `
 }
 

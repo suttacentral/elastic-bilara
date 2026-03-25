@@ -1,25 +1,152 @@
 .index-main-nav {
-    padding: var(--space-sm) var(--space-md)
+    padding: var(--space-sm) var(--space-md);
+    display: flex;
+    align-items: center;
 }
 
 .main-content--index {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: var(--space-lg);
+    min-height: 50vh;
+    padding: var(--space-xl) var(--space-md);
+    position: relative; /* Containing block for the bodhi leaf */
+}
+
+.index-main__title {
+    font-size: var(--text-3xl, 2rem);
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: var(--space-md);
+    text-align: center;
+}
+
+.index-main__card {
+    background: var(--color-background-secondary);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-xl);
+    box-shadow: 0 10px 25px var(--color-shadow-medium);
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    border: 1px solid var(--color-border);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.index-main__card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px var(--color-shadow-medium);
 }
 
 .index-main__description {
-    text-align: center;
-    color: var(--color-black);
+    color: var(--color-text);
+    font-size: var(--text-lg);
+    line-height: 1.6;
 }
 
-.index-main__description--push-top {
+.index-main__description--tip {
+    color: var(--color-text-secondary);
+    font-size: var(--text-base, 1rem);
+}
+
+.index-main__action {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+/* Delightful Animations */
+.fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.btn--large {
+    padding: var(--space-md) var(--space-xl);
+    font-size: var(--text-lg);
+    border-radius: 8px;
+    font-weight: 600;
 }
 
 @media (max-width: 575px) {
     .index-main-nav {
         font-size: var(--text-lg);
-        display: flex;
+    }
+    
+    .index-main__card {
+        padding: var(--space-lg);
+    }
+}
+
+/* Bodhi Leaf Background */
+.bodhi-leaf-bg {
+    position: absolute;
+    right: 5vw;
+    bottom: 5vh;
+    width: 45%;
+    max-width: 450px;
+    height: auto;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.15;
+    transform: rotate(-15deg);
+    transform-origin: bottom right;
+    mix-blend-mode: multiply; /* In light mode, inverted image (white bg) + multiply = drops the white background */
+}
+
+@media (prefers-color-scheme: dark) {
+    .bodhi-leaf-bg {
+        mix-blend-mode: screen; /* In dark mode, black bg + screen = drops the black background */
+        opacity: 0.25;
+    }
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg {
+    mix-blend-mode: screen;
+    opacity: 0.25;
+}
+
+.bodhi-leaf-bg img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    /* Light mode default: invert black background to white, make gold lines gray */
+    filter: invert(100%) grayscale(100%);
+}
+
+@media (prefers-color-scheme: dark) {
+    .bodhi-leaf-bg img {
+        /* Dark mode default: don't invert, just grayscale the gold lines */
+        filter: grayscale(100%);
+    }
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg img {
+    filter: grayscale(100%);
+}
+
+@media (max-width: 768px) {
+    .bodhi-leaf-bg {
+        width: 60%;
+        right: 5vw;
+        bottom: 5vh;
+        opacity: 0.1;
     }
 }
