@@ -132,9 +132,9 @@
                 <div x-show="loading" class="skeleton-list">
                     <template x-for="i in 8">
                         <div class="skeleton-item">
-                            <div class="skeleton" style="width: 24px; height: 24px;"></div>
-                            <div class="skeleton" style="flex: 1; height: 20px;"></div>
-                            <div class="skeleton" style="width: 60px; height: 20px;"></div>
+                            <div class="skeleton skeleton-icon"></div>
+                            <div class="skeleton skeleton-content"></div>
+                            <div class="skeleton skeleton-badge"></div>
                         </div>
                     </template>
                 </div>
@@ -143,7 +143,7 @@
                     <i class="bi-check-circle"></i>
                     <div>
                         <strong>Working directory clean</strong>
-                        <p style="font-size: var(--text-sm); margin-top: 4px;">No uncommitted changes detected</p>
+                        <p>No uncommitted changes detected</p>
                     </div>
                 </div>
 
@@ -164,7 +164,7 @@
                         <i class="bi-inbox"></i>
                         <div>
                             <strong>No files for your user</strong>
-                            <p style="font-size: var(--text-sm); margin-top: 4px;">There are no uncommitted changes in directories related to <strong x-text="username"></strong></p>
+                            <p>There are no uncommitted changes in directories related to <strong x-text="username"></strong></p>
                         </div>
                     </div>
 
@@ -172,7 +172,7 @@
                         <i class="bi-search"></i>
                         <div>
                             <strong>No files found</strong>
-                            <p style="font-size: var(--text-sm); margin-top: 4px;">No files match your filter criteria</p>
+                            <p>No files match your filter criteria</p>
                         </div>
                     </div>
                     <template x-for="(file, index) in paginatedFiles" :key="file.path">
@@ -287,7 +287,7 @@
                         <i class="bi-file-earmark-code"></i>
                         <div>
                             <strong>Select a file</strong>
-                            <p style="font-size: var(--text-sm); margin-top: 4px;">Click on a file to view its changes</p>
+                            <p>Click on a file to view its changes</p>
                         </div>
                     </div>
 
@@ -299,10 +299,10 @@
                     </div>
 
                     <div x-show="selectedFile && !loadingDiff && diffError" class="empty-state">
-                        <i class="bi-exclamation-triangle" style="color: var(--color-error);"></i>
+                        <i class="bi-exclamation-triangle diff-error-icon"></i>
                         <div>
                             <strong>Error loading diff</strong>
-                            <p style="font-size: var(--text-sm); margin-top: 4px;" x-text="diffError"></p>
+                            <p x-text="diffError"></p>
                         </div>
                     </div>
                 </div>

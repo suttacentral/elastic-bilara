@@ -533,7 +533,7 @@ body {
 }
 
 .modal-dialog {
-    background-color: var(--color-text-on-strong);
+    background-color: var(--color-background);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     width: 100%;
@@ -572,11 +572,16 @@ body {
     margin: 0;
     font-size: var(--text-lg);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-black);
+    color: var(--color-text-emphasized);
 }
 
 .modal-header-danger {
-    background-color: var(--color-background-tertiary);
+    background-color: color-mix(in srgb, var(--color-error) 12%, var(--color-background-secondary));
+    border-bottom-color: color-mix(in srgb, var(--color-error) 30%, var(--color-background-tertiary));
+}
+
+.modal-header-danger h3 {
+    color: var(--color-error);
 }
 
 .modal-header-danger i {
@@ -584,7 +589,12 @@ body {
 }
 
 .modal-header-info {
-    background-color: var(--color-background-tertiary);
+    background-color: color-mix(in srgb, var(--color-info) 12%, var(--color-background-secondary));
+    border-bottom-color: color-mix(in srgb, var(--color-info) 30%, var(--color-background-tertiary));
+}
+
+.modal-header-info h3 {
+    color: var(--color-info);
 }
 
 .modal-header-info i {
@@ -592,7 +602,12 @@ body {
 }
 
 .modal-header-success {
-    background-color: var(--color-success-bg);
+    background-color: color-mix(in srgb, var(--color-success) 12%, var(--color-background-secondary));
+    border-bottom-color: color-mix(in srgb, var(--color-success) 30%, var(--color-background-tertiary));
+}
+
+.modal-header-success h3 {
+    color: var(--color-success);
 }
 
 .modal-header-success i {
@@ -611,7 +626,7 @@ body {
 .modal-body .file-name {
     font-family: var(--font-serif);
     font-size: var(--text-sm);
-    background-color: var(--color-background);
+    background-color: var(--color-background-secondary);
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
@@ -1158,6 +1173,31 @@ body {
 
 .batch-btn-publish.loading i {
     animation: spin 1s linear infinite;
+}
+
+.empty-state p,
+.diff-empty p {
+    font-size: var(--text-sm);
+    margin-top: 4px;
+}
+
+.diff-error-icon {
+    color: var(--color-error);
+}
+
+.skeleton-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.skeleton-content {
+    flex: 1;
+    height: 20px;
+}
+
+.skeleton-badge {
+    width: 60px;
+    height: 20px;
 }
 
 @media (max-width: 768px) {
