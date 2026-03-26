@@ -21,6 +21,7 @@ function notificationsPanel() {
         },
         // Settings state
         showSettingsModal: false,
+        loadingAuthors: false,
         allAuthors: [],
         selectedAuthors: [],
         selectedDays: 360,
@@ -294,6 +295,7 @@ function notificationsPanel() {
         },
 
         async loadAuthors() {
+            this.loadingAuthors = true;
             const CACHE_KEY = 'git-authors-cache';
             const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
@@ -325,6 +327,8 @@ function notificationsPanel() {
             } catch (error) {
                 console.error('Error loading authors:', error);
                 this.allAuthors = [];
+            } finally {
+                this.loadingAuthors = false;
             }
         },
 

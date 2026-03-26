@@ -859,7 +859,54 @@ body {
     animation: spin 1s linear infinite;
 }
 
-/* Pagination */
+.empty-state p {
+    font-size: var(--text-sm);
+    margin-top: 4px;
+}
+
+.skeleton-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.skeleton-content {
+    flex: 1;
+    height: 20px;
+}
+
+.skeleton-badge {
+    width: 100px;
+    height: 20px;
+}
+
+.panel-header-meta {
+    font-size: var(--text-xs);
+    font-family: monospace;
+    color: var(--color-text-secondary);
+}
+
+.done-btn-read {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.loading-state-authors {
+    padding: var(--space-md);
+    min-height: 150px;
+}
+
+.loading-state span {
+    font-size: var(--text-sm);
+}
+
+.remark-value {
+    white-space: pre-wrap;
+}
+
+.detail-error-icon {
+    color: var(--color-error);
+}
+
 .pagination-controls {
     display: flex;
     align-items: center;
@@ -952,7 +999,6 @@ body {
     border-color: var(--color-primary);
 }
 
-/* Toast */
 .toast {
     position: fixed;
     bottom: var(--space-lg);
@@ -992,7 +1038,6 @@ body {
     display: none !important;
 }
 
-/* Modal */
 .modal-backdrop {
     position: fixed;
     top: 0;

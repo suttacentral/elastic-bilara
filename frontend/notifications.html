@@ -106,9 +106,9 @@
                     <div x-show="loading" class="skeleton-list">
                         <template x-for="i in 5">
                             <div class="skeleton-item">
-                                <div class="skeleton" style="width: 24px; height: 24px;"></div>
-                                <div class="skeleton" style="flex: 1; height: 20px;"></div>
-                                <div class="skeleton" style="width: 100px; height: 20px;"></div>
+                                <div class="skeleton skeleton-icon"></div>
+                                <div class="skeleton skeleton-content"></div>
+                                <div class="skeleton skeleton-badge"></div>
                             </div>
                         </template>
                     </div>
@@ -117,7 +117,7 @@
                         <i class="bi-bell-slash"></i>
                         <div>
                             <strong>No notifications</strong>
-                            <p style="font-size: var(--text-sm); margin-top: 4px;">You're all caught up!</p>
+                            <p>You're all caught up!</p>
                         </div>
                     </div>
 
@@ -126,7 +126,7 @@
                             <i class="bi-search"></i>
                             <div>
                                 <strong>No results found</strong>
-                                <p style="font-size: var(--text-sm); margin-top: 4px;">No notifications match your filter criteria</p>
+                                <p>No notifications match your filter criteria</p>
                             </div>
                         </div>
 
@@ -159,9 +159,8 @@
                                         <i :class="markingDone === getNotificationKey(notification) ? 'bi-arrow-repeat spinning' : 'bi-check-circle'"></i>
                                         Done
                                     </button>
-                                    <span class="action-btn done-btn"
+                                    <span class="action-btn done-btn done-btn-read"
                                           x-show="isNotificationRead(notification)"
-                                          style="cursor: default; opacity: 0.7;"
                                           title="Already read">
                                         <i class="bi-check2-all"></i>
                                         Read
@@ -231,7 +230,7 @@
                         <span>Details</span>
                     </div>
                     <span x-show="selectedNotification"
-                          style="font-size: var(--text-xs); font-family: monospace; color: var(--color-text-secondary);"
+                          class="panel-header-meta"
                           x-text="selectedNotification ? (selectedNotificationData?.notification_type === 'remark' ? 'Remark: ' + selectedNotification : 'Commit: ' + selectedNotification.substring(0, 8) + '...') : ''">
                     </span>
                 </div>
@@ -246,7 +245,7 @@
                             <i class="bi-file-earmark-code"></i>
                             <div>
                                 <strong>Select a notification</strong>
-                                <p style="font-size: var(--text-sm); margin-top: 4px;">Click on a notification to view affected files</p>
+                                <p>Click on a notification to view affected files</p>
                             </div>
                         </div>
 
@@ -313,7 +312,7 @@
                                     <div class="change-detail">
                                         <div class="change-html">
                                             <p><strong>Latest Remark Content</strong></p>
-                                            <p x-text="selectedNotificationData?.remark_value || '[empty]'" style="white-space: pre-wrap;"></p>
+                                            <p class="remark-value" x-text="selectedNotificationData?.remark_value || '[empty]'"></p>
                                         </div>
                                     </div>
                                 </div>
@@ -322,10 +321,10 @@
 
                         <!-- Error State -->
                         <div x-show="selectedNotification && !loadingDetail && detailError" class="empty-state">
-                            <i class="bi-exclamation-triangle" style="color: var(--color-error);"></i>
+                            <i class="bi-exclamation-triangle detail-error-icon"></i>
                             <div>
                                 <strong>Error loading details</strong>
-                                <p style="font-size: var(--text-sm); margin-top: 4px;" x-text="detailError"></p>
+                                <p x-text="detailError"></p>
                             </div>
                         </div>
                     </div>
@@ -386,7 +385,7 @@
                                 </button>
                             </div>
 
-                            <div class="author-list" x-show="allAuthors.length > 0">
+                            <div class="author-list" x-show="!loadingAuthors && allAuthors.length > 0">
                                 <template x-for="author in filteredAuthors" :key="author">
                                     <label class="author-item">
                                         <input type="checkbox"
@@ -397,7 +396,12 @@
                                 </template>
                             </div>
 
-                            <div x-show="allAuthors.length === 0" class="empty-authors">
+                            <div x-show="loadingAuthors" class="loading-state loading-state-authors">
+                                <div class="spinner"></div>
+                                <span>Loading authors...</span>
+                            </div>
+
+                            <div x-show="!loadingAuthors && allAuthors.length === 0" class="empty-authors">
                                 <i class="bi-person-x"></i>
                                 <p>No authors available</p>
                             </div>
