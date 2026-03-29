@@ -8,6 +8,7 @@ function fetchTranslation() {
         tagProjectName: '',
         tagProject: null,
         availableTags: [],
+        hyphenatedPrefixRanges: [],
         originalTranslations: null,
         splitter_uid: null,
         merger_uid: null,
@@ -21,7 +22,26 @@ function fetchTranslation() {
             this.muid = muid;
             this.sourceMuid = source;
 
-            await this.findOrCreateObject(source, this.prefix, true);
+            await this.loadHyphenatedPrefixRanges();
+
+            // Try loading source with original prefix; fall back to hyphenated range on failure
+            try {
+                await this.findOrCreateObject(source, this.prefix, true);
+            } catch (error) {
+                const fallbackPrefix = this.getFallbackPrefix(this.prefix);
+                if (fallbackPrefix) {
+                    console.info(`Prefix "${this.prefix}" not found, falling back to range prefix "${fallbackPrefix}"`);
+                    this.prefix = fallbackPrefix;
+                    await this.findOrCreateObject(source, this.prefix, true);
+                    // Update URL to reflect the resolved prefix
+                    const url = new URL(window.location);
+                    url.searchParams.set("prefix", this.prefix);
+                    window.history.replaceState(null, "", url);
+                } else {
+                    throw error;
+                }
+            }
+
             if (muid) {
                 await this.findOrCreateObject(muid, this.prefix);
             }
@@ -77,6 +97,75 @@ function fetchTranslation() {
 
             this.updateProgress();
         },
+        async loadHyphenatedPrefixRanges() {
+            try {
+                const response = await fetch("/static/merged_sutta_ranges.json", {
+                    credentials: "same-origin",
+                });
+                if (!response.ok) {
+                    this.hyphenatedPrefixRanges = [];
+                    return;
+                }
+                const ranges = await response.json();
+                this.hyphenatedPrefixRanges = Array.isArray(ranges) ? ranges : [];
+            } catch (error) {
+                this.hyphenatedPrefixRanges = [];
+            }
+        },
+        parseHyphenatedPrefixRange(rangePrefix) {
+            const match = /^(.+?)(\d+)-(\d+)$/.exec(rangePrefix);
+            if (!match) {
+                return null;
+            }
+            const start = Number(match[2]);
+            const end = Number(match[3]);
+            if (Number.isNaN(start) || Number.isNaN(end) || start > end) {
+                return null;
+            }
+            return {
+                original: rangePrefix,
+                base: match[1],
+                start,
+                end,
+                width: end - start,
+            };
+        },
+        getFallbackPrefix(prefix) {
+            if (!prefix || this.parseHyphenatedPrefixRange(prefix)) {
+                return null;
+            }
+
+            const inputMatch = /^(.+?)(\d+)$/.exec(prefix);
+            if (!inputMatch) {
+                return null;
+            }
+
+            const inputBase = inputMatch[1];
+            const inputNumber = Number(inputMatch[2]);
+            if (Number.isNaN(inputNumber)) {
+                return null;
+            }
+
+            let bestMatch = null;
+            for (const rangePrefix of this.hyphenatedPrefixRanges) {
+                const parsedRange = this.parseHyphenatedPrefixRange(rangePrefix);
+                if (!parsedRange) {
+                    continue;
+                }
+                if (parsedRange.base !== inputBase) {
+                    continue;
+                }
+                if (inputNumber < parsedRange.start || inputNumber > parsedRange.end) {
+                    continue;
+                }
+                if (!bestMatch || parsedRange.width < bestMatch.width) {
+                    bestMatch = parsedRange;
+                }
+            }
+
+            return bestMatch ? bestMatch.original : null;
+        },
+
         getValue(translation, uid) {
             return translation.data[uid] || "";
         },
