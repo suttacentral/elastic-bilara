@@ -108,7 +108,7 @@
                 </div>
             </div>
 
-            <div class="batch-actions-bar" x-show="!loading && selectedFiles.length > 0">
+            <div class="batch-actions-bar" x-show="false">
                 <div class="batch-info">
                     <i class="bi-check2-square"></i>
                     <span x-text="`${selectedFiles.length} file(s) selected`"></span>
@@ -149,7 +149,7 @@
 
                 <div x-show="!loading && files.length > 0" class="file-list">
                     <!-- Select All Header -->
-                    <div class="file-list-header" x-show="filteredFiles.length > 0">
+                    <div class="file-list-header" x-show="false">
                         <label class="checkbox-wrapper select-all">
                             <input type="checkbox"
                                    :checked="isAllSelected"
@@ -180,7 +180,7 @@
                              :class="{ 'selected': selectedFile === file.path, 'checked': isFileSelected(file.path) }"
                              @click="selectFile(file)"
                              :style="{ animationDelay: (index * 30) + 'ms' }">
-                            <label class="checkbox-wrapper" @click.stop>
+                            <label class="checkbox-wrapper" @click.stop style="display:none">
                                 <input type="checkbox"
                                        :checked="isFileSelected(file.path)"
                                        @change="toggleFileSelection(file.path)">

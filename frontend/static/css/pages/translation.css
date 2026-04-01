@@ -1158,6 +1158,35 @@ sl-dialog::part(title) {
     flex-shrink: 0;
 }
 
+/* ===== Search Panel Toggle Transition ===== */
+.search-panel-transition-enter {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.search-panel-transition-enter-start {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+.search-panel-transition-enter-end {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.search-panel-transition-leave {
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.search-panel-transition-leave-start {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.search-panel-transition-leave-end {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
 .translation-cell__resizer {
     position: absolute;
     right: -3px;
