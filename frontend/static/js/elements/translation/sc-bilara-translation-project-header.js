@@ -148,6 +148,12 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               box-shadow: var(--shadow-sm);
           }
 
+          @media (min-width: 1280px) {
+              .project-header__search-toggle {
+                  display: none !important;
+              }
+          }
+
           @media (max-width: 768px) {
               .project-header {
                   flex-wrap: wrap;
@@ -168,7 +174,22 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
                total: 0,
                percentage: 0,
                muid: new URLSearchParams(window.location.search).get('muid'),
-               init() {
+               userRole: '',
+               username: '',
+               get canSeeGoBtn() {
+                   if (this.userRole === ROLES.admin || this.userRole === ROLES.superuser) {
+                       return true;
+                   }
+                   if (!this.muid || !this.username) return false;
+                   const parts = this.muid.split('-');
+                   return parts.includes(this.username);
+               },
+               async init() {
+                   const userInfo = getUserInfo();
+                   await userInfo.getRole();
+                   this.userRole = userInfo.role;
+                   this.username = userInfo.username;
+
                    window.addEventListener('translation-progress-update', (e) => {
                        this.translated = e.detail.translated;
                        this.total = e.detail.total;
@@ -189,7 +210,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               <span class="project-header__progress-text" x-text="percentage + '%'"></span>
               <span class="project-header__progress-detail" x-text="'(' + translated + '/' + total + ')'"></span>
               <button x-cloak
-                  x-show="percentage >= 90"
+                  x-show="percentage >= 90 && canSeeGoBtn"
                   @click="goToUnpublished()"
                   class="project-header__progress-go-btn"
                   title="Go to Unpublished Changes">
@@ -202,6 +223,17 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
                   <li class="project-header__nav-item">
                       <sl-button size="small" variant="warning" outline @click="$dispatch('toggle-detail-panel', {panel: 'related'});">
                           <i class="bi bi-collection" style="margin-right: 6px;"></i>Related
+                      </sl-button>
+                  </li>
+                  <li class="project-header__nav-item project-header__search-toggle">
+                      <sl-button size="small" variant="warning" outline
+                          @click="$dispatch('toggle-search-panel')"
+                          x-data="{ panelVisible: true }"
+                          @toggle-search-panel.window="panelVisible = !panelVisible"
+                          @resize.window="if(window.innerWidth >= 1280) panelVisible = true"
+                          :title="panelVisible ? 'Hide search panel' : 'Show search panel'">
+                          <i class="bi" :class="panelVisible ? 'bi-layout-sidebar-reverse' : 'bi-layout-sidebar'" style="margin-right: 6px;"></i>
+                          <span x-text="panelVisible ? 'Hide Search Panel' : 'Show Search Panel'"></span>
                       </sl-button>
                   </li>
               </ul>
