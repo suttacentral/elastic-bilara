@@ -227,12 +227,13 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
                   </li>
                   <li class="project-header__nav-item project-header__search-toggle">
                       <sl-button size="small" variant="warning" outline
-                          @click="$dispatch('toggle-search-panel')"
-                          x-data="{ panelVisible: true }"
-                          @toggle-search-panel.window="panelVisible = !panelVisible"
-                          @resize.window="if(window.innerWidth >= 1280) panelVisible = true"
-                          :title="panelVisible ? 'Hide search panel' : 'Show search panel'">
-                          <i class="bi" :class="panelVisible ? 'bi-layout-sidebar-reverse' : 'bi-layout-sidebar'" style="margin-right: 6px;"></i>
+                           @click="$dispatch('toggle-search-panel')"
+                           x-data="{ panelVisible: window.innerWidth >= 1280 }"
+                           @toggle-search-panel.window="panelVisible = !panelVisible"
+                           @show-search-panel.window="panelVisible = true"
+                           @resize.window="if(window.innerWidth >= 1280) panelVisible = true"
+                           :title="panelVisible ? 'Hide search panel' : 'Show search panel'">
+                           <i class="bi" :class="panelVisible ? 'bi-layout-sidebar-reverse' : 'bi-layout-sidebar'" style="margin-right: 6px;"></i>
                           <span x-text="panelVisible ? 'Hide Search Panel' : 'Show Search Panel'"></span>
                       </sl-button>
                   </li>
