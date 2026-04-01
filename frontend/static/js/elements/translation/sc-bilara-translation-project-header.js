@@ -148,11 +148,8 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               box-shadow: var(--shadow-sm);
           }
 
-          @media (min-width: 1280px) {
-              .project-header__search-toggle {
-                  display: none !important;
-              }
-          }
+
+
 
           @media (max-width: 768px) {
               .project-header {
