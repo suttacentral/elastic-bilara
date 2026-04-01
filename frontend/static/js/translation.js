@@ -116,17 +116,27 @@ function fetchTranslation() {
                 }
             }
 
-            // Auto-load current user's remarks
-            if (myRemarkKey) {
+            // Restore previously saved related project selections
+            const savedRelated = this.getSavedRelatedProjects();
+            const storageKey = `relatedProjects_${this.muid}`;
+            const hasPersistedState = localStorage.getItem(storageKey) !== null;
+
+            // Auto-load current user's remarks only if:
+            // 1. No persisted state exists (first time), default to showing
+            // 2. Persisted state includes myRemarkKey, user chose to keep it
+            const shouldAutoLoadRemarks = myRemarkKey && (!hasPersistedState || savedRelated.includes(myRemarkKey));
+            if (shouldAutoLoadRemarks) {
                 try {
                     await this.findOrCreateObject(myRemarkKey, this.prefix);
+                    // On first visit, seed localStorage so toggle can track removals
+                    if (!hasPersistedState) {
+                        this.saveRelatedProjects([myRemarkKey]);
+                    }
                 } catch (error) {
                     console.error('Failed to auto-load own remarks:', error);
                 }
             }
 
-            // Restore previously saved related project selections
-            const savedRelated = this.getSavedRelatedProjects();
             const validSaved = savedRelated.filter(p => this.relatedProjects.includes(p));
             for (const project of validSaved) {
                 try {
@@ -135,9 +145,9 @@ function fetchTranslation() {
                     console.error(`Failed to restore related project ${project}:`, error);
                 }
             }
-            // Include auto-loaded my remarks in the restore event
+            // Build the list of all loaded projects for the restore event
             const allLoaded = [...validSaved];
-            if (myRemarkKey && !allLoaded.includes(myRemarkKey)) {
+            if (shouldAutoLoadRemarks && myRemarkKey && !allLoaded.includes(myRemarkKey)) {
                 allLoaded.push(myRemarkKey);
             }
             window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: allLoaded } }));
