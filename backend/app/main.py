@@ -5,17 +5,8 @@ from app.db.models.notification import Notification, RemarkNotification
 from app.db.models.remark import Remark
 from app.db.models.user import User
 from fastapi import FastAPI
-from sqlalchemy import inspect, text
 from starlette.middleware.cors import CORSMiddleware
 
-# Migrate remarks table: drop old table if github_id column is missing
-with engine.connect() as conn:
-    inspector = inspect(engine)
-    if inspector.has_table("remarks"):
-        columns = [c["name"] for c in inspector.get_columns("remarks")]
-        if "github_id" not in columns:
-            conn.execute(text("DROP TABLE remarks"))
-            conn.commit()
 
 Base.metadata.create_all(bind=engine, checkfirst=True)
 
