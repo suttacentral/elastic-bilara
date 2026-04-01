@@ -659,8 +659,8 @@
                             <span class="project-container__detail-panel__related-item-check"
                                 x-text="selectedProjects[project] ? '✓' : ''"></span>
                             <span class="project-container__detail-panel__related-item-label">
-                                <i class="bi bi-chat-left-text"
-                                    x-show="isRemarkProject(project)"
+                                <i class="bi"
+                                    :class="getProjectIcon(project)"
                                     aria-hidden="true"></i>
                                 <span x-text="isRemarkProject(project) ? getRemarkLabel(project) : project"></span>
                             </span>

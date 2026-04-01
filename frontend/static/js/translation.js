@@ -31,6 +31,15 @@ function fetchTranslation() {
             const user = this.remarkUsers.find(u => u.github_id === gid);
             return user ? `Remarks (${user.username})` : `Remarks (${gid})`;
         },
+        getProjectIcon(key) {
+            if (this.isRemarkProject(key)) return 'bi-chat-left-text';
+            if (key.startsWith('comment')) return 'bi-chat-dots';
+            if (key.startsWith('reference')) return 'bi-link-45deg';
+            if (key.startsWith('tag')) return 'bi-tag';
+            if (key.startsWith('translation')) return 'bi-translate';
+            if (key.startsWith('variant')) return 'bi-diagram-2';
+            return 'bi-file-text';
+        },
         async init() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
@@ -745,6 +754,7 @@ function fetchTranslation() {
                 const data = await response.json();
                 return Array.isArray(data) ? data : [];
             } catch (error) {
+                console.error('Failed to fetch remark users:', error);
                 return [];
             }
         },
