@@ -1,8 +1,11 @@
 function fetchTranslation() {
-    const REMARKS_PROJECT = "remarks";
+    const REMARKS_PREFIX = "remarks:";
     return {
         translations: [],
         relatedProjects: [],
+        remarkUsers: [],
+        currentUserGithubId: null,
+        currentUsername: null,
         htmlProjectName: '',
         htmlProject: null,
         tagProjectName: '',
@@ -13,6 +16,21 @@ function fetchTranslation() {
         splitter_uid: null,
         merger_uid: null,
         mergee_uid: null,
+        isRemarkProject(key) {
+            return key && key.startsWith(REMARKS_PREFIX);
+        },
+        getRemarkGithubId(key) {
+            return key ? parseInt(key.substring(REMARKS_PREFIX.length), 10) : null;
+        },
+        makeRemarkKey(githubId) {
+            return REMARKS_PREFIX + githubId;
+        },
+        getRemarkLabel(key) {
+            const gid = this.getRemarkGithubId(key);
+            if (gid === this.currentUserGithubId) return 'My Remarks';
+            const user = this.remarkUsers.find(u => u.github_id === gid);
+            return user ? `Remarks (${user.username})` : `Remarks (${gid})`;
+        },
         async init() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
@@ -21,6 +39,18 @@ function fetchTranslation() {
 
             this.muid = muid;
             this.sourceMuid = source;
+
+            // Fetch current user info directly
+            try {
+                const userResp = await requestWithTokenRetry("users/me");
+                if (userResp.ok) {
+                    const userData = await userResp.json();
+                    this.currentUserGithubId = userData.github_id || null;
+                    this.currentUsername = userData.username || null;
+                }
+            } catch (e) {
+                console.error('Failed to fetch current user info:', e);
+            }
 
             await this.loadHyphenatedPrefixRanges();
 
@@ -60,8 +90,30 @@ function fetchTranslation() {
                 project !== this.htmlProjectName
             );
 
-            if (!this.relatedProjects.includes(REMARKS_PROJECT)) {
-                this.relatedProjects.push(REMARKS_PROJECT);
+            // Build remark projects per user
+            const remarksMuid = this.sourceMuid || this.muid;
+            this.remarkUsers = await this.fetchRemarkUsers(remarksMuid, this.prefix);
+            const myRemarkKey = this.currentUserGithubId ? this.makeRemarkKey(this.currentUserGithubId) : null;
+
+            // Always include current user's remark in related projects
+            if (myRemarkKey && !this.relatedProjects.includes(myRemarkKey)) {
+                this.relatedProjects.push(myRemarkKey);
+            }
+            // Add other users who have remarks
+            for (const u of this.remarkUsers) {
+                const key = this.makeRemarkKey(u.github_id);
+                if (!this.relatedProjects.includes(key)) {
+                    this.relatedProjects.push(key);
+                }
+            }
+
+            // Auto-load current user's remarks
+            if (myRemarkKey) {
+                try {
+                    await this.findOrCreateObject(myRemarkKey, this.prefix);
+                } catch (error) {
+                    console.error('Failed to auto-load own remarks:', error);
+                }
             }
 
             // Restore previously saved related project selections
@@ -74,7 +126,12 @@ function fetchTranslation() {
                     console.error(`Failed to restore related project ${project}:`, error);
                 }
             }
-            window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: validSaved } }));
+            // Include auto-loaded my remarks in the restore event
+            const allLoaded = [...validSaved];
+            if (myRemarkKey && !allLoaded.includes(myRemarkKey)) {
+                allLoaded.push(myRemarkKey);
+            }
+            window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: allLoaded } }));
 
             // Apply saved column order after all translations are loaded
             try {
@@ -183,7 +240,7 @@ function fetchTranslation() {
         getTranslationProgress() {
             const sourceTranslation = this.translations.find(t => t.isSource);
             const editableTranslation = this.translations.find(
-                t => t.canEdit && !t.isSource && t.muid !== REMARKS_PROJECT
+                t => t.canEdit && !t.isSource && !this.isRemarkProject(t.muid)
             );
 
             if (!sourceTranslation || !editableTranslation) {
@@ -622,9 +679,15 @@ function fetchTranslation() {
             if (!obj) {
                 try {
                     const remarksMuid = this.sourceMuid || this.muid;
-                    const data = key === REMARKS_PROJECT
-                        ? await this.fetchRemarksData(remarksMuid, prefix)
-                        : await this.fetchData(key, prefix);
+                    let data;
+                    if (this.isRemarkProject(key)) {
+                        const gid = this.getRemarkGithubId(key);
+                        data = await this.fetchRemarksData(remarksMuid, prefix, gid);
+                        // Only the current user can edit their own remarks
+                        data.can_edit = (gid === this.currentUserGithubId);
+                    } else {
+                        data = await this.fetchData(key, prefix);
+                    }
                     obj = { canEdit: false, muid: key, prefix: prefix };
                     obj["data"] = data.data;
                     obj["canEdit"] = data["can_edit"];
@@ -643,9 +706,14 @@ function fetchTranslation() {
             if (!obj) {
                 try {
                     const remarksMuid = this.sourceMuid || this.muid;
-                    const data = key === REMARKS_PROJECT
-                        ? await this.fetchRemarksData(remarksMuid, prefix)
-                        : await this.fetchData(key, prefix);
+                    let data;
+                    if (this.isRemarkProject(key)) {
+                        const gid = this.getRemarkGithubId(key);
+                        data = await this.fetchRemarksData(remarksMuid, prefix, gid);
+                        data.can_edit = (gid === this.currentUserGithubId);
+                    } else {
+                        data = await this.fetchData(key, prefix);
+                    }
                     obj = { canEdit: false, muid: key, prefix: prefix };
                     obj["data"] = data.data;
                     obj["canEdit"] = data["can_edit"];
@@ -670,9 +738,23 @@ function fetchTranslation() {
                 throw new Error(error);
             }
         },
-        async fetchRemarksData(muid, prefix) {
+        async fetchRemarkUsers(muid, prefix) {
             try {
-                const response = await requestWithTokenRetry(`remarks/${muid}/${prefix}/`);
+                const response = await requestWithTokenRetry(`remarks/users/${muid}/${prefix}/`);
+                if (!response.ok) return [];
+                const data = await response.json();
+                return Array.isArray(data) ? data : [];
+            } catch (error) {
+                return [];
+            }
+        },
+        async fetchRemarksData(muid, prefix, githubId) {
+            try {
+                let url = `remarks/${muid}/${prefix}/`;
+                if (githubId != null) {
+                    url += `?github_id=${githubId}`;
+                }
+                const response = await requestWithTokenRetry(url);
                 const data = await response.json();
                 if (!Array.isArray(data)) {
                     throw new Error("Invalid remarks data format from the API");
@@ -727,7 +809,7 @@ function fetchTranslation() {
                         }
                     }
                     try {
-                        if (translation.muid === REMARKS_PROJECT) {
+                        if (this.isRemarkProject(translation.muid)) {
                             await this.updateRemarkHandler(uid, segment);
                         } else {
                             await this.updateHandler(

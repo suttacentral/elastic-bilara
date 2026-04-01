@@ -64,3 +64,4 @@ class RemarkBase(BaseModel):
 
 class Remark(RemarkBase):
     id: int
+    github_id: int

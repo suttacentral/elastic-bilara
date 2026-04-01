@@ -37,6 +37,7 @@ function getUserInfo() {
         username: "",
         avatarURL: "",
         role: "",
+        githubId: null,
         async getRole() {
             try {
                 const response = await requestWithTokenRetry("users/me");
@@ -48,6 +49,7 @@ function getUserInfo() {
                 this.isActive = data.is_active;
                 this.username = data.username;
                 this.avatarURL = data.avatar_url;
+                this.githubId = data.github_id;
             } catch (error) {
                 throw new Error(error);
             }

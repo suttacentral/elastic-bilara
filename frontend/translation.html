@@ -77,6 +77,7 @@
 
         <div class="project-container"
             x-data="{
+                searchPanelVisible: true,
                 searchPanelWidth: 280,
                 isPanelDragging: false,
                 panelStartX: 0,
@@ -105,7 +106,9 @@
             }"
             :class="{ 'project-container--resizing': isPanelDragging }"
             @mousemove.window="onPanelResize($event)"
-            @mouseup.window="stopPanelResize()">
+            @mouseup.window="stopPanelResize()"
+            @toggle-search-panel.window="searchPanelVisible = !searchPanelVisible"
+            @resize.window="if(window.innerWidth >= 1280) searchPanelVisible = true">
             <div class="translation-grid"
                 x-data="{
                     columnWidths: [],
@@ -345,8 +348,8 @@
                             @drop="onHeaderDrop(index, $event)"
                             @dragend="onHeaderDragEnd($event)"
                             @keydown="onHeaderKeydown(index, $event)">
-                            <span class="translation-grid__header-title" x-text="translation.muid"
-                                :class="'translation-grid__header-badge--' + (translation.muid || '').split('-')[0]">
+                            <span class="translation-grid__header-title" x-text="isRemarkProject(translation.muid) ? getRemarkLabel(translation.muid) : translation.muid"
+                                :class="'translation-grid__header-badge--' + (isRemarkProject(translation.muid) ? 'remarks' : (translation.muid || '').split('-')[0])">
                             </span>
 
                             <!-- Resizer handle (Not shown in the last column) -->
@@ -448,7 +451,7 @@
 
                                         <!-- Action buttons (split/merge) -->
                                         <sc-bilara-translation-project-actions
-                                            x-show="translation.canEdit && translation.muid !== 'remarks'"
+                                            x-show="translation.canEdit && !isRemarkProject(translation.muid)"
                                             class="translation-cell__actions">
                                         </sc-bilara-translation-project-actions>
 
@@ -621,11 +624,20 @@
 
             <!-- Panel Resizer -->
             <div class="project-container__resizer"
+                x-show="searchPanelVisible"
+                x-transition
                 :class="{ 'project-container__resizer--dragging': isPanelDragging }"
                 @mousedown.prevent="startPanelResize($event)">
             </div>
 
             <div class="project-container__detail-panel"
+                x-show="searchPanelVisible"
+                x-transition:enter="search-panel-transition-enter"
+                x-transition:enter-start="search-panel-transition-enter-start"
+                x-transition:enter-end="search-panel-transition-enter-end"
+                x-transition:leave="search-panel-transition-leave"
+                x-transition:leave-start="search-panel-transition-leave-start"
+                x-transition:leave-end="search-panel-transition-leave-end"
                 :style="`width: ${searchPanelWidth}px;`"
                 x-data="{ detailPanelActive: null }"
                 @toggle-detail-panel.window="detailPanelActive === $event.detail.panel ? detailPanelActive = 'none' : detailPanelActive = $event.detail.panel">
@@ -643,14 +655,14 @@
                         <div
                             class="project-container__detail-panel__related-item"
                             @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
-                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': project === 'remarks' }">
+                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': isRemarkProject(project) }">
                             <span class="project-container__detail-panel__related-item-check"
                                 x-text="selectedProjects[project] ? '✓' : ''"></span>
                             <span class="project-container__detail-panel__related-item-label">
                                 <i class="bi bi-chat-left-text"
-                                    x-show="project === 'remarks'"
+                                    x-show="isRemarkProject(project)"
                                     aria-hidden="true"></i>
-                                <span x-text="project"></span>
+                                <span x-text="isRemarkProject(project) ? getRemarkLabel(project) : project"></span>
                             </span>
                         </div>
                     </template>
