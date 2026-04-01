@@ -625,6 +625,36 @@
                 </div>
             </div>
 
+            <!-- Related Projects Dropdown - rendered independently of search panel visibility -->
+            <div class="project-container__detail-panel__related"
+                x-cloak
+                x-data="{
+                    active: false,
+                    selectedProjects: {}
+                }"
+                @toggle-detail-panel.window="active = ($event.detail.panel === 'related') ? !active : false"
+                x-show="active"
+                @click.outside="active = false"
+                :class="{'active': active}"
+                @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
+                <h3 class="detail-panel__title">Related Projects</h3>
+                <template x-for="project in relatedProjects" :key="project">
+                    <div
+                        class="project-container__detail-panel__related-item"
+                        @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
+                        :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': isRemarkProject(project) }">
+                        <span class="project-container__detail-panel__related-item-check"
+                            x-text="selectedProjects[project] ? '✓' : ''"></span>
+                        <span class="project-container__detail-panel__related-item-label">
+                            <i class="bi"
+                                :class="getProjectIcon(project)"
+                                aria-hidden="true"></i>
+                            <span x-text="isRemarkProject(project) ? getRemarkLabel(project) : project"></span>
+                        </span>
+                    </div>
+                </template>
+            </div>
+
             <!-- Panel Resizer -->
             <div class="project-container__resizer"
                 x-show="searchPanelVisible"
@@ -641,35 +671,7 @@
                 x-transition:leave="search-panel-transition-leave"
                 x-transition:leave-start="search-panel-transition-leave-start"
                 x-transition:leave-end="search-panel-transition-leave-end"
-                :style="`width: ${searchPanelWidth}px;`"
-                x-data="{ detailPanelActive: null }"
-                @toggle-detail-panel.window="detailPanelActive === $event.detail.panel ? detailPanelActive = 'none' : detailPanelActive = $event.detail.panel">
-
-                <!-- Related Projects Panel -->
-                <div class="project-container__detail-panel__related"
-                    x-cloak
-                    x-show="detailPanelActive === 'related'"
-                    @click.outside="detailPanelActive = null"
-                    :class="{'active': detailPanelActive === 'related'}"
-                    x-data="{selectedProjects: {}}"
-                    @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
-                    <h3 class="detail-panel__title">Related Projects</h3>
-                    <template x-for="project in relatedProjects" :key="project">
-                        <div
-                            class="project-container__detail-panel__related-item"
-                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
-                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': isRemarkProject(project) }">
-                            <span class="project-container__detail-panel__related-item-check"
-                                x-text="selectedProjects[project] ? '✓' : ''"></span>
-                            <span class="project-container__detail-panel__related-item-label">
-                                <i class="bi"
-                                    :class="getProjectIcon(project)"
-                                    aria-hidden="true"></i>
-                                <span x-text="isRemarkProject(project) ? getRemarkLabel(project) : project"></span>
-                            </span>
-                        </div>
-                    </template>
-                </div>
+                :style="`width: ${searchPanelWidth}px;`">
 
                 <div class="project-container__detail-panel__search search active"
                     x-data="{...search(), optionsExpanded: true}"
