@@ -25,6 +25,10 @@ export const themes = {
       --color-error: #ee121c;
       --color-success: #0ebf5e;
       --color-info: #5960f3;
+      --color-unread-bg: #3d2a1a;
+      --color-progress-low: #ff6b6b;
+      --color-progress-medium: #ffd166;
+      --color-progress-high: #2de59e;
   `,
   'suriya': css`
       --color-primary: #d33682;
@@ -41,6 +45,10 @@ export const themes = {
       --color-error: #dc322f;
       --color-success: #859900;
       --color-info: #268bd2;
+      --color-unread-bg: #fde8f2;
+      --color-progress-low: #c0392b;
+      --color-progress-medium: #8a6800;
+      --color-progress-high: #1e6e00;
   `,
   'candima': css`
       --color-primary: #dc322f;
@@ -57,6 +65,10 @@ export const themes = {
       --color-error: #dc322f;
       --color-success: #859900;
       --color-info: #268bd2;
+      --color-unread-bg: #1a0f0f;
+      --color-progress-low: #ff6b6b;
+      --color-progress-medium: #ffd166;
+      --color-progress-high: #2de59e;
   `,
   'manussa': css`
       --color-primary: black;
@@ -73,6 +85,10 @@ export const themes = {
       --color-error: #FF4136;
       --color-success: #2ECC40;
       --color-info: #0074D9;
+      --color-unread-bg: #e8f0fe;
+      --color-progress-low: #c62828;
+      --color-progress-medium: #c76b00;
+      --color-progress-high: #2e7d32;
   `,
   'yakkha': css`
       --color-primary: crimson;
@@ -89,6 +105,10 @@ export const themes = {
       --color-error: #FF4136;
       --color-success: #2ECC40;
       --color-info: #0074D9;
+      --color-unread-bg: #2a0a0f;
+      --color-progress-low: #ff5050;
+      --color-progress-medium: #ffcc00;
+      --color-progress-high: #00e676;
   `,
   'deva': css`
       --color-primary: #92a8d1;
@@ -105,6 +125,10 @@ export const themes = {
       --color-error: #e34843;
       --color-success: #5abb5c;
       --color-info: #0074D9;
+      --color-unread-bg: #dce6f4;
+      --color-progress-low: #c62828;
+      --color-progress-medium: #c75f00;
+      --color-progress-high: #276749;
   `,
   'asura': css`
       --color-primary: #92a8d1;
@@ -121,6 +145,10 @@ export const themes = {
       --color-error: #ed8986;
       --color-success: #2ECC40;
       --color-info: #0074D9;
+      --color-unread-bg: #5a6a7d;
+      --color-progress-low: #ff5252;
+      --color-progress-medium: #ffca28;
+      --color-progress-high: #00e676;
   `,
   'gandhabba': css`
       --color-primary: #92a8d1;
@@ -137,6 +165,10 @@ export const themes = {
       --color-error: #FC4384;
       --color-success: #5c8c25;
       --color-info: #00A7AA;
+      --color-unread-bg: #1e2a38;
+      --color-progress-low: #ff6b6b;
+      --color-progress-medium: #ffd166;
+      --color-progress-high: #6fcf97;
   `,
   'mara': css`
       --color-primary: #6272a4;
@@ -153,6 +185,10 @@ export const themes = {
       --color-error: #ff5555;
       --color-success: #06c436;
       --color-info: #7b90ce;
+      --color-unread-bg: #353747;
+      --color-progress-low: #ff5555;
+      --color-progress-medium: #ffb86c;
+      --color-progress-high: #50fa7b;
   `,
   'niraya': css`
       --color-primary: #666;
@@ -169,6 +205,10 @@ export const themes = {
       --color-error: red;
       --color-success: tomato;
       --color-info: blue;
+      --color-unread-bg: #7a1010;
+      --color-progress-low: #ff8c00;
+      --color-progress-medium: #ffd700;
+      --color-progress-high: #39ff14;
   `,
   'suññatā': css`
       --color-primary: initial;
@@ -185,6 +225,10 @@ export const themes = {
       --color-error: initial;
       --color-success: initial;
       --color-info: initial;
+      --color-unread-bg: #e8f0fe;
+      --color-progress-low: #ef4444;
+      --color-progress-medium: #f59e0b;
+      --color-progress-high: #22c55e;
   `,
   /* Calm, Precise, Introspective — Light mode */
   'pañña': css`
@@ -202,6 +246,10 @@ export const themes = {
       --color-error: #c0392b;
       --color-success: #2d7a4f;
       --color-info: #2c6b8a;
+      --color-unread-bg: #ddeaf4;
+      --color-progress-low: #b91c1c;
+      --color-progress-medium: #925000;
+      --color-progress-high: #1a6b38;
   `,
   /* Calm, Precise, Introspective — Dark mode */
   'samādhi': css`
@@ -219,6 +267,10 @@ export const themes = {
       --color-error: #e05c5c;
       --color-success: #5dab6d;
       --color-info: #5b9fbf;
+      --color-unread-bg: #2e2918;
+      --color-progress-low: #f08080;
+      --color-progress-medium: #f4c464;
+      --color-progress-high: #6fcb82;
   `,
   /* High contrast — Low vision accessibility (WCAG AAA) */
   'dīpā': css`
@@ -236,6 +288,10 @@ export const themes = {
       --color-error: #cc0000;
       --color-success: #006600;
       --color-info: #005fcc;
+      --color-unread-bg: #cce0ff;
+      --color-progress-low: #b50000;
+      --color-progress-medium: #7a3800;
+      --color-progress-high: #005500;
   `,
   /* Zhongguose - Palace Vermilion */
   'gongque-danqing': css`
@@ -253,6 +309,10 @@ export const themes = {
       --color-error: #b91f00;
       --color-success: #3f7d1e;
       --color-info: #1f5f9c;
+      --color-unread-bg: #fde5d0;
+      --color-progress-low: #b71c1c;
+      --color-progress-medium: #7a4800;
+      --color-progress-high: #2e5e18;
   `,
   /* Zhongguose - Misty Jiangnan */
   'jiangnan-yanyu': css`
@@ -270,6 +330,10 @@ export const themes = {
       --color-error: #ad3a31;
       --color-success: #1e7a52;
       --color-info: #1670c5;
+      --color-unread-bg: #cde3f5;
+      --color-progress-low: #ad3a31;
+      --color-progress-medium: #9a6200;
+      --color-progress-high: #1e7a52;
   `,
   /* Zhongguose - Spring Bamboo */
   'chunshan-xincha': css`
@@ -287,6 +351,10 @@ export const themes = {
       --color-error: #c94a2a;
       --color-success: #067a4b;
       --color-info: #1f6f96;
+      --color-unread-bg: #c8ebd6;
+      --color-progress-low: #c94a2a;
+      --color-progress-medium: #9a6000;
+      --color-progress-high: #076840;
   `,
   /* Zhongguose - Academy Ink */
   'shuyuan-yamo': css`
@@ -304,6 +372,10 @@ export const themes = {
       --color-error: #c65b4a;
       --color-success: #4c8b62;
       --color-info: #4f88c6;
+      --color-unread-bg: #2e2418;
+      --color-progress-low: #e57373;
+      --color-progress-medium: #ffb74d;
+      --color-progress-high: #81c784;
   `,
   /* Zhongguose - Celadon Ru Ware */
   'tianqing-ruci': css`
@@ -321,6 +393,10 @@ export const themes = {
       --color-error: #b53030;
       --color-success: #266b4a;
       --color-info: #1f5d9c;
+      --color-unread-bg: #c8e2e8;
+      --color-progress-low: #b53030;
+      --color-progress-medium: #904800;
+      --color-progress-high: #266b4a;
     `,
     /* Buddhist Kasaya - Huai Se */
     'kasaya': css`
@@ -338,6 +414,10 @@ export const themes = {
             --color-error: #8b3a2a;
             --color-success: #5f6f3a;
             --color-info: #2f4f79;
+            --color-unread-bg: #2e1f12;
+            --color-progress-low: #ef7070;
+            --color-progress-medium: #dba840;
+            --color-progress-high: #7cc07c;
     `,
     /* Buddhist Five-Color Flag - Pancavanna */
     'pancavanna': css`
@@ -355,6 +435,10 @@ export const themes = {
         --color-error: #b8322a;
         --color-success: #4f7a5c;
         --color-info: #1f5aa6;
+        --color-unread-bg: #ecdcc8;
+        --color-progress-low: #b8322a;
+        --color-progress-medium: #906200;
+        --color-progress-high: #3d6b4a;
     `,
     /* Zhongguose - Zen Forest */
     'chanlin': css`
@@ -372,6 +456,10 @@ export const themes = {
         --color-error: #bf4545;
         --color-success: #4e874e;
         --color-info: #3b7b9c;
+        --color-unread-bg: #d8e0ce;
+        --color-progress-low: #bf4545;
+        --color-progress-medium: #945500;
+        --color-progress-high: #3d7a3d;
     `,
     /* Zhongguose - Ruihe */
     'ruihe': css`
@@ -389,6 +477,10 @@ export const themes = {
         --color-error: #a84242;
         --color-success: #5c6d5a;
         --color-info: #4c82a3;
+        --color-unread-bg: #e4dcc4;
+        --color-progress-low: #a84242;
+        --color-progress-medium: #7a5500;
+        --color-progress-high: #336633;
     `
 }
 

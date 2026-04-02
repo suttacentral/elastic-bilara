@@ -155,7 +155,7 @@ body {
 }
 
 .notification-item.unread {
-    background-color: var(--color-primary);
+    background-color: var(--color-unread-bg);
 }
 
 .notification-icon {

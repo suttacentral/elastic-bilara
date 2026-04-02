@@ -151,21 +151,25 @@
     width: 100%;
     text-align: center;
     font-size: 11px;
-    font-weight: 500;
-    color: var(--color-text);
+    font-weight: 700;
+    color: var(--color-text-emphasized);
     z-index: 1;
+    text-shadow:
+        0 0 4px var(--color-background),
+        0 0 4px var(--color-background),
+        0 1px 3px var(--color-background);
 }
 
 .translation-progress.low .progress-bar {
-    background-color: linear-gradient(90deg, #ef4444, #f87171);
+    background-color: var(--color-progress-low);
 }
 
 .translation-progress.medium .progress-bar {
-    background-color: linear-gradient(90deg, #f59e0b, #fbbf24);
+    background-color: var(--color-progress-medium);
 }
 
 .translation-progress.high .progress-bar {
-    background-color: linear-gradient(90deg, #22c55e, #4ade80);
+    background-color: var(--color-progress-high);
 }
 
 @media (max-width: 575px) {
