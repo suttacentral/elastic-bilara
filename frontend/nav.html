@@ -18,9 +18,9 @@
     <script src="./static/js/nav.js"></script>
     <script src="./static/js/pullRequest.js"></script>
     <script src="./static/js/elements/notification/sc-bilara-notification-icon.js" type="module"></script>
-    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
-    <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
-    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav.js" type="module"></script>
+
+    <script src="./static/js/elements/nav/sc-bilara-nav-footer.js" type="module"></script>
     <script src="./static/js/elements/addons/sc-bilara-how-to.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-toast.js"></script>
@@ -28,8 +28,8 @@
 
   <body class="page-layout" x-data="getUserInfo()" x-init="await getRole(); if (!isActive) window.location.href = '/'">
     <header>
-      <sc-bilara-nav-main></sc-bilara-nav-main>
-      <sc-bilara-nav-main-mobile></sc-bilara-nav-main-mobile>
+      <sc-bilara-nav></sc-bilara-nav>
+
     </header>
 
     <main class="main-content">
@@ -102,7 +102,7 @@
       </div>
     </main>
 
-    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+    <sc-bilara-nav-footer></sc-bilara-nav-footer>
     <sc-bilara-toast></sc-bilara-toast>
   </body>
 </html>

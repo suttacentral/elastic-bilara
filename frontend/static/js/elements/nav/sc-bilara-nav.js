@@ -7,7 +7,7 @@ import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/compone
 import '../notification/sc-bilara-notification-icon.js';
 import '../addons/sc-bilara-settings-dialog.js';
 
-export class SCBilaraNavMain extends LitElement {
+export class SCBilaraNav extends LitElement {
   static styles = [
     css`
       :host {
@@ -36,9 +36,9 @@ export class SCBilaraNavMain extends LitElement {
   render() {
     return html`
       <nav>
-        <ul class="main-nav">
-              <li class="main-nav__item go-home">
-                  <a href="/nav" class="main-nav__item-link">Bilara</a>
+        <ul class="main-nav index-main-nav">
+              <li class="main-nav__item">
+                  <a href="/nav" class="main-nav__logo" title="Go to Bilara Home" aria-label="Bilara Home">Bilara</a>
               </li>
               <div class="image-container main-nav__item--right">
                 <sc-bilara-notification-icon></sc-bilara-notification-icon>
@@ -90,4 +90,4 @@ export class SCBilaraNavMain extends LitElement {
   }
 }
 
-customElements.define('sc-bilara-nav-main', SCBilaraNavMain);
+customElements.define('sc-bilara-nav', SCBilaraNav);

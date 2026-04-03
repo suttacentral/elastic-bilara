@@ -16,15 +16,15 @@
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/notifications_panel.js"></script>
 
-    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
-    <script src="./static/js/elements/nav/sc-bilara-nav-main-mobile.js" type="module"></script>
-    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav.js" type="module"></script>
+
+    <script src="./static/js/elements/nav/sc-bilara-nav-footer.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
 </head>
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole()">
     <header>
-        <sc-bilara-nav-main></sc-bilara-nav-main>
-        <sc-bilara-nav-main-mobile></sc-bilara-nav-main-mobile>
+        <sc-bilara-nav></sc-bilara-nav>
+
     </header>
 
     <main class="main-content">
@@ -442,6 +442,6 @@
             </div>
         </div>
     </main>
-    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+    <sc-bilara-nav-footer></sc-bilara-nav-footer>
 </body>
 </html>

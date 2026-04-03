@@ -18,8 +18,8 @@
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/menu/menu.js"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/menu-item/menu-item.js"></script>
     <script src="./static/js/elements/admin/sc-bilara-admin-header.js" type="module"></script>
-    <script src="./static/js/elements/nav/sc-bilara-nav-main.js" type="module"></script>
-    <script src="./static/js/elements/nav/sc-bilara-nav-main-footer.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav.js" type="module"></script>
+    <script src="./static/js/elements/nav/sc-bilara-nav-footer.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css" />
@@ -32,7 +32,7 @@
 </head>
 <body class="admin-page" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
     <header class="admin-header" x-data="getUserInfo()" x-init="getRole()">
-        <sc-bilara-nav-main></sc-bilara-nav-main>
+        <sc-bilara-nav></sc-bilara-nav>
     </header>
 
     <main class="admin-main" x-data="admin()">
@@ -663,6 +663,6 @@
             </ul>
         </div>
     </footer> -->
-    <sc-bilara-nav-main-footer></sc-bilara-nav-main-footer>
+    <sc-bilara-nav-footer></sc-bilara-nav-footer>
 </body>
 </html>

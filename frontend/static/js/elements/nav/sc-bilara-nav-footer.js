@@ -1,6 +1,6 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 
-export class SCBilaraNavMainFooter extends LitElement {
+export class SCBilaraNavFooter extends LitElement {
   createRenderRoot() {
     return this;
   }
@@ -25,4 +25,4 @@ export class SCBilaraNavMainFooter extends LitElement {
     `;
   }
 }
-customElements.define('sc-bilara-nav-main-footer', SCBilaraNavMainFooter);
+customElements.define('sc-bilara-nav-footer', SCBilaraNavFooter);
