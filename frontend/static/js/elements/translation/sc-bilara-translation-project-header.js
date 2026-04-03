@@ -136,20 +136,22 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           }
 
           .project-header__nav-item sl-button::part(base) {
-              font-weight: 500;
+              font-weight: 600;
               font-size: 0.7rem;
-              padding: 4px 8px;
+              padding: 4px 12px;
               min-height: unset;
-              transition: all 0.2s ease;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              border: 1px solid var(--color-primary);
+              color: var(--color-primary);
+              background-color: transparent;
           }
 
           .project-header__nav-item sl-button::part(base):hover {
-              transform: translateY(-1px);
-              box-shadow: var(--shadow-sm);
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+              background-color: var(--color-primary);
+              color: var(--color-text-on-strong);
           }
-
-
-
 
           @media (max-width: 768px) {
               .project-header {
@@ -217,13 +219,13 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
 
           <nav class="project-header__nav">
               <ul class="project-header__nav-list">
-                  <li class="project-header__nav-item">
-                      <sl-button size="small" variant="warning" outline @click="$dispatch('toggle-detail-panel', {panel: 'related'});">
+                   <li class="project-header__nav-item">
+                      <sl-button size="small" @click="$dispatch('toggle-detail-panel', {panel: 'related'});">
                           <i class="bi bi-collection" style="margin-right: 6px;"></i>Related
                       </sl-button>
                   </li>
-                  <li class="project-header__nav-item project-header__search-toggle">
-                      <sl-button size="small" variant="warning" outline
+                   <li class="project-header__nav-item project-header__search-toggle">
+                      <sl-button size="small"
                            @click="$dispatch('toggle-search-panel')"
                            x-data="{ panelVisible: window.innerWidth >= 1280 }"
                            @toggle-search-panel.window="panelVisible = !panelVisible"
