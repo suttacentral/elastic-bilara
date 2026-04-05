@@ -191,44 +191,44 @@ export const themes = {
       --color-progress-high: #50fa7b;
   `,
   'niraya': css`
-      --color-primary: #666;
-      --color-secondary: firebrick;
-      --color-background: darkred;
-      --color-background-secondary: red;
-      --color-background-tertiary: #666;
-      --color-text: crimson;
-      --color-text-emphasized: maroon;
-      --color-text-secondary: maroon;
+      --color-primary: #72997b;
+      --color-secondary: #8db795;
+      --color-background: #cee7c7;
+      --color-background-secondary: #f3b491;
+      --color-background-tertiary: #d68067;
+      --color-text: #11301f;
+      --color-text-emphasized: #061a10;
+      --color-text-secondary: #3f624d;
       --color-text-on-strong: #ffffff;
-      --color-border: orange;
-      --color-warning: orange;
-      --color-error: red;
-      --color-success: tomato;
-      --color-info: blue;
-      --color-unread-bg: #7a1010;
-      --color-progress-low: #ff8c00;
-      --color-progress-medium: #ffd700;
-      --color-progress-high: #39ff14;
+      --color-border: rgba(6, 26, 16, 0.22);
+      --color-warning: #a97a00;
+      --color-error: #c94a2a;
+      --color-success: #076840;
+      --color-info: #1f6f96;
+      --color-unread-bg: #e8f5e9;
+      --color-progress-low: #c94a2a;
+      --color-progress-medium: #9a6000;
+      --color-progress-high: #076840;
   `,
   'suññatā': css`
-      --color-primary: initial;
-      --color-secondary: initial;
-      --color-background: initial;
-      --color-background-secondary: initial;
-      --color-background-tertiary: initial;
-      --color-text: initial;
-      --color-text-emphasized: initial;
-      --color-text-secondary: initial;
+      --color-primary: #ED7277;
+      --color-secondary: #E293B5;
+      --color-background: #EBC3CB;
+      --color-background-secondary: #94B9BB;
+      --color-background-tertiary: #C8CEB6;
+      --color-text: #4a3136;
+      --color-text-emphasized: #2d1a1e;
+      --color-text-secondary: #7a5e64;
       --color-text-on-strong: #ffffff;
-      --color-border: initial;
-      --color-warning: initial;
-      --color-error: initial;
-      --color-success: initial;
-      --color-info: initial;
-      --color-unread-bg: #e8f0fe;
-      --color-progress-low: #ef4444;
-      --color-progress-medium: #f59e0b;
-      --color-progress-high: #22c55e;
+      --color-border: rgba(74, 49, 54, 0.2);
+      --color-warning: #94B9BB;
+      --color-error: #ED7277;
+      --color-success: #C8CEB6;
+      --color-info: #E293B5;
+      --color-unread-bg: #fdf2f4;
+      --color-progress-low: #ED7277;
+      --color-progress-medium: #E293B5;
+      --color-progress-high: #94B9BB;
   `,
   /* Calm, Precise, Introspective — Light mode */
   'pañña': css`
