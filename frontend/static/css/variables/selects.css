@@ -41,3 +41,26 @@
     background-color: var(--color-background);
     color: var(--color-text);
 }
+
+.theme-selector::-webkit-scrollbar {
+    width: var(--scrollbar-size, 8px);
+}
+
+.theme-selector::-webkit-scrollbar-track {
+    background: var(--color-background-secondary);
+}
+
+.theme-selector::-webkit-scrollbar-thumb {
+    background-color: var(--color-primary);
+    border-radius: var(--radius-md, 4px);
+    border: 2px solid var(--color-background-secondary);
+}
+
+.theme-selector::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-secondary);
+}
+
+.theme-selector {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) var(--color-background-secondary);
+}
