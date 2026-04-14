@@ -142,8 +142,8 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               min-height: unset;
               transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
               border: 1px solid var(--color-primary);
-              color: var(--color-primary);
-              background-color: transparent;
+              color: var(--color-text-on-strong);
+              background-color: var(--color-primary);
           }
 
           .project-header__nav-item sl-button::part(base):hover {
@@ -220,7 +220,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           <nav class="project-header__nav">
               <ul class="project-header__nav-list">
                    <li class="project-header__nav-item">
-                      <sl-button size="small" @click="$dispatch('toggle-detail-panel', {panel: 'related'});">
+                      <sl-button size="small" data-related-btn @click="$dispatch('toggle-detail-panel', {panel: 'related'});">
                           <i class="bi bi-collection" style="margin-right: 6px;"></i>Related
                       </sl-button>
                   </li>

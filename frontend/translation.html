@@ -452,7 +452,7 @@
 
                                         <!-- Action buttons (split/merge) -->
                                         <sc-bilara-translation-project-actions
-                                            x-show="translation.canEdit && !isRemarkProject(translation.muid)"
+                                            :style="(!translation.canEdit || isRemarkProject(translation.muid)) ? 'visibility: hidden;' : ''"
                                             class="translation-cell__actions">
                                         </sc-bilara-translation-project-actions>
 
@@ -630,9 +630,19 @@
                 x-cloak
                 x-data="{
                     active: false,
-                    selectedProjects: {}
+                    selectedProjects: {},
+                    alignToButton() {
+                        const btn = document.querySelector('[data-related-btn]');
+                        if (!btn) return;
+                        const btnRect = btn.getBoundingClientRect();
+                        const containerRect = $el.offsetParent.getBoundingClientRect();
+                        $el.style.left = (btnRect.left - containerRect.left) + 'px';
+                    }
                 }"
-                @toggle-detail-panel.window="active = ($event.detail.panel === 'related') ? !active : false"
+                @toggle-detail-panel.window="
+                    active = $event.detail.panel === 'related' ? !active : false;
+                    if (active) $nextTick(() => alignToButton());
+                "
                 x-show="active"
                 @click.outside="active = false"
                 :class="{'active': active}"

@@ -68,6 +68,7 @@
     color: var(--color-text-secondary);
     margin: 0 0 -2px 0;
     font-size: var(--text-xs);
+    min-height: 26px;
 }
 
 /* ===== Panel Resizer ===== */
@@ -126,7 +127,7 @@
 /* ===== Related Projects Panel ===== */
 .project-container__detail-panel__related {
     position: absolute;
-    right: 0;
+    right: auto;
     width: max-content;
     min-width: 200px;
     max-width: 280px;
@@ -830,29 +831,39 @@ sl-dialog::part(title) {
 .translation-row {
     display: flex;
     transition: background-color 0.15s ease;
+    background-color: var(--color-background);
+}
+
+.translation-row:focus-within {
+    box-shadow: inset 3px 0 0 0 var(--color-primary);
+    background-color: var(--color-background-secondary);
 }
 
 /* Set the top-left corner of the first cell in the first row. */
 .translation-row:first-of-type .translation-row__cells > .translation-cell:first-of-type {
     border-top-left-radius: var(--radius-lg);
-    padding-top: var(--space-xs);
 }
 
 /* Set the top-right corner of the last cell in the first row. */
 .translation-row:first-of-type .translation-row__cells > .translation-cell:last-of-type {
     border-top-right-radius: var(--radius-lg);
+}
+
+.translation-row:first-of-type .translation-row__cells > .translation-cell {
     padding-top: var(--space-xs);
 }
 
 /* Set the bottom-left corner of the first cell in the last row. */
 .translation-row:last-of-type .translation-row__cells > .translation-cell:first-of-type {
     border-bottom-left-radius: var(--radius-lg);
-    padding-bottom: var(--space-xs);
 }
 
 /* Set the bottom-right corner of the last cell in the last row. */
 .translation-row:last-of-type .translation-row__cells > .translation-cell:last-of-type {
     border-bottom-right-radius: var(--radius-lg);
+}
+
+.translation-row:last-of-type .translation-row__cells > .translation-cell {
     padding-bottom: var(--space-xs);
 }
 
@@ -878,7 +889,7 @@ sl-dialog::part(title) {
     flex-direction: column;
     min-width: 0;
     flex: 1;
-    background-color: var(--color-background);
+    background-color: transparent;
 }
 
 .translation-cell:last-child {
@@ -887,7 +898,7 @@ sl-dialog::part(title) {
 
 .translation-cell--source,
 .translation-cell--editable {
-    background-color: var(--color-background);
+    background-color: transparent;
 }
 
 .translation-cell--editable textarea {
@@ -935,12 +946,12 @@ sl-dialog::part(title) {
 
 .translation-cell__textarea {
     width: 100%;
-    height: auto;
+    height: 100%;
     margin: 0 0 0 -8px;
     padding: 0 8px;
     border: 1px solid transparent;
     border-radius: var(--radius-xxs);
-    background-color: var(--color-background);
+    background-color: transparent;
     font-family: inherit;
     font-size: var(--text-base-size);
 
@@ -960,7 +971,7 @@ sl-dialog::part(title) {
 
 .translation-cell__textarea:focus {
     outline: none;
-    background-color: var(--color-background-secondary);
+    background-color: transparent;
 }
 
 .translation-cell__textarea--readonly {
