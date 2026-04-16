@@ -147,7 +147,6 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           }
 
           .project-header__nav-item sl-button::part(base):hover {
-              transform: translateY(-2px);
               box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
               background-color: var(--color-primary);
               color: var(--color-text-on-strong);
