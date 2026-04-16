@@ -217,6 +217,12 @@
     background-color: color-mix(in srgb, var(--color-info) 24%, transparent);
 }
 
+.project-container__detail-panel__related-separator {
+    height: 1px;
+    background-color: var(--color-border);
+    margin: 4px 12px;
+}
+
 /* ===== Search Panel ===== */
 .project-container__detail-panel__search {
     flex: 1;

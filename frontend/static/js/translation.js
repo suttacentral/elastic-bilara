@@ -40,6 +40,16 @@ function fetchTranslation() {
             if (key.startsWith('variant')) return 'bi-diagram-2';
             return 'bi-file-text';
         },
+        getProjectType(key) {
+            if (!key) return 'other';
+            if (this.isRemarkProject(key)) return 'remarks';
+            if (key.startsWith('translation')) return 'translation';
+            if (key.startsWith('variant')) return 'variant';
+            if (key.startsWith('comment')) return 'comment';
+            if (key.startsWith('reference')) return 'reference';
+            if (key.startsWith('tag')) return 'tag';
+            return 'other';
+        },
         async init() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
@@ -115,6 +125,15 @@ function fetchTranslation() {
                     this.relatedProjects.push(key);
                 }
             }
+
+            // Sort relatedProjects by type
+            const typeOrder = { translation: 0, variant: 1, comment: 2, reference: 3, tag: 4, other: 5, remarks: 6 };
+            this.relatedProjects.sort((a, b) => {
+                const ta = typeOrder[this.getProjectType(a)] ?? 5;
+                const tb = typeOrder[this.getProjectType(b)] ?? 5;
+                if (ta !== tb) return ta - tb;
+                return a.localeCompare(b);
+            });
 
             // Restore previously saved related project selections
             const savedRelated = this.getSavedRelatedProjects();
