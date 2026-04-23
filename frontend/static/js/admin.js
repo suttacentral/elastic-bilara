@@ -1,6 +1,7 @@
 let dataTypes = {
     users: users(),
     projects: projects(),
+    publications: { isVisible: false },
     roots: roots(),
     shift: shift(),
 }

@@ -5,6 +5,7 @@ from app.api.api_v1.endpoints import (
     git_ops,
     languages,
     projects,
+    publications,
     pull_request,
     remarks,
     search,
@@ -38,3 +39,4 @@ api_router.include_router(notifications.router, tags=["notifications"])
 api_router.include_router(dictionary.router, tags=["dictionary"])
 api_router.include_router(settings.router, tags=["settings"])
 api_router.include_router(tags.router, tags=["tags"])
+api_router.include_router(publications.router, tags=["publications"])

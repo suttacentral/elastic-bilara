@@ -3,6 +3,7 @@ function projects() {
         isVisible: false,
         showAdd: false,
         showRemove: false,
+        showFileManager: false,
         toggleAdd() {
             if (this.showAdd) {
                 this.showAdd = false;
@@ -34,6 +35,7 @@ function addNewProject() {
         languages: {},
         user: null,
         languageCode: "",
+        projectName: "",
         validLanguageCode: true,
         invalidData: false,
         created: { status: false, username: "", paths: [] },
@@ -114,6 +116,33 @@ function addNewProject() {
                 headers: { "Content-Type": "application/json" },
             });
             const { new_project_paths: createdPaths, user } = await response.json();
+
+            // Also write project entry to _project-v2.json
+            const rootPathClean = this.base.replace(/\/$/, '');
+            const rootParts = rootPathClean.split('/');
+            // root/{lang}/{source}/{collection...}
+            const rootLang = rootParts.length >= 3 ? rootParts[2] : rootParts[1] || '';
+            const lastPart = rootParts[rootParts.length - 1] || '';
+            const selectedUser = this.users.find(u => String(u.github_id) === String(this.user));
+            const authorId = selectedUser ? selectedUser.username : '';
+            const projectEntry = {
+                project_uid: `${this.languageCode}_${rootLang}_translation_${authorId}`,
+                name: this.projectName,
+                root_path: rootPathClean,
+                translation_path: `translation/${this.languageCode}/${authorId}/${lastPart}`,
+                translation_muids: `translation-${this.languageCode}-${authorId}`,
+                creator_github_handle: authorId,
+            };
+            try {
+                await requestWithTokenRetry('projects/project-entries/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(projectEntry),
+                });
+            } catch (e) {
+                console.error('Failed to create project entry:', e);
+            }
+
             this.loading = false;
             this.created.status = true;
             this.created.username = user;
@@ -201,6 +230,219 @@ function removeProject() {
             setTimeout(() => {
                 this.message = false;
             }, 5000);
+        },
+    };
+}
+
+function projectsListManager() {
+    return {
+        entries: [],
+        loading: false,
+        view: 'list',
+        editingEntry: null,
+        searchQuery: '',
+        filterLang: '',
+        sortField: '',
+        sortAsc: true,
+        form: {
+            project_uid: '',
+            name: '',
+            root_path: '',
+            translation_path: '',
+            translation_muids: '',
+            creator_github_handle: '',
+        },
+        formErrors: {},
+        saving: false,
+        publishing: false,
+        toast: { show: false, message: '', type: 'success' },
+
+        async init() {
+            await this.loadEntries();
+        },
+
+        async loadEntries() {
+            this.loading = true;
+            try {
+                const res = await requestWithTokenRetry('projects/project-entries/');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Failed to load');
+                this.entries = data;
+            } catch (e) {
+                this.showToast('Failed to load project entries: ' + e.message, 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        get filteredEntries() {
+            let list = [...this.entries];
+            if (this.searchQuery) {
+                const q = this.searchQuery.toLowerCase();
+                list = list.filter(e =>
+                    String(e.project_uid || '').toLowerCase().includes(q) ||
+                    String(e.name || '').toLowerCase().includes(q) ||
+                    String(e.creator_github_handle || '').toLowerCase().includes(q) ||
+                    String(e.translation_path || '').toLowerCase().includes(q)
+                );
+            }
+            if (this.filterLang) {
+                list = list.filter(e => {
+                    const lang = e.translation_muids ? e.translation_muids.split('-')[1] || '' : '';
+                    return lang === this.filterLang;
+                });
+            }
+            if (this.sortField) {
+                list.sort((a, b) => {
+                    let va = a[this.sortField] ?? '';
+                    let vb = b[this.sortField] ?? '';
+                    if (typeof va === 'string') va = va.toLowerCase();
+                    if (typeof vb === 'string') vb = vb.toLowerCase();
+                    if (va < vb) return this.sortAsc ? -1 : 1;
+                    if (va > vb) return this.sortAsc ? 1 : -1;
+                    return 0;
+                });
+            }
+            return list;
+        },
+
+        get uniqueLanguages() {
+            const langs = new Set();
+            this.entries.forEach(e => {
+                if (e.translation_muids) {
+                    const parts = e.translation_muids.split('-');
+                    if (parts[1]) langs.add(parts[1]);
+                }
+            });
+            return [...langs].sort();
+        },
+
+        toggleSort(field) {
+            if (this.sortField === field) {
+                this.sortAsc = !this.sortAsc;
+            } else {
+                this.sortField = field;
+                this.sortAsc = true;
+            }
+        },
+
+        sortIcon(field) {
+            if (this.sortField !== field) return 'bi-arrow-down-up';
+            return this.sortAsc ? 'bi-sort-up' : 'bi-sort-down';
+        },
+
+        showCreateForm() {
+            this.editingEntry = null;
+            this.formErrors = {};
+            this.resetForm();
+            this.view = 'form';
+        },
+
+        showEditForm(entry) {
+            this.editingEntry = entry.project_uid;
+            this.formErrors = {};
+            this.form = {
+                project_uid: entry.project_uid || '',
+                name: entry.name || '',
+                root_path: entry.root_path || '',
+                translation_path: entry.translation_path || '',
+                translation_muids: entry.translation_muids || '',
+                creator_github_handle: entry.creator_github_handle || '',
+            };
+            this.view = 'form';
+        },
+
+        resetForm() {
+            this.form = {
+                project_uid: '',
+                name: '',
+                root_path: '',
+                translation_path: '',
+                translation_muids: '',
+                creator_github_handle: '',
+            };
+        },
+
+        validateForm() {
+            this.formErrors = {};
+            if (!this.form.project_uid.trim()) {
+                this.formErrors.project_uid = 'Project UID is required';
+            }
+            return Object.keys(this.formErrors).length === 0;
+        },
+
+        async submitForm() {
+            if (!this.validateForm()) return;
+            this.saving = true;
+            try {
+                const isEdit = !!this.editingEntry;
+                const url = isEdit
+                    ? `projects/project-entries/${this.editingEntry}`
+                    : 'projects/project-entries/';
+                const method = isEdit ? 'PUT' : 'POST';
+                const res = await requestWithTokenRetry(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(this.form),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Save failed');
+                this.showToast(
+                    isEdit ? 'Project entry updated' : 'Project entry created',
+                    'success'
+                );
+                await this.loadEntries();
+                this.view = 'list';
+            } catch (e) {
+                this.showToast('Error: ' + e.message, 'error');
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async deleteEntry(projectUid) {
+            if (!confirm(`Delete ${projectUid}? This cannot be undone.`)) return;
+            try {
+                const res = await requestWithTokenRetry(`projects/project-entries/${projectUid}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Delete failed');
+                this.showToast(`${projectUid} deleted`, 'success');
+                await this.loadEntries();
+            } catch (e) {
+                this.showToast('Error: ' + e.message, 'error');
+            }
+        },
+
+        cancelForm() {
+            this.view = 'list';
+            this.editingEntry = null;
+        },
+
+        showToast(message, type = 'success') {
+            this.toast = { show: true, message, type };
+            setTimeout(() => { this.toast.show = false; }, 4000);
+        },
+
+        async publishToGitHub() {
+            if (!confirm('Commit and push project metadata to GitHub?')) return;
+            this.publishing = true;
+            try {
+                const res = await requestWithTokenRetry('projects/project-entries/publish/', {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Publish failed');
+                this.showToast('Published to GitHub (task: ' + data.task_id + ')', 'success');
+            } catch (e) {
+                this.showToast('Publish error: ' + e.message, 'error');
+            } finally {
+                this.publishing = false;
+            }
         },
     };
 }

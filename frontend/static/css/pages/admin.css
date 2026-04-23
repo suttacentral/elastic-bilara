@@ -135,7 +135,6 @@
 }
 
 .admin-btn-secondary {
-    width: 120px;
     background-color: var(--color-background-secondary);
     color: var(--color-text-emphasized);
     border-color: var(--color-border);
@@ -396,7 +395,7 @@
 .admin-modal-overlay {
     position: fixed;
     inset: 0;
-    background-color: rgba(44, 43, 43, 0.6);
+    background-color: var(--color-backdrop);
     backdrop-filter: blur(var(--space-xxs));
     display: flex;
     align-items: center;
@@ -406,12 +405,38 @@
 }
 
 .admin-modal {
-    background-color: white;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-xs);
+    box-shadow: var(--shadow-md);
     max-width: 480px;
     width: 100%;
     animation: modalSlideIn 0.3s ease;
+}
+
+/* Modal Scrollbar Styling */
+.admin-modal * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+}
+
+.admin-modal *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.admin-modal *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.admin-modal *::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.admin-modal *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-text-secondary);
 }
 
 @keyframes modalSlideIn {
@@ -508,7 +533,8 @@
 .admin-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: white;
+    background-color: var(--color-background);
+    color: var(--color-text);
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-xs);
@@ -626,7 +652,9 @@
 
 .admin-tooltip {
     position: absolute;
-    background-color: white;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-xs);
     padding: var(--space-sm);
@@ -789,7 +817,6 @@
 }
 
 .admin-projects-toggle .admin-btn {
-    min-width: 120px;
     border-width: 2px;
 }
 

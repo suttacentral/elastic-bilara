@@ -1,3 +1,4 @@
+import json as json_module
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -46,7 +47,7 @@ from app.services.users.utils import get_user
 from app.tasks import commit
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from search.search import Search
 from search.utils import (
     find_root_path,
@@ -60,6 +61,107 @@ from search.utils import (
 router = APIRouter(prefix="/projects")
 
 search = Search()
+
+
+PROJECT_V2_FILE = settings.WORK_DIR / "_project-v2.json"
+
+
+def _read_project_v2() -> list[dict]:
+    with open(PROJECT_V2_FILE, "r", encoding="utf-8") as f:
+        return json_module.load(f)
+
+
+def _write_project_v2(data: list[dict]):
+    with open(PROJECT_V2_FILE, "w", encoding="utf-8") as f:
+        json_module.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+
+class ProjectV2In(BaseModel):
+    project_uid: str
+    name: str = ""
+    root_path: str = ""
+    translation_path: str = ""
+    translation_muids: str = ""
+    creator_github_handle: str = ""
+
+
+@router.get("/project-entries/")
+async def list_project_entries(
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+):
+    return _read_project_v2()
+
+
+@router.post("/project-entries/", status_code=status.HTTP_201_CREATED)
+async def create_project_entry(
+    body: ProjectV2In,
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    _admin=Depends(is_admin_or_superuser),
+    _active=Depends(is_user_active),
+):
+    if not body.project_uid:
+        raise HTTPException(status_code=400, detail="project_uid is required")
+
+    data = _read_project_v2()
+    if any(e["project_uid"] == body.project_uid for e in data):
+        raise HTTPException(status_code=409, detail=f"{body.project_uid} already exists")
+
+    entry = body.model_dump()
+    data.append(entry)
+    _write_project_v2(data)
+    return entry
+
+
+@router.post("/project-entries/publish/", status_code=status.HTTP_202_ACCEPTED)
+async def publish_project_entries(
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    _admin=Depends(is_admin_or_superuser),
+    _active=Depends(is_user_active),
+):
+    """Commit and push _project-v2.json to GitHub."""
+    user_data = get_user(int(user.github_id))
+    result = commit.delay(
+        user_data.model_dump(),
+        ["_project-v2.json"],
+        "Update project metadata",
+        add=True,
+    )
+    return {"task_id": result.id, "detail": "Publish task triggered"}
+
+
+@router.put("/project-entries/{project_uid}")
+async def update_project_entry(
+    project_uid: str,
+    body: ProjectV2In,
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    _admin=Depends(is_admin_or_superuser),
+    _active=Depends(is_user_active),
+):
+    data = _read_project_v2()
+    idx = next((i for i, e in enumerate(data) if e["project_uid"] == project_uid), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail=f"{project_uid} not found")
+
+    data[idx] = body.model_dump()
+    _write_project_v2(data)
+    return data[idx]
+
+
+@router.delete("/project-entries/{project_uid}", status_code=status.HTTP_200_OK)
+async def delete_project_entry(
+    project_uid: str,
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    _admin=Depends(is_admin_or_superuser),
+    _active=Depends(is_user_active),
+):
+    data = _read_project_v2()
+    new_data = [e for e in data if e["project_uid"] != project_uid]
+    if len(new_data) == len(data):
+        raise HTTPException(status_code=404, detail=f"{project_uid} not found")
+
+    _write_project_v2(new_data)
+    return {"detail": f"{project_uid} deleted"}
 
 
 @router.get("/", response_model=ProjectsOut)
