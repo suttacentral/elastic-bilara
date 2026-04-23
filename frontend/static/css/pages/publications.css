@@ -160,8 +160,10 @@
 }
 
 .pub-actions {
-    display: flex;
+    display: inline-flex;
+    align-items: center;
     gap: var(--space-xs);
+    white-space: nowrap;
 }
 
 .pub-btn {
