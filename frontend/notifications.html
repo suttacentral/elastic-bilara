@@ -34,6 +34,12 @@
                     <i class="bi-bell"></i>
                     <h1>Translation changes</h1>
                     <span class="subtitle">when you have subscribed to other translators, their changes will appear here</span>
+                    <div class="subscribed-authors" x-show="!loading">
+                        <span class="subscribed-label"><i class="bi-eye"></i> Subscribed:</span>
+                        <template x-for="author in selectedAuthors" :key="author">
+                            <span class="author-chip" x-text="author"></span>
+                        </template>
+                    </div>
                 </div>
                 <div class="header-actions">
                     <button class="btn header-btn" @click="refresh()" :disabled="loading">
