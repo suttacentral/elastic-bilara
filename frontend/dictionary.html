@@ -21,14 +21,75 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="./static/css/style.css"/>
     <link rel="stylesheet" href="./static/css/main.css">
+    <style>
+        .dictionary-layout {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+            padding: var(--space-lg);
+            height: calc(100vh - 80px);
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-md) var(--space-lg);
+            background-color: var(--color-background);
+            border-radius: var(--radius-md);
+            line-height: 1.2;
+            flex-shrink: 0;
+        }
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+        .page-title h1 {
+            font-size: var(--text-md);
+            font-weight: var(--font-weight-bold);
+            margin: 0;
+        }
+        .page-title i {
+            font-size: var(--text-lg);
+        }
+        .page-title .subtitle {
+            color: var(--color-text-secondary);
+            font-size: var(--text-sm);
+            border-left: 1px solid var(--color-border);
+            padding-left: var(--space-md);
+        }
+        .dictionary-container {
+            flex: 1;
+            min-height: 0;
+            background-color: var(--color-background);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
 </head>
 <body class="page-layout">
     <header x-data="getUserInfo()" x-init="getRole()">
         <sc-bilara-nav></sc-bilara-nav>
     </header>
 
-    <main class="main-content" style="height: calc(100vh - 120px);">
-        <sc-bilara-dictionary></sc-bilara-dictionary>
+    <main class="main-content">
+        <div class="dictionary-layout">
+            <header class="page-header">
+                <div class="page-title">
+                    <i class="bi-book"></i>
+                    <h1>Lexicon</h1>
+                    <span class="subtitle">Search Pali definitions and meanings</span>
+                </div>
+            </header>
+
+            <div class="dictionary-container">
+                <sc-bilara-dictionary style="flex: 1; height: 100%;"></sc-bilara-dictionary>
+            </div>
+        </div>
     </main>
 
     <sc-bilara-nav-footer></sc-bilara-nav-footer>
