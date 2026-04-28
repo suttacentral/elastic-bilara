@@ -27,11 +27,29 @@ export class ScBilaraAdminProjectFiles extends LitElement {
               <!-- Add Project Form -->
               <div x-cloak x-show="showAdd" x-data="addNewProject()">
                   <div x-cloak x-show="loading" class="admin-loading">
-                      <div class="admin-spinner"></div>
+                      <div class="admin-progress-panel" role="status" aria-live="polite">
+                          <p class="admin-progress-title" x-text="progress.phase === 'committing' ? 'Committing files…' : progress.phase === 'indexing' ? 'Indexing files…' : 'Creating project files…'"></p>
+                          <div class="admin-progress-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progress.phase === 'committing' || progress.phase === 'indexing' ? undefined : (progress.total > 0 ? Math.round(progress.current / progress.total * 100) : 0)">
+                              <div x-show="progress.phase !== 'indexing' && progress.phase !== 'committing'"
+                                   class="admin-progress-bar-fill"
+                                   x-bind:style="'width: ' + (progress.total > 0 ? Math.round(progress.current / progress.total * 100) : 0) + '%'"></div>
+                              <div x-show="progress.phase === 'indexing' || progress.phase === 'committing'"
+                                   class="admin-progress-bar-indeterminate"></div>
+                          </div>
+                          <p class="admin-progress-info">
+                              <span x-show="progress.phase !== 'indexing' && progress.phase !== 'committing'">
+                                  <span x-show="progress.total > 0"
+                                        x-text="progress.current + ' / ' + progress.total + ' (' + Math.round(progress.current / progress.total * 100) + '%)'"></span>
+                                  <span x-show="progress.total === 0">Preparing…</span>
+                              </span>
+                              <span x-show="progress.phase === 'committing' || progress.phase === 'indexing'"
+                                     x-text="'Elapsed ' + (elapsedSeconds >= 60 ? Math.floor(elapsedSeconds / 60) + 'm ' + (elapsedSeconds % 60) + 's' : elapsedSeconds + 's')"></span>
+                          </p>
+                      </div>
                   </div>
                   <div x-cloak x-show="invalidData" class="admin-alert admin-alert-danger admin-text-center">
                       <i class="bi-exclamation-circle"></i>
-                      The form contains invalid data.
+                      <span x-text="errorMessage || 'The form contains invalid data.'"></span>
                   </div>
                   <div class="admin-card admin-project-card">
                       <div class="admin-card-header admin-project-card-header">

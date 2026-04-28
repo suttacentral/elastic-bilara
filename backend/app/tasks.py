@@ -266,3 +266,94 @@ def update_file_translation_progress(file_path: str) -> dict:
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+@app.task(name="create_project", bind=True, base=GitTask, queue="commit_queue")
+def create_project(
+    self,
+    current_user: dict,
+    source_user_username: str,
+    root_path_str: str,
+    translation_language: str,
+) -> dict:
+    """Async task: create translation project files, index in ES, and commit."""
+    from pathlib import Path
+    from app.services.projects.utils import compute_target_path, create_project_file
+
+    root_path = Path(root_path_str)
+
+    source_root_files = sorted(
+        root_path.rglob("*.json") if root_path.is_dir() else root_path.parent.rglob("*.json")
+    )
+
+    directory_list = ["translation", "comment"]
+    total_steps = len(source_root_files) * len(directory_list)
+    all_paths_list: list[Path] = []
+    step = 0
+    PROGRESS_UPDATE_INTERVAL = 20
+    for source_file in source_root_files:
+        for dir_type in directory_list:
+            target = compute_target_path(
+                source_file, root_path, source_user_username, translation_language, dir_type
+            )
+            if create_project_file(source_file, target):
+                all_paths_list.append(target)
+            step += 1
+            if total_steps > 0 and step % PROGRESS_UPDATE_INTERVAL == 0:
+                self.update_state(
+                    state="PROGRESS",
+                    meta={"current": step, "total": total_steps},
+                )
+
+    if not all_paths_list:
+        return {
+            "status": "no_files",
+            "user": source_user_username,
+            "translation_language": translation_language,
+            "new_project_paths": [],
+            "error": "Translation files already exist for this project",
+        }
+
+    self.update_state(
+        state="PROGRESS",
+        meta={"current": total_steps, "total": total_steps, "phase": "committing"},
+    )
+
+    commit_success = commit(
+        current_user,
+        [str(path) for path in all_paths_list],
+        f"Creating new project for {source_user_username} in {translation_language.upper()} language",
+    )
+
+    if not commit_success:
+        return {
+            "status": "error",
+            "user": source_user_username,
+            "translation_language": translation_language,
+            "new_project_paths": [],
+            "error": "Failed to commit and push project files",
+        }
+
+    self.update_state(
+        state="PROGRESS",
+        meta={"current": total_steps, "total": total_steps, "phase": "indexing"},
+    )
+
+    index_error = None
+    try:
+        es.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, all_paths_list)
+    except Exception as exc:
+        index_error = str(exc)
+
+    result = {
+        "status": "success",
+        "user": source_user_username,
+        "translation_language": translation_language,
+        "new_project_paths": [
+            str(path.relative_to(settings.WORK_DIR)) for path in all_paths_list
+        ],
+    }
+    if index_error:
+        result["index_error"] = index_error
+    return result
+

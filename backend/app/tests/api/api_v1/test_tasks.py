@@ -7,11 +7,12 @@ from celery import states
 class TestTaskStatus:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "mock_status, expected_status_code, expected_response",
+        "mock_status, ready, info, result, expected_status_code, expected_response",
         [
-            (states.SUCCESS, 200, {"status": states.SUCCESS}),
-            (states.PENDING, 200, {"status": states.PENDING}),
-            (states.FAILURE, 200, {"status": states.FAILURE}),
+            (states.SUCCESS, True, None, {"status": "success"}, 200, {"status": states.SUCCESS, "result": {"status": "success"}}),
+            (states.PENDING, False, None, None, 200, {"status": states.PENDING}),
+            ("PROGRESS", False, {"current": 2, "total": 5}, None, 200, {"status": "PROGRESS", "info": {"current": 2, "total": 5}}),
+            (states.FAILURE, True, None, RuntimeError("boom"), 200, {"status": states.FAILURE, "error": "boom"}),
         ],
     )
     @patch("app.api.api_v1.endpoints.tasks.app.AsyncResult")
@@ -19,6 +20,9 @@ class TestTaskStatus:
         self,
         mock_async_result,
         mock_status,
+        ready,
+        info,
+        result,
         expected_status_code,
         expected_response,
         async_client,
@@ -27,6 +31,9 @@ class TestTaskStatus:
         task_id = "test_task_id"
         mock_instance = mock_async_result.return_value
         mock_instance.status = mock_status
+        mock_instance.ready.return_value = ready
+        mock_instance.info = info
+        mock_instance.result = result
 
         response = await async_client.get(f"/tasks/{task_id}/")
         assert response.status_code == expected_status_code

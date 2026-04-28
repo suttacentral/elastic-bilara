@@ -191,13 +191,21 @@
     background-color: var(--color-background-secondary);
     transition: var(--transition);
     box-sizing: border-box;
+    font-family: var(--font-sans);
+}
+
+.admin-input:hover,
+.admin-select:hover,
+.admin-textarea:hover {
+    border-color: var(--color-text-secondary);
+    background-color: var(--color-background-tertiary);
 }
 
 .admin-input:focus,
 .admin-select:focus,
 .admin-textarea:focus {
     outline: none;
-    border-color: var(--color-border);
+    border-color: var(--color-primary);
     box-shadow: var(--shadow-xs);
 }
 
@@ -568,6 +576,68 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
+}
+
+.admin-progress-panel {
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-lg) var(--space-xl);
+    width: min(calc(100vw - 2rem), 420px);
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.admin-progress-title {
+    margin: 0 0 var(--space-md);
+    font-size: var(--text-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-emphasized);
+}
+
+.admin-progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background-color: var(--color-background-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.admin-progress-bar-fill {
+    height: 100%;
+    background-color: var(--color-primary);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.admin-progress-info {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.admin-progress-bar-indeterminate {
+    width: 40%;
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, transparent, var(--color-primary) 40%, var(--color-primary) 60%, transparent);
+    animation: admin-progress-slide 1.4s ease-in-out infinite;
+    will-change: transform;
+}
+
+@keyframes admin-progress-slide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-progress-bar-indeterminate {
+        animation: none;
+        width: 100%;
+        background: var(--color-primary);
+        opacity: 0.8;
+    }
 }
 
 .admin-spinner {

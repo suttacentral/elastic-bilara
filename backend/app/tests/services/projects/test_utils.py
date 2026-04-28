@@ -6,6 +6,7 @@ from unittest.mock import mock_open, patch
 import pytest
 from app.services.projects.utils import (
     OverrideException,
+    compute_target_path,
     create_new_project_file_names,
     create_new_project_paths,
     create_project_file,
@@ -301,3 +302,24 @@ def test_create_project_file_exists_exception(mocker):
     mocker.patch.object(Path, "exists", return_value=True)
 
     assert not create_project_file(segments_root_path, existing_file_path)
+
+
+@pytest.mark.parametrize(
+    "root_path, source_file, expected",
+    [
+        (
+            Path("/app/checkouts/unpublished/root/pli/ms/sutta/an/an1"),
+            Path("/app/checkouts/unpublished/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"),
+            Path("/app/checkouts/unpublished/translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json"),
+        ),
+        (
+            Path("/app/checkouts/unpublished/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"),
+            Path("/app/checkouts/unpublished/root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json"),
+            Path("/app/checkouts/unpublished/translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json"),
+        ),
+    ],
+)
+def test_compute_target_path_handles_directory_and_file_root_path(root_path, source_file, expected):
+    actual = compute_target_path(source_file, root_path, "test_user", "en", "translation")
+
+    assert actual == expected

@@ -28,6 +28,10 @@ function projects() {
 function addNewProject() {
     return {
         loading: false,
+        progress: { current: 0, total: 0, phase: 'creating' },
+        elapsedSeconds: 0,
+        _elapsedTimer: null,
+        errorMessage: '',
         base: "root/",
         directories: [],
         files: [],
@@ -102,51 +106,103 @@ function addNewProject() {
         },
         async handleSubmit() {
             this.clearCreatedData();
+            this.invalidData = false;
+            this.errorMessage = '';
             if (this.user === null || this.user === "") return (this.invalidData = true);
             this.checkLanguageCode();
             if (!this.validLanguageCode) return (this.invalidData = true);
             this.loading = true;
+            this.progress = { current: 0, total: 0, phase: 'creating' };
+            this.elapsedSeconds = 0;
+            clearInterval(this._elapsedTimer);
+            this._elapsedTimer = setInterval(() => { this.elapsedSeconds++; }, 1000);
             const params = new URLSearchParams({
                 user_github_id: this.user,
                 root_path: this.base,
                 translation_language: this.languageCode,
             });
-            const response = await requestWithTokenRetry(`projects/create/?${params.toString()}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-            });
-            const { new_project_paths: createdPaths, user } = await response.json();
-
-            // Also write project entry to _project-v2.json
-            const rootPathClean = this.base.replace(/\/$/, '');
-            const rootParts = rootPathClean.split('/');
-            // root/{lang}/{source}/{collection...}
-            const rootLang = rootParts.length >= 3 ? rootParts[2] : rootParts[1] || '';
-            const lastPart = rootParts[rootParts.length - 1] || '';
-            const selectedUser = this.users.find(u => String(u.github_id) === String(this.user));
-            const authorId = selectedUser ? selectedUser.username : '';
-            const projectEntry = {
-                project_uid: `${this.languageCode}_${rootLang}_translation_${authorId}`,
-                name: this.projectName,
-                root_path: rootPathClean,
-                translation_path: `translation/${this.languageCode}/${authorId}/${lastPart}`,
-                translation_muids: `translation-${this.languageCode}-${authorId}`,
-                creator_github_handle: authorId,
-            };
             try {
-                await requestWithTokenRetry('projects/project-entries/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(projectEntry),
+                const response = await requestWithTokenRetry(`projects/create/?${params.toString()}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                 });
-            } catch (e) {
-                console.error('Failed to create project entry:', e);
-            }
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `API error (${response.status})`);
+                }
+                const { task_id, user } = await response.json();
 
-            this.loading = false;
-            this.created.status = true;
-            this.created.username = user;
-            this.created.paths = createdPaths;
+                // Poll task status until completion
+                const taskResult = await this.pollTask(task_id);
+
+                if (taskResult && taskResult.status === "success") {
+                    // Also write project entry to _project-v2.json
+                    const rootPathClean = this.base.replace(/\/$/, '');
+                    const rootParts = rootPathClean.split('/');
+                    const rootLang = rootParts.length >= 3 ? rootParts[2] : rootParts[1] || '';
+                    const lastPart = rootParts[rootParts.length - 1] || '';
+                    const selectedUser = this.users.find(u => String(u.github_id) === String(this.user));
+                    const authorId = selectedUser ? selectedUser.username : '';
+                    const projectEntry = {
+                        project_uid: `${this.languageCode}_${rootLang}_translation_${authorId}`,
+                        name: this.projectName,
+                        root_path: rootPathClean,
+                        translation_path: `translation/${this.languageCode}/${authorId}/${lastPart}`,
+                        translation_muids: `translation-${this.languageCode}-${authorId}`,
+                        creator_github_handle: authorId,
+                    };
+                    try {
+                        await requestWithTokenRetry('projects/project-entries/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(projectEntry),
+                        });
+                    } catch (e) {
+                        console.error('Failed to create project entry:', e);
+                    }
+
+                    this.created.status = true;
+                    this.created.username = user;
+                    this.created.paths = taskResult.new_project_paths || [];
+                } else {
+                    this.errorMessage = taskResult?.error || (taskResult?.status === 'error' ? 'Project creation task failed.' : 'Project creation failed.');
+                    this.invalidData = true;
+                }
+            } catch (error) {
+                console.error("Failed to create project:", error);
+                this.errorMessage = error.message || 'Project creation failed.';
+                this.invalidData = true;
+            } finally {
+                clearInterval(this._elapsedTimer);
+                this._elapsedTimer = null;
+                this.loading = false;
+            }
+        },
+        async pollTask(taskId) {
+            const POLL_INTERVAL = 2000;
+            const MAX_POLLS = 900; // 900 polls × 2s = 1800s (30 minutes)
+            for (let i = 0; i < MAX_POLLS; i++) {
+                try {
+                    const response = await requestWithTokenRetry(`tasks/${taskId}/`);
+                    const data = await response.json();
+                    if (data.status === "SUCCESS") {
+                        this.progress = { current: 1, total: 1, phase: 'done' };
+                        return data.result;
+                    } else if (data.status === "FAILURE") {
+                        return { status: 'error', error: data.error || 'Project creation task failed.' };
+                    } else if (data.status === "PROGRESS" && data.info) {
+                        this.progress = {
+                            current: data.info.current || 0,
+                            total: data.info.total || 0,
+                            phase: data.info.phase || 'creating',
+                        };
+                    }
+                } catch (pollError) {
+                    console.warn("Poll request failed, retrying:", pollError);
+                }
+                await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+            }
+            return { status: 'error', error: 'Project creation timed out.' };
         },
     };
 }

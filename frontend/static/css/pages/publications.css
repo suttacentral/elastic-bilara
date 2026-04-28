@@ -61,6 +61,7 @@
 .pub-filter {
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
+    font-family: var(--font-sans);
     border: 2px solid var(--color-border);
     border-radius: var(--radius-md);
     background-color: var(--color-background-secondary);
@@ -71,6 +72,18 @@
     background-repeat: no-repeat;
     background-position: right var(--space-sm) center;
     padding-right: var(--space-xl);
+    transition: var(--transition);
+}
+
+.pub-filter:hover {
+    border-color: var(--color-text-secondary);
+    background-color: var(--color-background-tertiary);
+}
+
+.pub-filter:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-xs);
 }
 
 .pub-stats {
@@ -281,6 +294,22 @@
     transition: var(--transition);
     box-sizing: border-box;
     font-family: var(--font-sans);
+}
+
+.pub-form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23657b83' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-sm) center;
+    padding-right: var(--space-xl);
+}
+
+.pub-form-input:hover,
+.pub-form-select:hover,
+.pub-form-textarea:hover {
+    border-color: var(--color-text-secondary);
+    background-color: var(--color-background-tertiary);
 }
 
 .pub-form-input:focus,

@@ -139,7 +139,7 @@ export class ScBilaraAdminProjects extends LitElement {
                               </button>
                           </div>
 
-                          <div style="padding:1rem 1.5rem;max-height:70vh;overflow-y:auto">
+                          <div class="admin-modal-scroll-area">
                               <form @submit.prevent="await submitForm()">
                                   <div class="pub-form-section" style="border:none;margin:0;padding:0;background:transparent;box-shadow:none;">
                                       <div class="pub-form-section-body" style="padding:0;">
@@ -218,7 +218,7 @@ export class ScBilaraAdminProjects extends LitElement {
                               <p class="admin-modal-subtitle">Add or remove translation project files.</p>
                           </div>
                       </div>
-                      <div style="padding:1rem 1.5rem;max-height:70vh;overflow-y:auto">
+                      <div class="admin-modal-scroll-area">
                           <sc-bilara-admin-project-files></sc-bilara-admin-project-files>
                       </div>
                       <div class="admin-modal-footer">

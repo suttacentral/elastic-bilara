@@ -153,7 +153,7 @@ export class ScBilaraAdminPublications extends LitElement {
                           </button>
                       </div>
 
-                      <div style="padding:1rem 1.5rem;max-height:75vh;overflow-y:auto">
+                      <div class="pub-modal-scroll-area">
                           <form @submit.prevent="await submitForm()">
 
                       <!-- Basic Info -->

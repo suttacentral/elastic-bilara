@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 from app.core.config import settings
-from app.db.schemas.user import User, UserBase
+from app.db.schemas.user import UserBase
 from app.services.auth import utils
 from app.services.directories.utils import (
     create_directory,
@@ -28,9 +28,6 @@ from app.services.projects.models import (
 from app.services.projects.uid_expander import UIDExpander
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
-    OverrideException,
-    create_new_project_file_names,
-    create_project_file,
     sort_paths,
     update_file,
     write_json_data,
@@ -41,11 +38,10 @@ from app.services.users.permissions import (
     can_edit_translation,
     is_admin_or_superuser,
     is_user_active,
-    is_user_in_admin_group,
 )
 from app.services.users.utils import get_user
 from app.tasks import commit
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 from search.search import Search
@@ -526,7 +522,7 @@ async def get_translation_progress(
 
 @router.post(
     "/create/",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
 )
 async def create_new_project(
@@ -557,44 +553,27 @@ async def create_new_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Root path '{root_path}' not found",
         )
-    if root_path.is_dir() and not list(root_path.glob("*.json")):
+    if root_path.is_dir() and not list(root_path.rglob("*.json")):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Root path directory '{root_path}' contains no json files."
             f" Target directory must contain at least one json file.",
         )
 
-    directory_list = ["translation", "comment"]
+    from app.tasks import create_project
 
-    new_project_paths = create_new_project_file_names(
-        source_user.username, translation_language, root_path, directory_list
-    )
-    source_root_files_names: list[Path] = list(
-        root_path.glob("*.json") if root_path.is_dir() else root_path.parent.glob("*.json")
-    )
-
-    all_paths_list: list[Path] = []
-    for root_file, new_file_path in zip(source_root_files_names, new_project_paths):
-        for directory_type_path in new_file_path:
-            if create_project_file(Path(root_file), Path(directory_type_path)):
-                all_paths_list.append(directory_type_path)
-    if not all_paths_list:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="No new project files were created",
-        )
-    search.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, all_paths_list)
-    result = commit.delay(
+    result = create_project.delay(
         current_user.model_dump(),
-        [str(path) for path in all_paths_list],
-        f"Creating new project for {source_user.username} in {translation_language.upper()} language",
+        source_user.username,
+        str(root_path),
+        translation_language,
     )
 
     return {
+        "task_id": result.id,
         "user": source_user.username,
         "translation_language": translation_language,
-        "new_project_paths": [path.relative_to(settings.WORK_DIR) for path in all_paths_list],
-        "commit_task_id": result.id,
+        "detail": "Project creation task has been queued.",
     }
 
 

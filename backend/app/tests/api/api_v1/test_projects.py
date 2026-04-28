@@ -523,17 +523,11 @@ class TestProjects:
                 "translation_language": translation_language,
             },
         )
-        assert response.status_code == 201
+        assert response.status_code == 202
+        assert "task_id" in response.json()
         assert "user" in response.json()
         assert "translation_language" in response.json()
-        assert "new_project_paths" in response.json()
-        assert "commit_task_id" in response.json()
-        assert response.json()["new_project_paths"] == [
-            "translation/en/test_user/sutta/an/an1/an1.1-10_translation-en-test_user.json",
-            "comment/en/test_user/sutta/an/an1/an1.1-10_comment-en-test_user.json",
-            "translation/en/test_user/sutta/an/an1/an1.11-20_translation-en-test_user.json",
-            "comment/en/test_user/sutta/an/an1/an1.11-20_comment-en-test_user.json",
-        ]
+        assert response.json()["task_id"] == "test_task_id"
 
     @pytest.mark.asyncio
     async def test_create_new_project_unauthorized(
@@ -643,7 +637,7 @@ class TestProjects:
         translation_language = "en"
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("pathlib.Path.is_dir", return_value=True)
-        mocker.patch("pathlib.Path.glob", return_value=[])
+        mocker.patch("pathlib.Path.rglob", return_value=[])
 
         response = await async_client.post(
             "/projects/create/",
@@ -693,11 +687,14 @@ class TestProjects:
         mocker,
         mock_is_admin_or_superuser_is_active,
         mock_get_current_user_admin,
+        mock_create_new_project,
         mock_new_project_create_data,
         mock_user,
         mock_session,
         async_client,
     ) -> None:
+        """Endpoint now dispatches a task — it always returns 202 if validation passes.
+        The 'already exist' check happens inside the Celery task."""
         current_user = copy(mock_user)
         current_user.role = "administrator"
         current_user.id = 66
@@ -709,9 +706,6 @@ class TestProjects:
         root_path = Path("root/pli/ms/sutta/an/an1/an1.1-10_root-pli-ms.json")
         translation_language = "en"
 
-        mocker.patch("app.api.api_v1.endpoints.projects.create_project_file", side_effect=[False, False, False, False])
-        mocker.patch("pathlib.Path.unlink", return_value=None)
-
         response = await async_client.post(
             "/projects/create/",
             params={
@@ -721,8 +715,8 @@ class TestProjects:
             },
         )
 
-        assert response.status_code == 409
-        assert "No new project files were created" in response.json()["detail"]
+        assert response.status_code == 202
+        assert "task_id" in response.json()
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("invalid_language", ["", "a", "abcd", "abcde"])

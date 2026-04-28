@@ -86,6 +86,12 @@ function publicationsManager() {
             list.sort((a, b) => {
                 let va = a[this.sortField] ?? '';
                 let vb = b[this.sortField] ?? '';
+                // publication_number sorts by the number after scpub
+                if (this.sortField === 'publication_number') {
+                    const na = parseInt(String(va).substring(5), 10) || 0;
+                    const nb = parseInt(String(vb).substring(5), 10) || 0;
+                    return this.sortAsc ? na - nb : nb - na;
+                }
                 if (typeof va === 'string') va = va.toLowerCase();
                 if (typeof vb === 'string') vb = vb.toLowerCase();
                 if (va < vb) return this.sortAsc ? -1 : 1;

@@ -126,6 +126,41 @@ def create_new_project_file_names(
     ]
 
 
+def compute_target_path(
+    source_file: Path, root_path: Path, username: str, translation_language: str, directory_type: str
+) -> Path:
+    """Compute the target path for a single source file.
+
+    Given a source file like:
+        WORK_DIR/root/pli/ms/sutta/dn/dn1_root-pli-ms.json
+    and root_path:
+        WORK_DIR/root/pli/ms/sutta/
+
+    This produces:
+        WORK_DIR/translation/{lang}/{user}/sutta/dn/dn1_translation-{lang}-{user}.json
+    """
+    root_base = root_path.parent if root_path.suffix == ".json" else root_path
+    root_parts = root_base.parts
+    if "root" not in root_parts:
+        raise ValueError(f'Expected "root" in path parts for {root_base!s}')
+    root_index = root_parts.index("root")
+    # Skip root/{lang}/{edition}/ (3 levels after "root") to get content-relative path
+    content_base = Path(*root_parts[root_index + 3 :]) if len(root_parts) > root_index + 3 else Path(".")
+    # Get the relative path of the source file's directory from root_path
+    relative_dir = source_file.parent.relative_to(root_base) if source_file.parent != root_base else Path(".")
+    prefix = source_file.name.split("_")[0]
+    filename = f"{prefix}_{directory_type}-{translation_language}-{username}.json"
+    target_dir = (
+        settings.WORK_DIR
+        / directory_type
+        / translation_language.lower()
+        / username.lower()
+        / content_base
+        / relative_dir
+    )
+    return target_dir / filename
+
+
 def create_project_file(segments_root_path: Path, new_file_path: Path):
     if not segments_root_path or not new_file_path or Path(new_file_path).exists():
         return False
