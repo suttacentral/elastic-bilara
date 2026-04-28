@@ -20,11 +20,11 @@ export class ScBilaraAdminUsers extends LitElement {
                           <!-- User Header (Clickable) -->
                           <div class="admin-user-header" @click="user.showDetails = !user.showDetails">
                               <div class="admin-user-info">
-                                  <img :src="user.avatar_url" :alt="${'`${user.username}\'s profile`'}"
+                                  <img :src="user.avatar_url" :alt="'Profile image for ' + user.username"
                                        class="admin-user-avatar"/>
                                   <div>
                                       <p class="admin-user-name" x-text="user.username"></p>
-                                      <p class="admin-user-meta" x-text="${'`Last seen: ${formatDate(user.last_login)}`'}"></p>
+                                      <p class="admin-user-meta" x-text="'Last seen: ' + formatDate(user.last_login)"></p>
                                   </div>
                               </div>
                               <div class="admin-user-badges">
@@ -39,8 +39,8 @@ export class ScBilaraAdminUsers extends LitElement {
                           <div x-cloak x-show="user.showDetails" class="admin-user-details">
                               <div class="admin-user-controls">
                                   <div class="admin-form-group">
-                                      <label :for="${'`${key}-role`'}" class="admin-label">Change Role</label>
-                                      <select :name="${'`${key}-role`'}" :id="${'`${key}-role`'}" x-model="user.role"
+                                      <label :for="key + '-role'" class="admin-label">Change Role</label>
+                                      <select :name="key + '-role'" :id="key + '-role'" x-model="user.role"
                                               x-on:change="await setUsersRole(user.github_id, user.role); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
                                               class="admin-select">
                                           <template x-for="role in ROLES">
@@ -49,8 +49,8 @@ export class ScBilaraAdminUsers extends LitElement {
                                       </select>
                                   </div>
                                   <div class="admin-form-group">
-                                      <label :for="${'`${key}-state`'}" class="admin-label">Account Status</label>
-                                      <select :name="${'`${key}-state`'}" :id="${'`${key}-state`'}" x-model="user.is_active"
+                                      <label :for="key + '-state'" class="admin-label">Account Status</label>
+                                      <select :name="key + '-state'" :id="key + '-state'" x-model="user.is_active"
                                               x-on:change="await activateUser(user.github_id, user.is_active); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
                                               class="admin-select">
                                           <template x-for="state in ['true', 'false']">
@@ -100,7 +100,7 @@ export class ScBilaraAdminUsers extends LitElement {
                                               </div>
                                               <div>
                                                   <h2 class="admin-modal-title"
-                                                      x-text="selectedUser ? ${"'`Delete ${selectedUser.username}?`'"} : ''"></h2>
+                                                      x-text="selectedUser ? 'Delete ' + selectedUser.username + '?' : ''"></h2>
                                                   <p class="admin-modal-subtitle">This action cannot be undone.</p>
                                               </div>
                                           </div>
