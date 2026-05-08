@@ -26,7 +26,7 @@ export class ScBilaraAdminPublications extends LitElement {
                           <button class="pub-btn pub-btn-primary" @click="await showCreateForm()" x-show="isAdmin">
                               <i class="bi-plus-lg"></i> New Publication
                           </button>
-                          <button class="pub-btn" style="background:#2ea44f;color:#fff" @click="await publishToGitHub()" x-show="isAdmin" :disabled="publishing">
+                          <button class="pub-btn" @click="await publishToGitHub()" x-show="isAdmin" :disabled="publishing">
                               <i class="bi-github"></i>
                               <span x-text="publishing ? 'Publishing\u2026' : 'Publish to GitHub'"></span>
                           </button>

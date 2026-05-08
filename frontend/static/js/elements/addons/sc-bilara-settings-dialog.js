@@ -5,6 +5,8 @@ import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/compone
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/spinner/spinner.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/alert/alert.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/icon/icon.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/select/select.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/option/option.js';
 
 import { registerIconLibrary } from 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/utilities/icon-library.js';
 
@@ -116,6 +118,28 @@ export class SCBilaraSettingsDialog extends LitElement {
       flex-shrink: 0;
     }
 
+    .setting-control sl-select {
+      min-width: 140px;
+      --sl-input-height-small: 30px;
+      --sl-input-font-size-small: 0.8rem;
+    }
+
+    .setting-control sl-select::part(combobox) {
+      background-color: var(--color-background);
+      border-color: var(--color-border);
+      border-radius: 6px;
+      color: var(--color-text-emphasized);
+    }
+
+    .setting-control sl-select::part(combobox):hover {
+      border-color: var(--color-primary);
+    }
+
+    .setting-control sl-select::part(listbox) {
+      background-color: var(--color-background);
+      border-color: var(--color-border);
+    }
+
     .loading-container {
       display: flex;
       flex-direction: column;
@@ -186,6 +210,7 @@ export class SCBilaraSettingsDialog extends LitElement {
     this._settings = {
       pali_lookup: true,
       dblclick_search: true,
+      hint_style: 'dropdown',
     };
     this._toast = { show: false, message: '', variant: 'primary' };
   }
@@ -208,6 +233,7 @@ export class SCBilaraSettingsDialog extends LitElement {
       this._settings = {
         pali_lookup: data.pali_lookup ?? true,
         dblclick_search: data.dblclick_search ?? true,
+        hint_style: data.hint_style ?? 'dropdown',
       };
     } catch (err) {
       console.error('Failed to load settings:', err);
@@ -257,7 +283,23 @@ export class SCBilaraSettingsDialog extends LitElement {
     this._settings = { ...this._settings, dblclick_search: e.target.checked };
   }
 
-  _onDialogHide() {
+  _onHintStyleChange(e) {
+    this._settings = { ...this._settings, hint_style: e.target.value };
+  }
+
+  _onRequestClose(e) {
+    if (e.target !== e.currentTarget) return;
+    
+    // Prevent overlay click from closing the dialog.
+    if (e.detail.source === 'overlay') {
+      e.preventDefault();
+    }
+  }
+
+  _onDialogHide(e) {
+    // Prevent child components (like sl-select) from triggering dialog hide
+    if (e.target !== e.currentTarget) return;
+    
     this.open = false;
     this.dispatchEvent(new CustomEvent('settings-closed', { bubbles: true, composed: true }));
   }
@@ -267,6 +309,7 @@ export class SCBilaraSettingsDialog extends LitElement {
       <sl-dialog
         ?open=${this.open}
         @sl-after-hide=${this._onDialogHide}
+        @sl-request-close=${this._onRequestClose}
         label="Settings"
       >
         <div slot="label">
@@ -314,6 +357,26 @@ export class SCBilaraSettingsDialog extends LitElement {
                     ?checked=${this._settings.dblclick_search}
                     @sl-change=${this._onDblclickSearchChange}
                   ></sl-switch>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-label">
+                  <span class="title">
+                    <sl-icon library="bi" name="lightbulb"></sl-icon>
+                    Hint Display Style
+                  </span>
+                  <span class="description">How translation hints are shown when editing</span>
+                </div>
+                <div class="setting-control">
+                  <sl-select
+                    size="small"
+                    value=${this._settings.hint_style}
+                    @sl-change=${this._onHintStyleChange}
+                  >
+                    <sl-option value="dropdown">Dropdown</sl-option>
+                    <sl-option value="inline">Inline</sl-option>
+                  </sl-select>
                 </div>
               </div>
             </div>

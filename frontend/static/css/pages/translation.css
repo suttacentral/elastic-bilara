@@ -559,7 +559,7 @@
 }
 
 .search__results-title-link:hover {
-    color: var(--color-primary, #4a90d9);
+    color: var(--color-primary);
     text-decoration: underline;
 }
 
@@ -822,7 +822,7 @@ sl-dialog::part(title) {
 }
 
 .translation-grid__header-badge--tag {
-    background-color: var(--color-accent, #7c3aed);
+    background-color: var(--color-accent);
     color: var(--color-text-on-strong);
 }
 
@@ -923,7 +923,11 @@ sl-dialog::part(title) {
 }
 
 .project-container__content-body__text-uid {
-    padding-left: 2px;
+    color: var(--color-primary);
+    padding-left: 4px;
+    font-family: monospace;
+    font-size: 0.95em;
+    font-variant-caps: normal;
 }
 
 .project-container__content-body__text--hide {
@@ -1007,6 +1011,104 @@ sl-dialog::part(title) {
     border-radius: var(--radius-xs);
     box-shadow: var(--shadow-md);
     overflow-y: auto;
+}
+
+/* Inline hint mode (old Bilara style) */
+.translation-cell__hints--inline {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    z-index: auto;
+    margin-top: 4px;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-y: visible;
+    margin-bottom: 10px;
+
+    --hint-inline-source-bg: color-mix(in srgb, var(--color-primary) 12%, var(--color-background));
+    --hint-inline-source-border: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+    --hint-inline-translation-bg: color-mix(in srgb, var(--color-primary) 6%, var(--color-background));
+    --hint-inline-hover-source-bg: color-mix(in srgb, var(--color-primary) 20%, var(--color-background));
+    --hint-inline-hover-translation-bg: color-mix(in srgb, var(--color-primary) 12%, var(--color-background));
+    --hint-inline-selected-border: var(--color-primary);
+}
+
+.translation-cell__hints--inline .translation-cell__hints-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.translation-cell__hints--inline .translation-cell__hints-item {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    border-bottom: none;
+    border-radius: var(--radius-xs);
+    overflow: hidden;
+    border-left: 3px solid transparent;
+    transition: border-color 0.15s ease;
+}
+
+.translation-cell__hints--inline .translation-cell__hints-item:hover {
+    background-color: transparent;
+}
+
+.translation-cell__hints--inline .translation-cell__hints-item--selected {
+    background-color: transparent;
+    border-left-color: var(--hint-inline-selected-border);
+}
+
+.translation-cell__hints--inline .translation-cell__hints-content {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.translation-cell__hints--inline .translation-cell__hints-source {
+    flex: 1;
+    padding: 4px 10px;
+    font-size: var(--text-l);
+    color: var(--color-text);
+    background-color: var(--hint-inline-source-bg);
+    border-right: 1px solid var(--hint-inline-source-border);
+}
+
+.translation-cell__hints--inline .translation-cell__hints-translation {
+    flex: 1;
+    padding: 4px 10px;
+    background-color: var(--hint-inline-translation-bg);
+}
+
+.translation-cell__hints--inline .translation-cell__hints-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.translation-cell__hints--inline .translation-cell__hints-item:hover .translation-cell__hints-source,
+.translation-cell__hints--inline .translation-cell__hints-item--selected .translation-cell__hints-source {
+    background-color: var(--hint-inline-hover-source-bg);
+}
+
+.translation-cell__hints--inline .translation-cell__hints-item:hover .translation-cell__hints-translation,
+.translation-cell__hints--inline .translation-cell__hints-item--selected .translation-cell__hints-translation {
+    background-color: var(--hint-inline-hover-translation-bg);
+}
+
+
+/* Inline mode: responsive stacking for narrow screens */
+@media (max-width: 600px) {
+    .translation-cell__hints--inline .translation-cell__hints-content {
+        flex-direction: column;
+    }
+
+    .translation-cell__hints--inline .translation-cell__hints-source {
+        border-right: none;
+        border-bottom: 1px solid var(--hint-inline-source-border);
+    }
 }
 
 .translation-cell__hints-list {

@@ -4,11 +4,20 @@ from app.db.database import Base, engine
 from app.db.models.notification import Notification, RemarkNotification
 from app.db.models.remark import Remark
 from app.db.models.user import User
+from app.db.models.user_preference import UserPreference
 from fastapi import FastAPI
+from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
 
 
 Base.metadata.create_all(bind=engine, checkfirst=True)
+
+# Safe column migrations for existing tables
+with engine.connect() as conn:
+    conn.execute(text(
+        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS hint_style VARCHAR"
+    ))
+    conn.commit()
 
 app = FastAPI(
     title=settings.PROJECT_NAME, docs_url="/api/v1/docs", redoc_url="/api/v1/redoc", openapi_url="/api/v1/openapi.json"

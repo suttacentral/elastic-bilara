@@ -388,6 +388,7 @@
                                             showHints: false,
                                             hintClicked: false,
                                             selectedHintIndex: -1,
+                                            hintStyle: window.userSettings.hint_style || 'dropdown',
                                             isSource: translation.isSource,
                                             isRoot: translation.isSource,
                                             muid: translation.muid,
@@ -448,7 +449,8 @@
                                                     }
                                                 });
                                             }
-                                        }">
+                                        }"
+                                        @settings-saved.window="hintStyle = $event.detail.hint_style || 'dropdown'">
 
                                         <!-- Action buttons (split/merge) -->
                                         <sc-bilara-translation-project-actions
@@ -553,6 +555,7 @@
 
                                         <!-- Translation hints dropdown -->
                                         <div class="translation-cell__hints"
+                                            :class="{ 'translation-cell__hints--inline': hintStyle === 'inline' }"
                                             tabindex="-1"
                                             x-cloak
                                             x-show="hints.length > 0 && showHints && !translation.isSource">
@@ -563,12 +566,16 @@
                                                         tabindex="-1"
                                                         @click="selectHint(hintIndex); $el.closest('.translation-cell').querySelector('textarea').focus();"
                                                         @mouseenter="selectedHintIndex = hintIndex">
-                                                        <span class="translation-cell__hints-uid" x-text="hint.uid"></span>
+                                                        <span class="translation-cell__hints-uid"
+                                                            x-show="hintStyle !== 'inline'"
+                                                            x-text="hint.uid"></span>
                                                         <div class="translation-cell__hints-content">
                                                             <div class="translation-cell__hints-source" x-text="hint.segment"></div>
                                                             <div class="translation-cell__hints-translation">
                                                                 <span class="translation-cell__hints-text" x-text="hint.translation_hints"></span>
-                                                                <span class="translation-cell__hints-strength" x-text="'(' + hint.strength + ')'"></span>
+                                                                <span class="translation-cell__hints-strength"
+                                                                    x-show="hintStyle !== 'inline'"
+                                                                    x-text="'(' + hint.strength + ')'"></span>
                                                             </div>
                                                         </div>
                                                     </li>
