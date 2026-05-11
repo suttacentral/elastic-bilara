@@ -638,6 +638,12 @@
                 x-data="{
                     active: false,
                     selectedProjects: {},
+                    filterText: '',
+                    get filteredProjects() {
+                        if (!this.filterText) return relatedProjects;
+                        const lowerFilter = this.filterText.toLowerCase();
+                        return relatedProjects.filter(p => p.toLowerCase().includes(lowerFilter));
+                    },
                     alignToButton() {
                         const btn = document.querySelector('[data-related-btn]');
                         if (!btn) return;
@@ -648,33 +654,48 @@
                 }"
                 @toggle-detail-panel.window="
                     active = $event.detail.panel === 'related' ? !active : false;
-                    if (active) $nextTick(() => alignToButton());
+                    if (active) {
+                        filterText = ''; // Reset filter when opened
+                        $nextTick(() => { alignToButton(); $el.querySelector('.project-container__detail-panel__related-search-input')?.focus(); });
+                    }
                 "
                 x-show="active"
                 @click.outside="active = false"
                 :class="{'active': active}"
                 @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
                 <h3 class="detail-panel__title">Related Projects</h3>
-                <template x-for="(project, idx) in relatedProjects" :key="project">
-                    <div>
-                        <div class="project-container__detail-panel__related-separator"
-                            x-show="idx > 0 && getProjectType(relatedProjects[idx-1]) !== getProjectType(project)">
+                
+                <div class="project-container__detail-panel__related-search" x-show="relatedProjects.length > 10">
+                    <i class="bi bi-search"></i>
+                    <input type="text" x-model="filterText" placeholder="Filter projects..." class="project-container__detail-panel__related-search-input">
+                    <i x-show="filterText" @click="filterText = ''" class="bi bi-x-circle project-container__detail-panel__related-search-clear" style="cursor:pointer"></i>
+                </div>
+                
+                <div class="project-container__detail-panel__related-list">
+                    <template x-for="(project, idx) in filteredProjects" :key="project">
+                        <div>
+                            <div class="project-container__detail-panel__related-separator"
+                                x-show="idx > 0 && getProjectType(filteredProjects[idx-1]) !== getProjectType(project)">
+                            </div>
+                            <div
+                                class="project-container__detail-panel__related-item"
+                                @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
+                                :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': isRemarkProject(project) }">
+                                <span class="project-container__detail-panel__related-item-check"
+                                    x-text="selectedProjects[project] ? '✓' : ''"></span>
+                                <span class="project-container__detail-panel__related-item-label">
+                                    <i class="bi"
+                                        :class="getProjectIcon(project)"
+                                        aria-hidden="true"></i>
+                                    <span x-text="isRemarkProject(project) ? getRemarkLabel(project) : project"></span>
+                                </span>
+                            </div>
                         </div>
-                        <div
-                            class="project-container__detail-panel__related-item"
-                            @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
-                            :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': isRemarkProject(project) }">
-                            <span class="project-container__detail-panel__related-item-check"
-                                x-text="selectedProjects[project] ? '✓' : ''"></span>
-                            <span class="project-container__detail-panel__related-item-label">
-                                <i class="bi"
-                                    :class="getProjectIcon(project)"
-                                    aria-hidden="true"></i>
-                                <span x-text="isRemarkProject(project) ? getRemarkLabel(project) : project"></span>
-                            </span>
-                        </div>
+                    </template>
+                    <div x-show="filteredProjects.length === 0" class="project-container__detail-panel__related-empty" x-cloak>
+                        No matching projects found.
                     </div>
-                </template>
+                </div>
             </div>
 
             <!-- Panel Resizer -->
