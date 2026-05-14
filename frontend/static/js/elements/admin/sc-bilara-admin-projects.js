@@ -11,9 +11,6 @@ export class ScBilaraAdminProjects extends LitElement {
     render() {
         return html`
           <div x-data="dataTypes.projects">
-              <div class="admin-section-header">
-                  <h1 class="admin-section-title">Project Management</h1>
-              </div>
               <div class="admin-projects-shell">
 
               <!-- ===== Project List ===== -->
@@ -30,7 +27,7 @@ export class ScBilaraAdminProjects extends LitElement {
                   <!-- List View -->
                   <div>
                       <div class="pub-header">
-                          <h2 class="pub-title"></h2>
+                          <h2 class="pub-title">Project Management</h2>
                           <div style="display:flex;gap:.5rem">
                               <button class="pub-btn pub-btn-primary" @click="showFileManager = true">
                                   <i class="bi-folder-plus"></i> Manage Files
