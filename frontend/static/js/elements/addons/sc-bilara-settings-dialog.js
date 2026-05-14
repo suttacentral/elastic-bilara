@@ -122,6 +122,9 @@ export class SCBilaraSettingsDialog extends LitElement {
       min-width: 140px;
       --sl-input-height-small: 30px;
       --sl-input-font-size-small: 0.8rem;
+      --sl-input-color: var(--color-text-emphasized);
+      --sl-input-color-hover: var(--color-text-emphasized);
+      --sl-input-placeholder-color: var(--color-text-secondary);
     }
 
     .setting-control sl-select::part(combobox) {
@@ -131,6 +134,17 @@ export class SCBilaraSettingsDialog extends LitElement {
       color: var(--color-text-emphasized);
     }
 
+    .setting-control sl-select::part(display-input) {
+      color: var(--color-text-emphasized);
+      font-weight: 600;
+      opacity: 1;
+    }
+
+    .setting-control sl-select::part(expand-icon) {
+      color: var(--color-text-secondary);
+      opacity: 0.95;
+    }
+
     .setting-control sl-select::part(combobox):hover {
       border-color: var(--color-primary);
     }
@@ -138,6 +152,30 @@ export class SCBilaraSettingsDialog extends LitElement {
     .setting-control sl-select::part(listbox) {
       background-color: var(--color-background);
       border-color: var(--color-border);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+    }
+
+    .setting-control sl-option::part(base) {
+      color: var(--color-text);
+      border-radius: 6px;
+      margin: 2px 4px;
+    }
+
+    .setting-control sl-option::part(base):hover {
+      background-color: var(--color-background-secondary);
+      color: var(--color-text-emphasized);
+    }
+
+    .setting-control sl-option[current]::part(base),
+    .setting-control sl-option[selected]::part(base) {
+      background-color: var(--color-background-secondary);
+      color: var(--color-text-emphasized);
+      font-weight: 600;
+      box-shadow: inset 2px 0 0 var(--color-primary);
+    }
+
+    .setting-control sl-option::part(checked-icon) {
+      color: var(--color-primary);
     }
 
     .loading-container {
@@ -289,7 +327,7 @@ export class SCBilaraSettingsDialog extends LitElement {
 
   _onRequestClose(e) {
     if (e.target !== e.currentTarget) return;
-    
+
     // Prevent overlay click from closing the dialog.
     if (e.detail.source === 'overlay') {
       e.preventDefault();
@@ -299,7 +337,7 @@ export class SCBilaraSettingsDialog extends LitElement {
   _onDialogHide(e) {
     // Prevent child components (like sl-select) from triggering dialog hide
     if (e.target !== e.currentTarget) return;
-    
+
     this.open = false;
     this.dispatchEvent(new CustomEvent('settings-closed', { bubbles: true, composed: true }));
   }
@@ -371,6 +409,7 @@ export class SCBilaraSettingsDialog extends LitElement {
                 <div class="setting-control">
                   <sl-select
                     size="small"
+                    hoist
                     value=${this._settings.hint_style}
                     @sl-change=${this._onHintStyleChange}
                   >
