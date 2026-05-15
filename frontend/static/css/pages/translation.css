@@ -891,6 +891,7 @@ sl-dialog::part(title) {
 
 .translation-row {
     display: flex;
+    flex-wrap: wrap;
     transition: background-color 0.15s ease;
     background-color: var(--color-background);
 }
@@ -937,7 +938,7 @@ sl-dialog::part(title) {
 }
 
 .translation-row__cells {
-    flex: 1;
+    flex: 1 0 100%;
     display: flex;
     align-items: stretch;
     min-width: 0;
@@ -1070,18 +1071,16 @@ sl-dialog::part(title) {
 
 /* Inline hint mode (old Bilara style) */
 .translation-cell__hints--inline {
-    position: relative;
-    top: auto;
-    left: auto;
-    right: auto;
-    z-index: auto;
-    margin-top: 4px;
+    width: 100%;
+    flex: 0 0 100%;
+    padding: 0 12px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
     background-color: transparent;
     border: none;
     border-radius: 0;
     box-shadow: none;
     overflow-y: visible;
-    margin-bottom: 10px;
 
     --hint-inline-source-bg: color-mix(in srgb, var(--color-primary) 12%, var(--color-background));
     --hint-inline-source-border: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
@@ -1101,62 +1100,64 @@ sl-dialog::part(title) {
     display: flex;
     align-items: stretch;
     padding: 0;
-    border-bottom: none;
-    border-radius: var(--radius-xs);
+    margin: 2px 12px;
+    border-radius: 12px;
     overflow: hidden;
-    border-left: 3px solid transparent;
-    transition: border-color 0.15s ease;
+    background-color: var(--hint-inline-translation-bg);
+    border: 1px solid var(--hint-inline-source-border);
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.translation-cell__hints--inline .translation-cell__hints-item:last-child {
+    border-bottom: 1px solid var(--hint-inline-source-border);
 }
 
 .translation-cell__hints--inline .translation-cell__hints-item:hover {
-    background-color: transparent;
+    background-color: var(--hint-inline-hover-translation-bg);
 }
 
 .translation-cell__hints--inline .translation-cell__hints-item--selected {
-    background-color: transparent;
-    border-left-color: var(--hint-inline-selected-border);
+    background-color: var(--hint-inline-hover-translation-bg);
+    border-color: var(--hint-inline-selected-border);
 }
 
 .translation-cell__hints--inline .translation-cell__hints-content {
-    display: flex;
-    flex-direction: row;
+    display: grid;
     width: 100%;
+}
+
+.translation-cell__hints--inline .translation-cell__hints-column {
+    display: flex;
+    padding: 0 12px;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .translation-cell__hints--inline .translation-cell__hints-source {
     flex: 1;
-    padding: 4px 10px;
-    font-size: var(--text-l);
+    padding: 2px 12px;
+    font-size: 0.95rem;
     color: var(--color-text);
-    background-color: var(--hint-inline-source-bg);
-    border-right: 1px solid var(--hint-inline-source-border);
+    background-color: transparent;
+    border-right: none;
 }
 
 .translation-cell__hints--inline .translation-cell__hints-translation {
     flex: 1;
-    padding: 4px 10px;
-    background-color: var(--hint-inline-translation-bg);
+    padding: 2px 12px;
+    background-color: transparent;
 }
 
 .translation-cell__hints--inline .translation-cell__hints-text {
-    font-size: var(--text-sm);
+    font-size: 0.85rem;
     color: var(--color-text-secondary);
 }
-
-.translation-cell__hints--inline .translation-cell__hints-item:hover .translation-cell__hints-source,
-.translation-cell__hints--inline .translation-cell__hints-item--selected .translation-cell__hints-source {
-    background-color: var(--hint-inline-hover-source-bg);
-}
-
-.translation-cell__hints--inline .translation-cell__hints-item:hover .translation-cell__hints-translation,
-.translation-cell__hints--inline .translation-cell__hints-item--selected .translation-cell__hints-translation {
-    background-color: var(--hint-inline-hover-translation-bg);
-}
-
 
 /* Inline mode: responsive stacking for narrow screens */
 @media (max-width: 600px) {
     .translation-cell__hints--inline .translation-cell__hints-content {
+        display: flex;
         flex-direction: column;
     }
 

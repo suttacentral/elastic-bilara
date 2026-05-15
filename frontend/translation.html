@@ -179,6 +179,13 @@
                         this.initWidths();
                         return `flex: 0 0 ${this.columnWidths[index]}%; width: ${this.columnWidths[index]}%;`;
                     },
+                    getColumnGridStyle() {
+                        this.initWidths();
+                        return `grid-template-columns: ${this.columnWidths.map(width => `${width}%`).join(' ')};`;
+                    },
+                    getColumnPlacementStyle(index) {
+                        return `grid-column: ${index + 1};`;
+                    },
                     startResize(index, event) {
                         this.isDragging = true;
                         this.dragIndex = index;
@@ -373,7 +380,24 @@
                         :key="uid">
 
                         <!-- Each row contains the same segment across all translation projects -->
-                        <div class="translation-row" :data-uid="uid" :data-index="rowIndex">
+                        <div class="translation-row" :data-uid="uid" :data-index="rowIndex"
+                             x-data="{
+                                 rowHints: [],
+                                 rowHintsShow: false,
+                                 rowHintsSelectCallback: null,
+                                 rowHintsSelectedIdx: -1,
+                                 rowHintsHoverCallback: null,
+                                 rowHintsActiveIndex: -1,
+                                 get sourceIndex() { return translations.findIndex(t => t.isSource); }
+                             }"
+                             @sync-row-hints.stop="
+                                 rowHints = $event.detail.hints;
+                                 rowHintsShow = $event.detail.show;
+                                 rowHintsSelectCallback = $event.detail.selectCallback;
+                                 rowHintsSelectedIdx = $event.detail.selectedIndex;
+                                 rowHintsHoverCallback = $event.detail.hoverCallback;
+                                 rowHintsActiveIndex = $event.detail.activeIndex;
+                             ">
                             <!-- Cells for each translation project -->
                             <div class="translation-row__cells">
                                 <template x-for="(translation, colIndex) in translations" :key="'cell-' + translation.muid + '-' + uid">
@@ -450,6 +474,22 @@
                                                 });
                                             }
                                         }"
+                                        x-effect="
+                                            $dispatch('sync-row-hints', {
+                                                hints: visibleHints,
+                                                show: hints.length > 0 && showHints && !translation.isSource && hintStyle === 'inline',
+                                                selectedIndex: selectedHintIndex,
+                                                activeIndex: colIndex,
+                                                selectCallback: (index) => {
+                                                    selectHint(index);
+                                                    const ta = $el.querySelector('textarea');
+                                                    if (ta) ta.focus();
+                                                },
+                                                hoverCallback: (index) => {
+                                                    selectedHintIndex = index;
+                                                }
+                                            });
+                                        "
                                         @settings-saved.window="hintStyle = $event.detail.hint_style || 'dropdown'">
 
                                         <!-- Action buttons (split/merge) -->
@@ -505,9 +545,14 @@
                                                 "
                                                 x-on:blur="
                                                     const cell = $el.closest('.translation-cell');
-                                                    const allHints = cell.querySelectorAll('.translation-cell__hints');
+                                                    const row = $el.closest('.translation-row');
                                                     let inHints = false;
-                                                    allHints.forEach(el => { if (el.contains($event.relatedTarget)) inHints = true; });
+                                                    if (cell) {
+                                                        cell.querySelectorAll('.translation-cell__hints').forEach(el => { if (el.contains($event.relatedTarget)) inHints = true; });
+                                                    }
+                                                    if (row) {
+                                                        row.querySelectorAll('.translation-cell__hints--inline').forEach(el => { if (el.contains($event.relatedTarget)) inHints = true; });
+                                                    }
                                                     if (!inHints) {
                                                         showHints = false;
                                                         showTagSuggestions = false;
@@ -555,10 +600,9 @@
 
                                         <!-- Translation hints dropdown -->
                                         <div class="translation-cell__hints"
-                                            :class="{ 'translation-cell__hints--inline': hintStyle === 'inline' }"
                                             tabindex="-1"
                                             x-cloak
-                                            x-show="hints.length > 0 && showHints && !translation.isSource">
+                                            x-show="hints.length > 0 && showHints && !translation.isSource && hintStyle !== 'inline'">
                                             <ul class="translation-cell__hints-list">
                                                 <template x-for="(hint, hintIndex) in visibleHints" :key="hint.uid">
                                                     <li class="translation-cell__hints-item"
@@ -627,6 +671,32 @@
                                     </div>
                                 </template>
                             </div>
+
+                            <!-- Inline hints rendered at the row level -->
+                            <div class="translation-cell__hints--inline" x-show="rowHintsShow" x-cloak>
+                                <ul class="translation-cell__hints-list">
+                                    <template x-for="(hint, hintIndex) in rowHints" :key="hint.uid">
+                                        <li class="translation-cell__hints-item"
+                                            :class="{ 'translation-cell__hints-item--selected': rowHintsSelectedIdx === hintIndex }"
+                                            tabindex="-1"
+                                            @click="if (rowHintsSelectCallback) rowHintsSelectCallback(hintIndex)"
+                                            @mouseenter="if (rowHintsHoverCallback) rowHintsHoverCallback(hintIndex)">
+                                            <div class="translation-cell__hints-content" :style="getColumnGridStyle()">
+                                                <div class="translation-cell__hints-column" :style="getColumnPlacementStyle(sourceIndex)">
+                                                    <div class="translation-cell__hints-source">
+                                                        <span x-text="hint.segment"></span>
+                                                    </div>
+                                                </div>
+                                                <div class="translation-cell__hints-column" :style="getColumnPlacementStyle(rowHintsActiveIndex)">
+                                                    <div class="translation-cell__hints-translation">
+                                                        <span class="translation-cell__hints-text" x-text="hint.translation_hints"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -664,13 +734,13 @@
                 :class="{'active': active}"
                 @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
                 <h3 class="detail-panel__title">Related Projects</h3>
-                
+
                 <div class="project-container__detail-panel__related-search" x-show="relatedProjects.length > 10">
                     <i class="bi bi-search"></i>
                     <input type="text" x-model="filterText" placeholder="Filter projects..." class="project-container__detail-panel__related-search-input">
                     <i x-show="filterText" @click="filterText = ''" class="bi bi-x-circle project-container__detail-panel__related-search-clear" style="cursor:pointer"></i>
                 </div>
-                
+
                 <div class="project-container__detail-panel__related-list">
                     <template x-for="(project, idx) in filteredProjects" :key="project">
                         <div>
