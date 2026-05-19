@@ -1,10 +1,20 @@
 import { html, css, LitElement } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
+import { registerIconLibrary } from 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/utilities/icon-library.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/input/input.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/button/button.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/spinner/spinner.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/icon/icon.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/card/card.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/divider/divider.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/components/textarea/textarea.js';
+
+if (!globalThis.__scBilaraBiIconLibraryRegistered) {
+  registerIconLibrary('bi', {
+    resolver: name => `https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/${name}.svg`,
+    mutator: svg => svg.setAttribute('fill', 'currentColor'),
+  });
+  globalThis.__scBilaraBiIconLibraryRegistered = true;
+}
 
 export class SCBilaraDictionary extends LitElement {
   static styles = css`
@@ -235,6 +245,69 @@ export class SCBilaraDictionary extends LitElement {
       border-top: 1px solid var(--color-border);
       background-color: var(--color-background-tertiary);
     }
+
+    /* Notes section */
+    .notes-card {
+      margin-top: 2rem;
+      width: 100%;
+    }
+
+    .notes-card::part(base) {
+      border: 1px solid var(--sl-color-primary-200);
+      box-shadow: var(--sl-shadow-sm);
+    }
+
+    .notes-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: var(--sl-color-primary-700);
+    }
+
+    .notes-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .notes-actions-spacer {
+      flex: 1;
+    }
+
+    .notes-login-hint {
+      color: var(--sl-color-neutral-500);
+      font-size: 0.95rem;
+      padding: 1rem 0;
+    }
+
+    .notes-status {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .notes-status.visible {
+      opacity: 1;
+    }
+
+    .notes-status.saved {
+      color: var(--sl-color-success-600);
+    }
+
+    .notes-status.error {
+      color: var(--sl-color-danger-600);
+    }
+
+    .notes-textarea {
+      --sl-input-border-color-focus: var(--sl-color-primary-400);
+      --sl-focus-ring-color: var(--sl-color-primary-100);
+    }
   `;
 
   static properties = {
@@ -245,7 +318,13 @@ export class SCBilaraDictionary extends LitElement {
     detailLoading: { type: Boolean },
     searchQuery: { type: String },
     page: { type: Number },
-    hasMore: { type: Boolean }
+    hasMore: { type: Boolean },
+    noteValue: { type: String },
+    noteLoading: { type: Boolean },
+    noteSaving: { type: Boolean },
+    noteExists: { type: Boolean },
+    noteStatus: { type: String },
+    isLoggedIn: { type: Boolean },
   };
 
   constructor() {
@@ -259,11 +338,29 @@ export class SCBilaraDictionary extends LitElement {
     this.page = 0;
     this.limit = 50;
     this.hasMore = false;
+    // Notes state
+    this.noteValue = '';
+    this._savedNoteValue = '';
+    this.noteLoading = false;
+    this.noteSaving = false;
+    this.noteExists = false;
+    this.noteStatus = '';
+    this.isLoggedIn = false;
   }
 
   connectedCallback() {
     super.connectedCallback();
     this.fetchWords();
+    this._checkLoginStatus();
+  }
+
+  async _checkLoginStatus() {
+    try {
+      const response = await requestWithTokenRetry('users/me');
+      this.isLoggedIn = response.ok;
+    } catch {
+      this.isLoggedIn = false;
+    }
   }
 
   async fetchWords() {
@@ -352,7 +449,108 @@ export class SCBilaraDictionary extends LitElement {
   async selectWord(word) {
     this.selectedWord = word;
     this.selectedWordDetail = null;
-    await this.fetchWordDetail(word.word);
+    this.noteValue = '';
+    this._savedNoteValue = '';
+    this.noteExists = false;
+    this.noteStatus = '';
+    this.fetchWordDetail(word.word);
+    this.fetchNote(word.word);
+  }
+
+  // ── Notes methods ──────────────────────────────────────────────
+
+  async fetchNote(word) {
+    if (!this.isLoggedIn) return;
+    this.noteLoading = true;
+    try {
+      const response = await requestWithTokenRetry(
+        `dictionary/${encodeURIComponent(word)}/note`,
+        { credentials: 'include' }
+      );
+      if (this.selectedWord?.word !== word) return;
+      if (response.ok) {
+        const data = await response.json();
+        if (data) {
+          this.noteValue = data.note_value;
+          this._savedNoteValue = data.note_value;
+          this.noteExists = true;
+        } else {
+          this.noteValue = '';
+          this._savedNoteValue = '';
+          this.noteExists = false;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch note:', error);
+    } finally {
+      if (this.selectedWord?.word === word) {
+        this.noteLoading = false;
+      }
+    }
+  }
+
+  async saveNote() {
+    if (!this.selectedWord || this.noteSaving) return;
+    const word = this.selectedWord.word;
+    this.noteSaving = true;
+    this.noteStatus = '';
+    try {
+      const response = await requestWithTokenRetry(
+        `dictionary/${encodeURIComponent(word)}/note`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note_value: this.noteValue }),
+        }
+      );
+      if (this.selectedWord?.word !== word) return;
+      if (response.ok) {
+        this._savedNoteValue = this.noteValue;
+        this.noteExists = true;
+        this.noteStatus = 'saved';
+        setTimeout(() => { this.noteStatus = ''; }, 3000);
+      } else {
+        this.noteStatus = 'error';
+      }
+    } catch (error) {
+      console.error('Failed to save note:', error);
+      this.noteStatus = 'error';
+    } finally {
+      this.noteSaving = false;
+    }
+  }
+
+  async deleteNote() {
+    if (!this.selectedWord || !this.noteExists) return;
+    const word = this.selectedWord.word;
+    this.noteSaving = true;
+    this.noteStatus = '';
+    try {
+      const response = await requestWithTokenRetry(
+        `dictionary/${encodeURIComponent(word)}/note`,
+        { method: 'DELETE', credentials: 'include' }
+      );
+      if (this.selectedWord?.word !== word) return;
+      if (response.ok) {
+        this.noteValue = '';
+        this._savedNoteValue = '';
+        this.noteExists = false;
+        this.noteStatus = '';
+      }
+    } catch (error) {
+      console.error('Failed to delete note:', error);
+    } finally {
+      this.noteSaving = false;
+    }
+  }
+
+  _onNoteInput(e) {
+    this.noteValue = e.target.value;
+  }
+
+  get _noteHasChanges() {
+    return this.noteValue !== this._savedNoteValue;
   }
 
   nextPage() {
@@ -452,6 +650,57 @@ export class SCBilaraDictionary extends LitElement {
                 <p>This word has no cached summary or detailed definition.</p>
               </div>
             ` : ''}
+
+            <!-- My Notes -->
+            <sl-card class="notes-card">
+              <div slot="header" class="notes-header">
+                <sl-icon name="pencil-square"></sl-icon>
+                My Notes
+              </div>
+              ${!this.isLoggedIn ? html`
+                <div class="notes-login-hint">Please login to add notes.</div>
+              ` : this.noteLoading ? html`
+                <div class="loading-container"><sl-spinner style="font-size: 1.5rem;"></sl-spinner></div>
+              ` : html`
+                <sl-textarea
+                  class="notes-textarea"
+                  placeholder="Write your notes about this word..."
+                  rows="4"
+                  resize="auto"
+                  .value=${this.noteValue}
+                  @sl-input=${this._onNoteInput}
+                ></sl-textarea>
+                <div class="notes-actions">
+                  <div class="notes-status ${this.noteStatus} ${this.noteStatus ? 'visible' : ''}">
+                    ${this.noteStatus === 'saved' ? html`<sl-icon library="bi" name="check-circle-fill"></sl-icon> Saved successfully` : ''}
+                    ${this.noteStatus === 'error' ? html`<sl-icon library="bi" name="exclamation-circle-fill"></sl-icon> Failed to save` : ''}
+                  </div>
+                  <div class="notes-actions-spacer"></div>
+                  ${this.noteExists ? html`
+                    <sl-button
+                      variant="danger"
+                      outline
+                      size="small"
+                      ?disabled=${this.noteSaving}
+                      @click=${this.deleteNote}
+                    >
+                      <sl-icon library="bi" slot="prefix" name="trash"></sl-icon>
+                      Delete
+                    </sl-button>
+                  ` : ''}
+                  <sl-button
+                    variant="primary"
+                    size="small"
+                    ?disabled=${this.noteSaving || !this.noteValue.trim() || !this._noteHasChanges}
+                    ?loading=${this.noteSaving}
+                    @click=${this.saveNote}
+                  >
+                    <sl-icon library="bi" slot="prefix" name="check-lg"></sl-icon>
+                    Save
+                  </sl-button>
+                </div>
+              `}
+            </sl-card>
           ` : html`
             <div class="empty-state">
               <sl-icon name="journal-text"></sl-icon>

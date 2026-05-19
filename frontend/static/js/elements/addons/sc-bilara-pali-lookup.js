@@ -16,6 +16,8 @@ export class ScBilaraPaliLookup extends LitElement {
         visible: { type: Boolean, state: true },
         word: { type: String, state: true },
         summaries: { type: Array, state: true },
+        noteValue: { type: String, state: true },
+        noteLoading: { type: Boolean, state: true },
         loading: { type: Boolean, state: true },
         error: { type: String, state: true },
         posX: { type: Number, state: true },
@@ -157,14 +159,14 @@ export class ScBilaraPaliLookup extends LitElement {
 
         .tooltip__error {
             padding: 16px;
-            color: var(--color-error, #dc322f);
+            color: var(--color-error);
             text-align: center;
         }
 
         .tooltip__summary {
             margin-bottom: 8px;
             padding: 8px 10px;
-            background-color: var(--color-background-secondary, #f5f5f5);
+            background-color: var(--color-background-secondary);
             border-radius: 4px;
             border-left: 3px solid var(--lookup-primary);
         }
@@ -196,6 +198,42 @@ export class ScBilaraPaliLookup extends LitElement {
             font-style: italic;
         }
 
+        .tooltip__note {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background-color: var(--color-background-tertiary);
+            border: 1px solid var(--lookup-border);
+            border-radius: 6px;
+            border-left: 3px solid var(--sl-color-primary-400);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .tooltip__note--loading {
+            color: var(--lookup-text-secondary);
+            font-style: italic;
+            border-left-color: transparent;
+            box-shadow: none;
+            background-color: transparent;
+            padding: 8px 0 0 0;
+            border: none;
+        }
+
+        .tooltip__note-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+            color: var(--sl-color-primary-700);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .tooltip__note-text {
+            white-space: pre-wrap;
+            color: var(--lookup-text);
+            line-height: 1.5;
+        }
+
         .tooltip__link {
             display: block;
             text-align: right;
@@ -221,6 +259,8 @@ export class ScBilaraPaliLookup extends LitElement {
         this.visible = false;
         this.word = '';
         this.summaries = [];
+        this.noteValue = '';
+        this.noteLoading = false;
         this.loading = false;
         this.error = null;
         this.posX = 0;
@@ -394,6 +434,11 @@ export class ScBilaraPaliLookup extends LitElement {
         this.posX = x;
         this.posY = y;
         this.visible = true;
+        this.noteValue = '';
+        this.noteLoading = false;
+        this._currentWord = word;
+
+        this._fetchNote(word);
 
         // Check cache first
         const cacheKey = word.toLowerCase();
@@ -419,6 +464,7 @@ export class ScBilaraPaliLookup extends LitElement {
             }
 
             const data = await response.json();
+            if (this._currentWord !== word) return;
             const summaryHtml = data.summary_html || '';
             const summaries = this._parseHtmlResponse(summaryHtml);
 
@@ -429,9 +475,47 @@ export class ScBilaraPaliLookup extends LitElement {
             this.loading = false;
             this._adjustPosition();
         } catch (err) {
+            if (this._currentWord !== word) return;
             this.loading = false;
             this.error = 'Unable to obtain definition';
             console.error('Pali lookup error:', err);
+        }
+    }
+
+    async _fetchNote(word) {
+        this.noteLoading = true;
+        this.noteValue = '';
+
+        try {
+            const endpoint = `dictionary/${encodeURIComponent(word)}/note`;
+            const response = typeof window.requestWithTokenRetry === 'function'
+                ? await window.requestWithTokenRetry(endpoint, { credentials: 'include' })
+                : await fetch(`/api/v1/${endpoint}`, { credentials: 'include' });
+
+            if (this._currentWord !== word) return;
+
+            if (response.status === 401 || response.status === 403) {
+                this.noteValue = '';
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (this._currentWord !== word) return;
+            this.noteValue = data?.note_value || '';
+        } catch (err) {
+            if (this._currentWord === word) {
+                this.noteValue = '';
+                console.error('Pali lookup note error:', err);
+            }
+        } finally {
+            if (this._currentWord === word) {
+                this.noteLoading = false;
+                this._adjustPosition();
+            }
         }
     }
 
@@ -560,6 +644,23 @@ export class ScBilaraPaliLookup extends LitElement {
         return `https://dpdict.net/?q=${encodeURIComponent(this.word)}`;
     }
 
+    _renderNoteSection() {
+        if (this.noteLoading) {
+            return html`<div class="tooltip__note tooltip__note--loading">Loading your note...</div>`;
+        }
+
+        if (!this.noteValue) {
+            return html``;
+        }
+
+        return html`
+            <div class="tooltip__note">
+                <div class="tooltip__note-label">My note</div>
+                <div class="tooltip__note-text">${this.noteValue}</div>
+            </div>
+        `;
+    }
+
     render() {
         if (!this.visible) {
             return html``;
@@ -596,6 +697,7 @@ export class ScBilaraPaliLookup extends LitElement {
                             <span class="tooltip__summary-meaning">${item.meaning}</span>
                         </div>
                     `)}
+                    ${!this.loading && !this.error ? this._renderNoteSection() : ''}
                 </div>
                 ${!this.loading && !this.error && this.summaries.length > 0 ? html`
                     <a class="tooltip__link" href=${this._getDictUrl()} target="_blank">

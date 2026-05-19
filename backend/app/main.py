@@ -5,6 +5,7 @@ from app.db.models.notification import Notification, RemarkNotification
 from app.db.models.remark import Remark
 from app.db.models.user import User
 from app.db.models.user_preference import UserPreference
+from app.db.models.dictionary_note import DictionaryNote
 from fastapi import FastAPI
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware

@@ -11,6 +11,10 @@ from typing import Optional
 
 from app.db.database import get_db
 from app.db.models.dictionary_cache import DictionaryCache
+from app.db.schemas.dictionary_note import DictionaryNoteCreate, DictionaryNoteResponse
+from app.services.auth import utils as auth_utils
+from app.services.dictionary_notes import utils as note_utils
+from app.services.users import permissions
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +67,44 @@ async def list_dictionary_entries(
             for row in rows
         ]
     }
+
+
+# ── Dictionary Notes ──────────────────────────────────────────────
+
+
+@router.get("/dictionary/{word}/note", response_model=DictionaryNoteResponse | None)
+async def get_note(
+    word: str,
+    user=Depends(auth_utils.get_current_user),
+    _=Depends(permissions.is_user_active),
+):
+    if user.github_id is None:
+        raise HTTPException(status_code=403, detail="GitHub account required")
+    return note_utils.get_note(word, int(user.github_id))
+
+
+@router.post("/dictionary/{word}/note", response_model=DictionaryNoteResponse)
+async def save_note(
+    word: str,
+    body: DictionaryNoteCreate,
+    user=Depends(auth_utils.get_current_user),
+    _=Depends(permissions.is_user_active),
+):
+    if user.github_id is None:
+        raise HTTPException(status_code=403, detail="GitHub account required")
+    return note_utils.upsert_note(word, body.note_value, int(user.github_id))
+
+
+@router.delete("/dictionary/{word}/note")
+async def delete_note(
+    word: str,
+    user=Depends(auth_utils.get_current_user),
+    _=Depends(permissions.is_user_active),
+):
+    if user.github_id is None:
+        raise HTTPException(status_code=403, detail="GitHub account required")
+    note_utils.delete_note(word, int(user.github_id))
+    return {"detail": "Note deleted"}
 
 
 @router.get("/dictionary/{word}")
@@ -126,3 +168,4 @@ async def lookup_dictionary(word: str, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Failed to fetch dictionary for {word}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch dictionary: {str(e)}")
+
