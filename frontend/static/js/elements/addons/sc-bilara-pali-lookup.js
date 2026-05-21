@@ -407,7 +407,7 @@ export class ScBilaraPaliLookup extends LitElement {
         if (index < 0 || index >= text.length) return null;
 
         // Define word boundaries (space, punctuation, etc.)
-        const wordPattern = /[\s\.,;:!?\(\)\[\]\{\}"'<>«»—–\-\d]/;
+        const wordPattern = /[\p{P}\p{Z}\p{N}]/u;
 
         // Find word start
         let start = index;

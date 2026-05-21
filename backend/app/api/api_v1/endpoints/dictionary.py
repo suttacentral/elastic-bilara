@@ -14,6 +14,7 @@ from app.db.models.dictionary_cache import DictionaryCache
 from app.db.schemas.dictionary_note import DictionaryNoteCreate, DictionaryNoteResponse
 from app.services.auth import utils as auth_utils
 from app.services.dictionary_notes import utils as note_utils
+from app.services.dictionary_hidden_words import utils as hidden_utils
 from app.services.users import permissions
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,85 @@ async def list_dictionary_entries(
             for row in rows
         ]
     }
+
+
+@router.get("/dictionary/my-list")
+async def list_my_dictionary_entries(
+    skip: int = 0,
+    limit: int = 50,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user=Depends(auth_utils.get_current_user),
+    _=Depends(permissions.is_user_active),
+):
+    """
+    Fetch the word list for the current user, excluding hidden words.
+    """
+    if user.github_id is None:
+        raise HTTPException(status_code=403, detail="GitHub account required")
+
+    from app.db.models.dictionary_hidden_word import DictionaryHiddenWord
+
+    github_id = int(user.github_id)
+    normalized_skip = max(skip, 0)
+    normalized_limit = min(max(limit, 1), 100)
+    normalized_search = (search or "").strip()
+
+    hidden_subq = (
+        db.query(DictionaryHiddenWord.word)
+        .filter(DictionaryHiddenWord.github_id == github_id)
+        .subquery()
+    )
+
+    query = (
+        db.query(DictionaryCache.word)
+        .filter(DictionaryCache.word.isnot(None))
+        .filter(~DictionaryCache.word.in_(db.query(hidden_subq.c.word)))
+    )
+
+    if normalized_search:
+        query = query.filter(
+            DictionaryCache.word.ilike(f"%{normalized_search}%")
+        )
+
+    rows = (
+        query
+        .order_by(DictionaryCache.word)
+        .offset(normalized_skip)
+        .limit(normalized_limit + 1)
+        .all()
+    )
+
+    has_more = len(rows) > normalized_limit
+    rows = rows[:normalized_limit]
+
+    return {
+        "skip": normalized_skip,
+        "limit": normalized_limit,
+        "has_more": has_more,
+        "items": [
+            {
+                "word": row.word,
+            }
+            for row in rows
+        ]
+    }
+
+
+@router.delete("/dictionary/{word}/list-entry")
+async def hide_dictionary_entry(
+    word: str,
+    user=Depends(auth_utils.get_current_user),
+    _=Depends(permissions.is_user_active),
+):
+    """
+    Hide a word from the current user's word list.
+    Does not delete the dictionary cache entry.
+    """
+    if user.github_id is None:
+        raise HTTPException(status_code=403, detail="GitHub account required")
+    hidden_utils.hide_word(word, int(user.github_id))
+    return {"detail": "Word hidden"}
 
 
 # ── Dictionary Notes ──────────────────────────────────────────────

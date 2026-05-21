@@ -54,6 +54,8 @@ export class SCBilaraDictionary extends LitElement {
     }
 
     .word-item {
+      display: flex;
+      align-items: center;
       padding: 0.75rem 1rem;
       cursor: pointer;
       border-radius: var(--sl-border-radius-medium);
@@ -70,6 +72,32 @@ export class SCBilaraDictionary extends LitElement {
       background-color: var(--sl-color-primary-100);
       color: var(--sl-color-primary-700);
       font-weight: 600;
+    }
+
+    .word-label {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .word-remove-btn {
+      flex-shrink: 0;
+      opacity: 0;
+      margin-left: 0.25rem;
+      color: var(--sl-color-neutral-500);
+      transition: opacity 0.15s ease, color 0.15s ease;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .word-item:hover .word-remove-btn {
+      opacity: 1;
+    }
+
+    .word-remove-btn:hover {
+      color: var(--sl-color-danger-600);
     }
 
     .content-area {
@@ -350,8 +378,12 @@ export class SCBilaraDictionary extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this._initLoad();
+  }
+
+  async _initLoad() {
+    await this._checkLoginStatus();
     this.fetchWords();
-    this._checkLoginStatus();
   }
 
   async _checkLoginStatus() {
@@ -363,16 +395,25 @@ export class SCBilaraDictionary extends LitElement {
     }
   }
 
+  _getListUrl() {
+    const skip = this.page * this.limit;
+    const base = this.isLoggedIn ? 'dictionary/my-list' : 'dictionary/list';
+    let url = `${base}?skip=${skip}&limit=${this.limit}`;
+    if (this.searchQuery) {
+      url += `&search=${encodeURIComponent(this.searchQuery)}`;
+    }
+    return url;
+  }
+
   async fetchWords() {
     this.loading = true;
     try {
-      const skip = this.page * this.limit;
-      let url = `/api/v1/dictionary/list?skip=${skip}&limit=${this.limit}`;
-      if (this.searchQuery) {
-        url += `&search=${encodeURIComponent(this.searchQuery)}`;
+      let response;
+      if (this.isLoggedIn) {
+        response = await requestWithTokenRetry(this._getListUrl());
+      } else {
+        response = await fetch(`/api/v1/${this._getListUrl()}`);
       }
-
-      const response = await fetch(url);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
 
@@ -396,6 +437,36 @@ export class SCBilaraDictionary extends LitElement {
       this.hasMore = false;
     } finally {
       this.loading = false;
+    }
+  }
+
+  async hideWord(word, e) {
+    e.stopPropagation();
+    try {
+      const response = await requestWithTokenRetry(
+        `dictionary/${encodeURIComponent(word)}/list-entry`,
+        { method: 'DELETE', credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to hide word');
+
+      // Remove from local list
+      this.words = this.words.filter(w => w.word !== word);
+
+      // Handle selected word removal
+      if (this.selectedWord?.word === word) {
+        if (this.words.length > 0) {
+          this.selectWord(this.words[0]);
+        } else {
+          this.selectedWord = null;
+          this.selectedWordDetail = null;
+          this.noteValue = '';
+          this._savedNoteValue = '';
+          this.noteExists = false;
+          this.noteStatus = '';
+        }
+      }
+    } catch (error) {
+      console.error('Failed to hide word:', error);
     }
   }
 
@@ -584,7 +655,7 @@ export class SCBilaraDictionary extends LitElement {
               @keydown=${this.handleSearch}
               @sl-clear=${this.handleSearch}
             >
-              <sl-icon name="search" slot="prefix"></sl-icon>
+              <sl-icon library="bi" name="search" slot="prefix"></sl-icon>
             </sl-input>
           </div>
 
@@ -597,7 +668,16 @@ export class SCBilaraDictionary extends LitElement {
                       class="word-item ${this.selectedWord?.word === w.word ? 'selected' : ''}"
                       @click=${() => this.selectWord(w)}
                     >
-                      ${w.word}
+                      <span class="word-label">${w.word}</span>
+                      ${this.isLoggedIn ? html`
+                        <sl-icon
+                          library="bi"
+                          class="word-remove-btn"
+                          name="x-lg"
+                          label="Remove from my list"
+                          @click=${(e) => this.hideWord(w.word, e)}
+                        ></sl-icon>
+                      ` : ''}
                     </div>
                   `)}
                   ${this.words.length === 0 ? html`<div style="padding: 1rem; color: var(--sl-color-neutral-500); text-align: center;">No words found</div>` : ''}
@@ -609,11 +689,11 @@ export class SCBilaraDictionary extends LitElement {
           ${this.page > 0 || this.hasMore ? html`
             <div class="pagination">
               <sl-button size="small" circle ?disabled=${this.page === 0} @click=${this.prevPage}>
-                <sl-icon name="chevron-left"></sl-icon>
+                <sl-icon library="bi" name="chevron-left"></sl-icon>
               </sl-button>
               <span style="font-size: 0.9rem; color: var(--sl-color-neutral-600);">Page ${this.page + 1}</span>
               <sl-button size="small" circle ?disabled=${!this.hasMore} @click=${this.nextPage}>
-                <sl-icon name="chevron-right"></sl-icon>
+                <sl-icon library="bi" name="chevron-right"></sl-icon>
               </sl-button>
             </div>
           ` : ''}
@@ -654,7 +734,7 @@ export class SCBilaraDictionary extends LitElement {
             <!-- My Notes -->
             <sl-card class="notes-card">
               <div slot="header" class="notes-header">
-                <sl-icon name="pencil-square"></sl-icon>
+                <sl-icon library="bi" name="pencil-square"></sl-icon>
                 My Notes
               </div>
               ${!this.isLoggedIn ? html`
@@ -703,7 +783,7 @@ export class SCBilaraDictionary extends LitElement {
             </sl-card>
           ` : html`
             <div class="empty-state">
-              <sl-icon name="journal-text"></sl-icon>
+              <sl-icon library="bi" name="journal-text"></sl-icon>
               <h2>Select a word</h2>
               <p>Choose a Pali word from the list to view its summary and definition.</p>
             </div>
