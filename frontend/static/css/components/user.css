@@ -4,6 +4,13 @@
     align-items: center;
     flex-direction: column;
     max-height: 36px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    transition: border 0.3s ease;
+}
+
+.user-container:hover {
+    border: 2px solid var(--color-primary);
 }
 .user-avatar{
     width: 32px;
