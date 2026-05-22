@@ -781,7 +781,7 @@ body {
     align-items: center;
 }
 
-.search-box i {
+.search-box > i {
     position: absolute;
     left: var(--space-md);
     color: var(--color-text-secondary);
