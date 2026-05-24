@@ -115,8 +115,8 @@ async def get_git_status(
         status_dict = repo.status()
 
         for filepath, status_code in status_dict.items():
-            # 0 means unmodified
-            if status_code != 0 and fileFilter(Path(filepath)):
+            # 0 means unmodified; skip new/untracked files
+            if status_code != 0 and not (status_code & (GIT_STATUS_WT_NEW | GIT_STATUS_INDEX_NEW)) and fileFilter(Path(filepath)):
                 # Non-admin users can only see files in own namespace
                 if (not is_admin and not _is_user_file_allowed(
                     filepath,

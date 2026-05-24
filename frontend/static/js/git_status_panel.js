@@ -1,4 +1,40 @@
 function gitStatusPanel() {
+    const filteredFilesCache = {
+        source: null,
+        key: null,
+        value: []
+    };
+    const statusOrder = {
+        'staged_new': 1,
+        'staged_modified': 2,
+        'staged_deleted': 3,
+        'modified': 4,
+        'untracked': 5,
+        'deleted': 6
+    };
+    const sortedFilesCache = {
+        source: null,
+        defaultOrder: [],
+        dateOrder: []
+    };
+
+    function getModifiedTimestamp(file) {
+        return file.modified_timestamp ?? (file.modified_time ? Date.parse(file.modified_time) || 0 : 0);
+    }
+
+    function rebuildSortedFilesCache(files) {
+        sortedFilesCache.source = files;
+        sortedFilesCache.defaultOrder = [...files].sort((a, b) => {
+            const orderA = statusOrder[a.status] || 99;
+            const orderB = statusOrder[b.status] || 99;
+            if (orderA !== orderB) return orderA - orderB;
+            return a.path.localeCompare(b.path);
+        });
+        sortedFilesCache.dateOrder = [...files].sort((a, b) => {
+            return getModifiedTimestamp(b) - getModifiedTimestamp(a);
+        });
+    }
+
     return {
         files: [],
         selectedFile: null,
@@ -47,6 +83,7 @@ function gitStatusPanel() {
         batchPublishing: false,
         // Performance optimization: diff cache
         diffCache: new Map(),
+        parsedDiffLines: [],
 
         async init() {
             // Parse URL parameters
@@ -76,46 +113,46 @@ function gitStatusPanel() {
         },
 
         get filteredFiles() {
-            let filtered = [...this.files];
+            const searchText = this.filterText.trim().toLowerCase();
+            const username = this.isAdmin ? '' : (this.username || '').toLowerCase();
+            const cacheKey = [
+                this.isAdmin ? 'admin' : 'user',
+                username,
+                searchText,
+                this.sortMode
+            ].join('|');
 
-            if (!this.isAdmin && this.username) {
-                // For non-admin users, only show files that contain their username in the path
+            if (
+                filteredFilesCache.source === this.files &&
+                filteredFilesCache.key === cacheKey
+            ) {
+                return filteredFilesCache.value;
+            }
+
+            if (sortedFilesCache.source !== this.files) {
+                rebuildSortedFilesCache(this.files);
+            }
+
+            let filtered = this.sortMode === 'date'
+                ? sortedFilesCache.dateOrder
+                : sortedFilesCache.defaultOrder;
+
+            if (username) {
                 filtered = filtered.filter(file =>
-                    file.path.toLowerCase().includes(this.username.toLowerCase())
+                    (file.search_path || file.path.toLowerCase()).includes(username)
                 );
             }
 
-            if (this.filterText.trim()) {
-                const searchText = this.filterText.toLowerCase();
+            if (searchText) {
                 filtered = filtered.filter(file =>
-                    file.path.toLowerCase().includes(searchText)
+                    (file.search_path || file.path.toLowerCase()).includes(searchText)
                 );
             }
 
-            if (this.sortMode === 'date') {
-                filtered.sort((a, b) => {
-                    const dateA = new Date(a.modified_time || 0);
-                    const dateB = new Date(b.modified_time || 0);
-                    return dateB - dateA; // newest first
-                });
-            } else {
-                const statusOrder = {
-                    'staged_new': 1,
-                    'staged_modified': 2,
-                    'staged_deleted': 3,
-                    'modified': 4,
-                    'untracked': 5,
-                    'deleted': 6
-                };
-                filtered.sort((a, b) => {
-                    const orderA = statusOrder[a.status] || 99;
-                    const orderB = statusOrder[b.status] || 99;
-                    if (orderA !== orderB) return orderA - orderB;
-                    return a.path.localeCompare(b.path);
-                });
-            }
-
-            return filtered;
+            filteredFilesCache.source = this.files;
+            filteredFilesCache.key = cacheKey;
+            filteredFilesCache.value = filtered;
+            return filteredFilesCache.value;
         },
 
         get totalPages() {
@@ -148,6 +185,7 @@ function gitStatusPanel() {
         async refresh() {
             this.selectedFile = null;
             this.diffContent = '';
+            this.parsedDiffLines = [];
             this.diffError = null;
             this.selectedFiles = []; // Clear selection on refresh
             this.diffCache.clear(); // Clear diff cache on refresh
@@ -168,11 +206,21 @@ function gitStatusPanel() {
                 }
 
                 const data = await response.json();
-                this.files = data.files;
+                this.files = data.files.map(file => ({
+                    ...file,
+                    search_path: file.path.toLowerCase(),
+                    modified_timestamp: file.modified_time ? Date.parse(file.modified_time) || 0 : 0
+                }));
+                filteredFilesCache.source = null;
+                filteredFilesCache.key = null;
+                filteredFilesCache.value = [];
                 this.calculateStats();
             } catch (error) {
                 console.error('Error fetching git status:', error);
                 this.files = [];
+                filteredFilesCache.source = null;
+                filteredFilesCache.key = null;
+                filteredFilesCache.value = [];
             } finally {
                 this.loading = false;
             }
@@ -203,12 +251,14 @@ function gitStatusPanel() {
             // Check cache first (performance optimization)
             if (this.diffCache.has(file.path)) {
                 this.diffContent = this.diffCache.get(file.path);
+                this.parsedDiffLines = this.parseDiff(this.diffContent);
                 this.diffError = null;
                 return;
             }
 
             this.loadingDiff = true;
             this.diffContent = '';
+            this.parsedDiffLines = [];
             this.diffError = null;
 
             try {
@@ -227,6 +277,7 @@ function gitStatusPanel() {
                 // Cache the diff for future use
                 this.diffCache.set(file.path, data.diff);
                 this.diffContent = data.diff;
+                this.parsedDiffLines = this.parseDiff(data.diff);
             } catch (error) {
                 console.error('Error fetching diff:', error);
                 this.diffError = error.message;
@@ -334,6 +385,7 @@ function gitStatusPanel() {
                 if (this.selectedFile === this.fileToDiscard.path) {
                     this.selectedFile = null;
                     this.diffContent = '';
+                    this.parsedDiffLines = [];
                     this.diffError = null;
                 }
 
@@ -481,6 +533,7 @@ function gitStatusPanel() {
                 if (this.selectedFile === file.path) {
                     this.selectedFile = null;
                     this.diffContent = '';
+                    this.parsedDiffLines = [];
                     this.diffError = null;
                 }
 
@@ -610,6 +663,7 @@ function gitStatusPanel() {
                     if (this.selectedFile && this.selectedFiles.includes(this.selectedFile)) {
                         this.selectedFile = null;
                         this.diffContent = '';
+                        this.parsedDiffLines = [];
                         this.diffError = null;
                     }
 
