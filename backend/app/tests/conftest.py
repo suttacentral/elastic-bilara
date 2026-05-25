@@ -338,6 +338,16 @@ def mock_path_iterdir():
 
 
 @pytest.fixture
+def mock_new_project_create_data(monkeypatch, tmp_path):
+    work_dir = tmp_path / "unpublished"
+    root_file = work_dir / "root" / "pli" / "ms" / "sutta" / "an" / "an1" / "an1.1-10_root-pli-ms.json"
+    root_file.parent.mkdir(parents=True, exist_ok=True)
+    root_file.write_text(json.dumps({"an1.1:0.1": "Test"}), encoding="utf-8")
+    monkeypatch.setattr(settings, "WORK_DIR", work_dir)
+    return root_file
+
+
+@pytest.fixture
 def mock_create_new_project(mocker):
     delay_return = MagicMock()
     delay_return.id = "test_task_id"

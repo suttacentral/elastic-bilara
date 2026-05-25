@@ -176,7 +176,7 @@ class TestGetGitStatus:
     async def test_get_git_status_with_modified_files(
         self, mock_ensure_safe, mock_repository_class, mock_get_status_name, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
     ):
-        """Test git status with multiple modified files"""
+        """Test git status with tracked modified/deleted files only."""
         mock_repo = MagicMock()
         mock_repository_class.return_value = mock_repo
         mock_repo.status.return_value = {
@@ -194,10 +194,11 @@ class TestGetGitStatus:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["total"] == 3
-        assert len(data["files"]) == 3
+        assert data["total"] == 2
+        assert len(data["files"]) == 2
         # Verify files are sorted by path
         paths = [f["path"] for f in data["files"]]
+        assert "comment/en/test.json" not in paths
         assert paths == sorted(paths)
 
     @pytest.mark.asyncio

@@ -28,7 +28,7 @@ def _to_bool(val, default=True):
 
 
 def _to_str(val, default="dropdown"):
-    return val if val is not None else default
+    return val if isinstance(val, str) and val else default
 
 
 @router.get("", response_model=UserSettingsResponse)

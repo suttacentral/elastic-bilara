@@ -21,7 +21,7 @@ class UIDExpander:
         for path in data:
             data_after = data[path]["data_after"]
             write_json_data_for_split_or_merge(Path(path), data_after)
-        self.related_paths.remove(settings.WORK_DIR / self.path)
+        self.related_paths.discard(settings.WORK_DIR / self.path)
         es = Search()
         for path in data:
             es.add_to_index(path)
@@ -34,7 +34,7 @@ class UIDExpander:
             results[path] = {"data_before": get_json_data(path), "data_after": {}}
             data = results[path]["data_before"]
             start_index, end_index = self._get_pattern_boundaries(self.uid, data)
-            if not start_index or not end_index:
+            if start_index is None or end_index is None:
                 failed_paths.append(path)
                 continue
             uids = list(data.keys())
