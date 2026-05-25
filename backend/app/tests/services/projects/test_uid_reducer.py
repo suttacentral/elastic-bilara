@@ -545,3 +545,38 @@ class TestUIDReducer:
         mock_get_json_data.side_effect = side_effect_helper
         result = reducer_instance.decrement_dry()
         assert result == expected_data
+
+    @patch("app.services.projects.uid_reducer.Search")
+    @patch("app.services.projects.uid_reducer.write_json_data")
+    @patch("app.services.projects.uid_reducer.get_json_data")
+    def test_decrement_does_not_auto_commit(
+        self,
+        mock_get_json_data,
+        mock_write_json_data,
+        mock_search,
+        uid_reducer,
+    ):
+        path = Path("/app/checkouts/unpublished/root/pli/ms/sutta/test/test1/test1.1_root-pli-ms.json")
+        related_path = Path(
+            "/app/checkouts/unpublished/translation/en/test_user/sutta/test/test1/"
+            "test1.1_translation-en-test_user.json"
+        )
+        existing_json_data = {
+            path: {"test:1": "one", "test:2": "two", "test:3": "three"},
+            related_path: {"test:1": "one", "test:2": "two", "test:3": "three"},
+        }
+        reducer_instance, mock_reduce_commit, _ = uid_reducer(
+            path,
+            ["test:2"],
+            False,
+            set(existing_json_data.keys()),
+        )
+        reducer_instance.auto_commit = False
+        mock_get_json_data.side_effect = lambda arg: existing_json_data[arg]
+
+        result = reducer_instance.decrement()
+
+        assert result == (None, None)
+        assert mock_write_json_data.call_count == 2
+        mock_reduce_commit.assert_not_called()
+        mock_search.return_value.remove_segments.assert_called_once_with(related_path)

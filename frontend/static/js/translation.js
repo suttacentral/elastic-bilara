@@ -951,13 +951,9 @@ function fetchTranslation() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 });
-                const { task_id: taskID } = await response.json();
-                if (!taskID) {
-                    displayMessage(
-                        element,
-                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
-                        "failure",
-                    );
+                if (!response.ok) {
+                    const body = await response.json().catch(() => null);
+                    throw new Error(body?.detail ?? `Server error (${response.status})`);
                 }
 
                 displayMessage(
@@ -984,13 +980,9 @@ function fetchTranslation() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 });
-                const { task_id: taskID } = await response.json();
-                if (!taskID) {
-                    displayMessage(
-                        element,
-                        "There has been an error. Please retry in a few moments. If the issue persists, please contact the administrator.",
-                        "failure",
-                    );
+                if (!response.ok) {
+                    const body = await response.json().catch(() => null);
+                    throw new Error(body?.detail ?? `Server error (${response.status})`);
                 }
 
                 displayMessage(

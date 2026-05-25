@@ -113,8 +113,8 @@ class CalleeSplit(CalleeBase):
 
 
 class MergeSplitOutBase(BaseModel):
-    main_task_id: str
-    related_task_id: str
+    main_task_id: str | None = None
+    related_task_id: str | None = None
     message: str
     path: str
     callee: CalleeBase

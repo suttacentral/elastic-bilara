@@ -4,10 +4,8 @@ from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.directories.utils import get_matches
 from app.services.projects.utils import write_json_data, write_json_data_for_split_or_merge
-from app.services.users.utils import get_user
 from search.search import Search
 from search.utils import get_json_data
-from app.tasks import commit
 
 
 class UIDExpander:
@@ -24,18 +22,10 @@ class UIDExpander:
             data_after = data[path]["data_after"]
             write_json_data_for_split_or_merge(Path(path), data_after)
         self.related_paths.remove(settings.WORK_DIR / self.path)
-        main_task_id = self._expand_commit(
-            [str(settings.WORK_DIR / self.path)],
-            f"{self.user.username} changed {str(self.path).replace(str(settings.WORK_DIR), '')}",
-        )
-        related_task_id = self._expand_commit(
-            [str(path) for path in self.related_paths],
-            f"{self.user.username} changed files related to {str(self.path).replace(str(settings.WORK_DIR), '')}",
-        )
         es = Search()
         for path in data:
             es.add_to_index(path)
-        return data, main_task_id, related_task_id
+        return data, None, None
 
     def expand_dry(self):
         results = {}
@@ -87,10 +77,6 @@ class UIDExpander:
 
     def _increment_uid(self, uid: str) -> str:
         return uid[:-1] + str(int(uid[-1]) + 1)
-
-    def _expand_commit(self, changed_paths: list[str], message: str) -> str:
-        result = commit.delay(get_user(int(self.user.github_id)).model_dump(), changed_paths, message)
-        return result.id
 
     def _get_pattern_boundaries(self, segment_id: str, data: dict[str, str]) -> tuple[int | None, int | None]:
         uids = list(key.split(":")[-1] for key in data.keys())

@@ -208,7 +208,7 @@ async def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_use
             )
         write_json_data(path, data)
 
-    reducer = UIDReducer(user, file_path, [payload.mergee_uid])
+    reducer = UIDReducer(user, file_path, [payload.mergee_uid], auto_commit=False)
     main_task_id, related_task_id = reducer.decrement()
 
     affected_paths_data_after = {}

@@ -12,11 +12,12 @@ from app.tasks import commit
 
 
 class UIDReducer:
-    def __init__(self, user: UserBase, path: Path, uids: list[str], exact: bool = False):
+    def __init__(self, user: UserBase, path: Path, uids: list[str], exact: bool = False, auto_commit: bool = True):
         self.user = user
         self.path = path
         self.uids = sorted(uids, reverse=True)
         self.exact = exact
+        self.auto_commit = auto_commit
         self.character_pattern = r"[a-zA-Z]+"
         self.starts_with_digit_pattern = r"^\d+"
         self.has_digits_around_dot_pattern = r"(\d+(\.\d+)+)$"
@@ -27,12 +28,17 @@ class UIDReducer:
         for path in data:
             write_json_data(Path(path), data[path])
         self.related_paths.remove(settings.WORK_DIR / self.path)
-        main_task_id = self._reduce_commit(
-            [str(settings.WORK_DIR / self.path)], f"{self.user.username} changed {str(self.path).replace(str(settings.WORK_DIR), '')}"
-        )
-        related_task_id = self._reduce_commit(
-            [str(path) for path in self.related_paths], f"{self.user.username} changed files related to {str(self.path).replace(str(settings.WORK_DIR), '')}"
-        )
+        main_task_id = None
+        related_task_id = None
+        if self.auto_commit:
+            main_task_id = self._reduce_commit(
+                [str(settings.WORK_DIR / self.path)],
+                f"{self.user.username} changed {str(self.path).replace(str(settings.WORK_DIR), '')}",
+            )
+            related_task_id = self._reduce_commit(
+                [str(path) for path in self.related_paths],
+                f"{self.user.username} changed files related to {str(self.path).replace(str(settings.WORK_DIR), '')}",
+            )
         es = Search()
         for path in self.related_paths:
             es.remove_segments(path)
