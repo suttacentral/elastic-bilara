@@ -212,11 +212,85 @@ describe('Translation Core Functions', () => {
                         JSON.stringify(this.originalTranslations)
                     );
                     this.originalTranslations = null;
+                    this.updateProgress();
                 }
+            },
+
+            _commitSplitMergeOperation() {
+                this.originalTranslations = null;
+                this.updateProgress();
             },
             
             hasActiveOperation() {
                 return this.originalTranslations !== null;
+            },
+
+            _ensureHtmlProjectInTranslations(translations = this.translations) {
+                if (!this.htmlProjectName || !this.htmlProject) return;
+
+                const existingProject = translations.find(project => project.muid === this.htmlProjectName);
+                if (!existingProject) {
+                    translations.push(this.htmlProject);
+                }
+            },
+
+            isMergeHighlightedRow(uid) {
+                return this.merger_uid === uid || this.mergee_uid === uid;
+            },
+
+            isSplitHighlightedRow(uid, splittingUid) {
+                return splittingUid === uid || this.splitter_uid === uid;
+            },
+
+            getMergePreviewParts(translation, uid) {
+                if (!this.originalTranslations || uid !== this.merger_uid) {
+                    return null;
+                }
+
+                const originalTranslation = this.originalTranslations.find(item => item.muid === translation.muid);
+                const currentText = translation && translation.data
+                    ? translation.data[uid] || ""
+                    : "";
+                const mergerText = originalTranslation && originalTranslation.data
+                    ? originalTranslation.data[this.merger_uid] || currentText
+                    : currentText;
+                const mergeeText = originalTranslation && originalTranslation.data
+                    ? originalTranslation.data[this.mergee_uid] || ""
+                    : "";
+                if (!mergerText && !mergeeText) {
+                    return null;
+                }
+
+                return {
+                    mergerUid: this.merger_uid,
+                    mergerText,
+                    mergeeUid: this.mergee_uid,
+                    mergeeText
+                };
+            },
+
+            getSplitPreviewPart(translation, uid, splittingUid) {
+                if (!this.originalTranslations || (uid !== splittingUid && uid !== this.splitter_uid)) {
+                    return null;
+                }
+
+                const role = uid === splittingUid ? "original" : "new";
+                const label = role === "original" ? uid + " current" : uid + " new";
+                const currentText = translation && translation.data
+                    ? translation.data[uid] || ""
+                    : "";
+                const originalTranslation = this.originalTranslations.find(item => item.muid === translation.muid);
+                const originalText = originalTranslation && originalTranslation.data
+                    ? originalTranslation.data[splittingUid] || currentText
+                    : currentText;
+
+                return {
+                    role,
+                    label,
+                    text: role === "original"
+                        ? (originalText || "Current segment is empty")
+                        : (currentText || "New empty segment")
+                };
             }
         };
     });
@@ -417,10 +491,51 @@ describe('Translation Core Functions', () => {
             expect(mockContext.originalTranslations).toBeNull();
         });
 
+        test('should update progress after restore', () => {
+            const updateProgress = jest.spyOn(mockContext, 'updateProgress');
+
+            mockContext._backupTranslations();
+            mockContext._restoreTranslations();
+
+            expect(updateProgress).toHaveBeenCalledTimes(1);
+        });
+
         test('should do nothing when no backup exists', () => {
             const originalTranslations = [...mockContext.translations];
             mockContext._restoreTranslations();
             expect(mockContext.translations).toEqual(originalTranslations);
+        });
+    });
+
+    describe('_ensureHtmlProjectInTranslations', () => {
+        test('should add loaded HTML project before split/merge backup', () => {
+            mockContext.translations = [
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Text' } }
+            ];
+            mockContext.htmlProjectName = 'html-pli-ms';
+            mockContext.htmlProject = {
+                muid: 'html-pli-ms',
+                data: { 'mn1:1.1': '<p>First</p>', 'mn1:1.2': '<p>Second</p>' }
+            };
+
+            mockContext._ensureHtmlProjectInTranslations(mockContext.translations);
+            mockContext._backupTranslations();
+
+            expect(mockContext.originalTranslations).toEqual([
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Text' } },
+                { muid: 'html-pli-ms', data: { 'mn1:1.1': '<p>First</p>', 'mn1:1.2': '<p>Second</p>' } }
+            ]);
+        });
+
+        test('should not duplicate HTML project when it is already loaded', () => {
+            const htmlProject = { muid: 'html-pli-ms', data: { 'mn1:1.1': '<p>First</p>' } };
+            mockContext.translations = [htmlProject];
+            mockContext.htmlProjectName = 'html-pli-ms';
+            mockContext.htmlProject = htmlProject;
+
+            mockContext._ensureHtmlProjectInTranslations(mockContext.translations);
+
+            expect(mockContext.translations).toHaveLength(1);
         });
     });
 
@@ -438,6 +553,161 @@ describe('Translation Core Functions', () => {
             mockContext._backupTranslations();
             mockContext._restoreTranslations();
             expect(mockContext.hasActiveOperation()).toBe(false);
+        });
+
+        test('should return false after successful split/merge commit', () => {
+            mockContext._backupTranslations();
+            mockContext._commitSplitMergeOperation();
+            expect(mockContext.hasActiveOperation()).toBe(false);
+        });
+    });
+
+    describe('isMergeHighlightedRow', () => {
+        test('should highlight merger and mergee rows during merge confirmation', () => {
+            mockContext.merger_uid = 'mn1:1.1';
+            mockContext.mergee_uid = 'mn1:1.2';
+
+            expect(mockContext.isMergeHighlightedRow('mn1:1.1')).toBe(true);
+            expect(mockContext.isMergeHighlightedRow('mn1:1.2')).toBe(true);
+        });
+
+        test('should not highlight unrelated rows', () => {
+            mockContext.merger_uid = 'mn1:1.1';
+            mockContext.mergee_uid = 'mn1:1.2';
+
+            expect(mockContext.isMergeHighlightedRow('mn1:1.3')).toBe(false);
+        });
+    });
+
+    describe('isSplitHighlightedRow', () => {
+        test('should highlight the original split row and inserted splitter row during split confirmation', () => {
+            mockContext.splitter_uid = 'mn1:1.2';
+
+            expect(mockContext.isSplitHighlightedRow('mn1:1.1', 'mn1:1.1')).toBe(true);
+            expect(mockContext.isSplitHighlightedRow('mn1:1.2', 'mn1:1.1')).toBe(true);
+        });
+
+        test('should not highlight unrelated rows', () => {
+            mockContext.splitter_uid = 'mn1:1.2';
+
+            expect(mockContext.isSplitHighlightedRow('mn1:1.3', 'mn1:1.1')).toBe(false);
+        });
+    });
+
+    describe('getMergePreviewParts', () => {
+        test('should return original merger and mergee text for the merged row', () => {
+            mockContext.merger_uid = 'mn1:1.1';
+            mockContext.mergee_uid = 'mn1:1.2';
+            mockContext.originalTranslations = [
+                {
+                    muid: 'pli-ms',
+                    data: {
+                        'mn1:1.1': 'Upper text',
+                        'mn1:1.2': 'Lower text'
+                    }
+                }
+            ];
+
+            expect(mockContext.getMergePreviewParts({ muid: 'pli-ms' }, 'mn1:1.1')).toEqual({
+                mergerUid: 'mn1:1.1',
+                mergerText: 'Upper text',
+                mergeeUid: 'mn1:1.2',
+                mergeeText: 'Lower text'
+            });
+        });
+
+        test('should use current row text when original merger text is missing', () => {
+            mockContext.merger_uid = 'mn1:1.1';
+            mockContext.mergee_uid = 'mn1:1.2';
+            mockContext.originalTranslations = [
+                { muid: 'html-pli-ms', data: {} }
+            ];
+
+            expect(mockContext.getMergePreviewParts(
+                { muid: 'html-pli-ms', data: { 'mn1:1.1': '<article>HTML text</article>' } },
+                'mn1:1.1'
+            )).toEqual({
+                mergerUid: 'mn1:1.1',
+                mergerText: '<article>HTML text</article>',
+                mergeeUid: 'mn1:1.2',
+                mergeeText: ''
+            });
+        });
+
+        test('should not return preview parts for unrelated rows', () => {
+            mockContext.merger_uid = 'mn1:1.1';
+            mockContext.mergee_uid = 'mn1:1.2';
+            mockContext.originalTranslations = [
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Upper text', 'mn1:1.2': 'Lower text' } }
+            ];
+
+            expect(mockContext.getMergePreviewParts({ muid: 'pli-ms' }, 'mn1:1.3')).toBeNull();
+        });
+    });
+
+    describe('getSplitPreviewPart', () => {
+        test('should return preview data for the original split row', () => {
+            mockContext.splitter_uid = 'mn1:1.2';
+            mockContext.originalTranslations = [
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Original text' } }
+            ];
+
+            expect(mockContext.getSplitPreviewPart(
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Original text', 'mn1:1.2': '' } },
+                'mn1:1.1',
+                'mn1:1.1'
+            )).toEqual({
+                role: 'original',
+                label: 'mn1:1.1 current',
+                text: 'Original text'
+            });
+        });
+
+        test('should return preview data for the new split row', () => {
+            mockContext.splitter_uid = 'mn1:1.2';
+            mockContext.originalTranslations = [
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Original text' } }
+            ];
+
+            expect(mockContext.getSplitPreviewPart(
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Original text', 'mn1:1.2': '' } },
+                'mn1:1.2',
+                'mn1:1.1'
+            )).toEqual({
+                role: 'new',
+                label: 'mn1:1.2 new',
+                text: 'New empty segment'
+            });
+        });
+
+        test('should use current row text when original split text is missing', () => {
+            mockContext.splitter_uid = 'mn1:1.2';
+            mockContext.originalTranslations = [
+                { muid: 'html-pli-ms', data: {} }
+            ];
+
+            expect(mockContext.getSplitPreviewPart(
+                { muid: 'html-pli-ms', data: { 'mn1:1.1': '<article>HTML text</article>' } },
+                'mn1:1.1',
+                'mn1:1.1'
+            )).toEqual({
+                role: 'original',
+                label: 'mn1:1.1 current',
+                text: '<article>HTML text</article>'
+            });
+        });
+
+        test('should not return preview data for unrelated rows', () => {
+            mockContext.splitter_uid = 'mn1:1.2';
+            mockContext.originalTranslations = [
+                { muid: 'pli-ms', data: { 'mn1:1.1': 'Original text' } }
+            ];
+
+            expect(mockContext.getSplitPreviewPart(
+                { muid: 'pli-ms', data: { 'mn1:1.3': 'Other text' } },
+                'mn1:1.3',
+                'mn1:1.1'
+            )).toBeNull();
         });
     });
 });

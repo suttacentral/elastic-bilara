@@ -38,24 +38,28 @@
 </head>
 
 <body class="page-layout" x-data="getUserInfo()" x-init="getRole(); loadUserSettings()">
-    <sl-dialog label="Hint" class="dialog-split-hint">
-        When any split is made, you must check the HTML and confirm it is correct.
-        <br>
-        <div class="dialog-footer">
+    <sl-dialog label="Split Hint" class="dialog-split-hint">
+        <div class="dialog-hint-content">
+            <sl-icon library="bi" name="info-circle"></sl-icon>
+            <p>When any split is made, you must check the HTML and confirm it is correct.</p>
+        </div>
+        <div class="dialog-footer" slot="footer">
             <sl-checkbox @sl-change="localStorage.setItem('enableSplitHintDialog', !$event.target.checked);">Don't show again</sl-checkbox>
-            <sl-button slot="footer" variant="primary"
+            <sl-button variant="primary"
                 @click="document.querySelector('.dialog-split-hint').hide()"
                 class="cc cc-logo">Close
             </sl-button>
         </div>
     </sl-dialog>
 
-    <sl-dialog label="Hint" class="dialog-merge-hint">
-        When any merge is made, you must check the HTML and confirm it is correct.
-        <br>
-        <div class="dialog-footer">
+    <sl-dialog label="Merge Hint" class="dialog-merge-hint">
+        <div class="dialog-hint-content">
+            <sl-icon library="bi" name="info-circle"></sl-icon>
+            <p>When any merge is made, you must check the HTML and confirm it is correct.</p>
+        </div>
+        <div class="dialog-footer" slot="footer">
             <sl-checkbox @sl-change="localStorage.setItem('enableMergeHintDialog', !$event.target.checked);">Don't show again</sl-checkbox>
-            <sl-button slot="footer" variant="primary"
+            <sl-button variant="primary"
                 @click="document.querySelector('.dialog-merge-hint').hide()"
                 class="cc cc-logo">Close
             </sl-button>
@@ -72,6 +76,31 @@
         x-cloak
         x-show="isActive"
         @toggle-detail-panel.window="active === $event.detail.panel ? active = null : active = $event.detail.panel">
+
+        <sl-dialog label="Affected Files" class="dialog-affected-files">
+            <div class="affected-files-dialog">
+                <p class="affected-files-dialog__message">The following files have been modified by this operation:</p>
+                <div class="affected-files-dialog__list">
+                    <template x-for="file in affectedFiles" :key="file.path">
+                        <div class="affected-files-dialog__item" :class="'affected-files-dialog__item--' + file.type">
+                            <i class="bi" :class="file.type === 'main' ? 'bi-file-earmark-code' : 'bi-file-earmark'"></i>
+                            <span class="affected-files-dialog__path" x-text="file.path" :title="file.path"></span>
+                            <span class="affected-files-dialog__badge" x-text="file.type === 'main' ? 'main' : file.muid"></span>
+                        </div>
+                    </template>
+                </div>
+                <div class="affected-files-dialog__footer">
+                    <sl-button variant="default"
+                        @click="document.querySelector('.dialog-affected-files').hide();"
+                        class="cc">Close
+                    </sl-button>
+                    <sl-button variant="primary"
+                        @click="document.querySelector('.dialog-affected-files').hide(); window.open('/git_status_panel?filter=' + encodeURIComponent(affectedPrefix), '_blank', 'noopener');"
+                        class="cc cc-logo">View Unpublished Changes
+                    </sl-button>
+                </div>
+            </div>
+        </sl-dialog>
 
         <sc-bilara-translation-project-header></sc-bilara-translation-project-header>
 
@@ -119,6 +148,7 @@
                     startWidths: [],
                     splitting: false,
                     merging: false,
+                    splitMergeProcessing: false,
                     mergingUid: '',
                     splittingUid: '',
                     hoveredResizerIndex: -1,
@@ -381,6 +411,7 @@
 
                         <!-- Each row contains the same segment across all translation projects -->
                         <div class="translation-row" :data-uid="uid" :data-index="rowIndex"
+                             :class="{ 'translation-row--split-highlight': splitting && isSplitHighlightedRow(uid, splittingUid), 'translation-row--merge-highlight': merging && isMergeHighlightedRow(uid) }"
                              x-data="{
                                  rowHints: [],
                                  rowHintsShow: false,
@@ -499,6 +530,21 @@
                                         </sc-bilara-translation-project-actions>
 
                                         <div class="translation-cell__textarea-wrapper">
+                                            <template x-if="merging && uid === merger_uid && getMergePreviewParts(translation, uid)">
+                                                <div class="translation-cell__merge-preview" x-data="{ parts: getMergePreviewParts(translation, uid) }">
+                                                    <span class="translation-cell__merge-preview-badge translation-cell__merge-preview-badge--merger" x-text="parts.mergerUid"></span>
+                                                    <span class="translation-cell__merge-preview-part translation-cell__merge-preview-part--merger" x-text="parts.mergerText"></span>
+                                                    <span class="translation-cell__merge-preview-separator" aria-hidden="true"> + </span>
+                                                    <span class="translation-cell__merge-preview-badge translation-cell__merge-preview-badge--mergee" x-text="parts.mergeeUid"></span>
+                                                    <span class="translation-cell__merge-preview-part translation-cell__merge-preview-part--mergee" x-text="parts.mergeeText"></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="splitting && isSplitHighlightedRow(uid, splittingUid) && getSplitPreviewPart(translation, uid, splittingUid)">
+                                                <div class="translation-cell__split-preview" x-data="{ part: getSplitPreviewPart(translation, uid, splittingUid) }">
+                                                    <span class="translation-cell__split-preview-badge" :class="'translation-cell__split-preview-badge--' + part.role" x-text="part.label"></span>
+                                                    <span class="translation-cell__split-preview-part" :class="'translation-cell__split-preview-part--' + part.role" x-text="part.text"></span>
+                                                </div>
+                                            </template>
                                             <textarea
                                                 class="translation-cell__textarea"
                                                 :class="{ 'translation-cell__textarea--readonly': !translation.canEdit }"

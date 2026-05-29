@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
+import { LitElement, html, css, nothing } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
 
 /**
  * Toast notification component
@@ -39,7 +39,7 @@ export class ScBilaraToast extends LitElement {
             bottom: var(--space-lg);
             right: var(--space-lg);
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: var(--space-sm);
             padding: var(--space-md) var(--space-lg);
             background-color: var(--color-black);
@@ -50,7 +50,7 @@ export class ScBilaraToast extends LitElement {
             animation: toastIn 0.3s ease;
             font-family: inherit;
             font-size: var(--text-sm);
-            max-width: 400px;
+            max-width: min(90vw, 500px);
         }
 
         .toast.success {
@@ -68,10 +68,15 @@ export class ScBilaraToast extends LitElement {
         .toast i {
             font-size: var(--text-lg);
             flex-shrink: 0;
+            margin-top: 2px;
         }
 
         .toast span {
             flex: 1;
+            word-break: break-word;
+            white-space: pre-wrap;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         @keyframes toastIn {
@@ -130,17 +135,17 @@ export class ScBilaraToast extends LitElement {
     }
 
     render() {
-        if (!this.visible) {
-            return html``;
-        }
-
         const iconClass = this.type === 'success'
             ? 'bi-check-circle-fill'
             : 'bi-x-circle-fill';
 
         return html`
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-            <div class="toast ${this.type}">
+            <div
+                class="toast ${this.type} ${this.visible ? '' : 'hidden'}"
+                aria-live="polite"
+                role="${this.visible ? 'status' : nothing}"
+            >
                 <i class="${iconClass}"></i>
                 <span>${this.message}</span>
             </div>

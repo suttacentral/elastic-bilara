@@ -16,6 +16,8 @@ function fetchTranslation() {
         splitter_uid: null,
         merger_uid: null,
         mergee_uid: null,
+        affectedFiles: [],
+        affectedPrefix: '',
         isRemarkProject(key) {
             return key && key.startsWith(REMARKS_PREFIX);
         },
@@ -321,10 +323,33 @@ function fetchTranslation() {
                     JSON.stringify(this.originalTranslations)
                 );
                 this.originalTranslations = null;
+                this.updateProgress();
             }
+        },
+        _commitSplitMergeOperation() {
+            this.originalTranslations = null;
+            this.updateProgress();
         },
         hasActiveOperation() {
             return this.originalTranslations !== null;
+        },
+        _ensureHtmlProjectInTranslations(translations = this.translations) {
+            if (!this.htmlProjectName || !this.htmlProject) return;
+
+            const existingProject = translations.find(project => project.muid === this.htmlProjectName);
+            if (!existingProject) {
+                translations.push(this.htmlProject);
+            }
+        },
+        async withGuard(data, flag, action) {
+            if (data[flag]) return;
+            data[flag] = true;
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            try {
+                await action();
+            } finally {
+                data[flag] = false;
+            }
         },
         async splitBasedOnUid(translations, uid, element) {
             if (!isMergeSplitConditionMet(uid)) {
@@ -353,14 +378,8 @@ function fetchTranslation() {
                 document.querySelector('.dialog-split-hint')?.show();
             }
 
+            this._ensureHtmlProjectInTranslations(translations);
             this._backupTranslations();
-
-            if (this.htmlProjectName) {
-                const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
-                if (!existingProject) {
-                    this.translations.push(this.htmlProject);
-                }
-            }
 
             const [sectionUid, sectionNumber] = uid.split(':');
             const isTwoLevelFormat = /^\d+\.\d+$/.test(sectionNumber);
@@ -382,6 +401,8 @@ function fetchTranslation() {
                     sectionNumber
                 );
             }
+
+            this.updateProgress();
 
             return true;
         },
@@ -476,13 +497,8 @@ function fetchTranslation() {
 
             let newObj = {};
             this.merger_uid = uid;
-            this.originalTranslations = JSON.parse(JSON.stringify(translations));
-            if (this.htmlProjectName) {
-                const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
-                if (!existingProject) {
-                    this.translations.push(this.htmlProject);
-                }
-            }
+            this._ensureHtmlProjectInTranslations(translations);
+            this._backupTranslations();
 
             if (localStorage.getItem('enableMergeHintDialog') === null) {
                 localStorage.setItem('enableMergeHintDialog', 'true');
@@ -504,6 +520,8 @@ function fetchTranslation() {
             else if (isThreeLevelFormat) {
                 this._handleThreeLevelMerge(translations, sectionUid, sectionNumber);
             }
+
+            this.updateProgress();
 
             return true;
         },
@@ -705,6 +723,61 @@ function fetchTranslation() {
         cancelMerge(translations) {
             this._restoreTranslations();
         },
+        isMergeHighlightedRow(uid) {
+            return this.merger_uid === uid || this.mergee_uid === uid;
+        },
+        isSplitHighlightedRow(uid, splittingUid) {
+            return splittingUid === uid || this.splitter_uid === uid;
+        },
+        getMergePreviewParts(translation, uid) {
+            if (!this.originalTranslations || uid !== this.merger_uid) {
+                return null;
+            }
+
+            const originalTranslation = this.originalTranslations.find(item => item.muid === translation.muid);
+            const currentText = translation && translation.data
+                ? translation.data[uid] || ""
+                : "";
+            const mergerText = originalTranslation && originalTranslation.data
+                ? originalTranslation.data[this.merger_uid] || currentText
+                : currentText;
+            const mergeeText = originalTranslation && originalTranslation.data
+                ? originalTranslation.data[this.mergee_uid] || ""
+                : "";
+            if (!mergerText && !mergeeText) {
+                return null;
+            }
+
+            return {
+                mergerUid: this.merger_uid,
+                mergerText,
+                mergeeUid: this.mergee_uid,
+                mergeeText
+            };
+        },
+        getSplitPreviewPart(translation, uid, splittingUid) {
+            if (!this.originalTranslations || (uid !== splittingUid && uid !== this.splitter_uid)) {
+                return null;
+            }
+
+            const role = uid === splittingUid ? "original" : "new";
+            const label = role === "original" ? uid + " current" : uid + " new";
+            const currentText = translation && translation.data
+                ? translation.data[uid] || ""
+                : "";
+            const originalTranslation = this.originalTranslations.find(item => item.muid === translation.muid);
+            const originalText = originalTranslation && originalTranslation.data
+                ? originalTranslation.data[splittingUid] || currentText
+                : currentText;
+
+            return {
+                role,
+                label,
+                text: role === "original"
+                    ? (originalText || "Current segment is empty")
+                    : (currentText || "New empty segment")
+            };
+        },
         redirectToHtml() {
             const params = new URLSearchParams(window.location.search);
             const prefix = params.get("prefix");
@@ -774,6 +847,33 @@ function fetchTranslation() {
                 return data;
             } catch (error) {
                 throw new Error(error);
+            }
+        },
+        async refreshHtmlProject(prefix = this.prefix) {
+            if (!this.htmlProjectName) return;
+
+            const data = await this.fetchData(this.htmlProjectName, prefix);
+            const existingProject = this.translations.find(project => project.muid === this.htmlProjectName);
+            const targetProject = existingProject || this.htmlProject || {
+                canEdit: false,
+                muid: this.htmlProjectName,
+                prefix,
+            };
+
+            targetProject.data = data.data;
+            targetProject.canEdit = data.can_edit;
+            targetProject.prefix = prefix;
+            this.htmlProject = targetProject;
+        },
+        async refreshHtmlProjectAfterSplitMerge(prefix) {
+            try {
+                await this.refreshHtmlProject(prefix);
+            } catch (error) {
+                console.error("Failed to refresh HTML project after split/merge:", error);
+                const toast = document.querySelector("sc-bilara-toast");
+                if (toast) {
+                    toast.show("HTML column could not be refreshed. Please reload the page.", "warning", 5000);
+                }
             }
         },
         async fetchRemarkUsers(muid, prefix) {
@@ -953,17 +1053,25 @@ function fetchTranslation() {
                 });
                 if (!response.ok) {
                     const body = await response.json().catch(() => null);
-                    throw new Error(body?.detail ?? `Server error (${response.status})`);
+                    let errorMessage = `Server error (${response.status})`;
+                    if (body?.detail) {
+                        errorMessage = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+                    }
+                    throw new Error(errorMessage);
                 }
+                const result = await response.json();
+                await this.refreshHtmlProjectAfterSplitMerge(prefix);
+                this._commitSplitMergeOperation();
 
-                displayMessage(
-                    element,
-                    "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
-                );
+                // Collect all affected file paths
+                const affectedFiles = [
+                    { path: result.path, muid: muid, type: 'main' },
+                    ...(result.affected || []).map(a => ({ path: a.path, muid: a.muid, type: 'related' }))
+                ];
 
-                this.redirectToHtml();
+                return { affectedFiles, prefix };
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         async updateHandlerForMerge(muid, prefix, element) {
@@ -982,17 +1090,25 @@ function fetchTranslation() {
                 });
                 if (!response.ok) {
                     const body = await response.json().catch(() => null);
-                    throw new Error(body?.detail ?? `Server error (${response.status})`);
+                    let errorMessage = `Server error (${response.status})`;
+                    if (body?.detail) {
+                        errorMessage = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+                    }
+                    throw new Error(errorMessage);
                 }
+                const result = await response.json();
+                await this.refreshHtmlProjectAfterSplitMerge(prefix);
+                this._commitSplitMergeOperation();
 
-                displayMessage(
-                    element,
-                    "Your changes have reached the server. They are being processed at the moment. This may take some time. Please continue your work as normal.",
-                );
+                // Collect all affected file paths
+                const affectedFiles = [
+                    { path: result.path, muid: muid, type: 'main' },
+                    ...(result.affected || []).map(a => ({ path: a.path, muid: a.muid, type: 'related' }))
+                ];
 
-                this.redirectToHtml();
+                return { affectedFiles, prefix };
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         async fetchRelatedProjects(prefix) {

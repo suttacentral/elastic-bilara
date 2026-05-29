@@ -99,7 +99,7 @@ class UIDReducer:
             "translation": "",
             "comment": "| ",
             "variant": "| ",
-            "html": "manual",
+            "html": "",
             "reference": ", ",
         }
         merge_separator = merge_separator_config.get(
