@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 from typing import Annotated, Any
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from search.search import Search
 from search.utils import get_json_data
@@ -115,6 +115,9 @@ class CalleeSplit(CalleeBase):
 class MergeSplitOutBase(BaseModel):
     main_task_id: str | None = None
     related_task_id: str | None = None
+    auto_publish_task_id: str | None = None
+    auto_published_paths: list[str] = Field(default_factory=list)
+    manual_publish_paths: list[str] = Field(default_factory=list)
     message: str
     path: str
     callee: CalleeBase

@@ -79,15 +79,38 @@
 
         <sl-dialog label="Affected Files" class="dialog-affected-files">
             <div class="affected-files-dialog">
-                <p class="affected-files-dialog__message">The following files have been modified by this operation:</p>
-                <div class="affected-files-dialog__list">
-                    <template x-for="file in affectedFiles" :key="file.path">
-                        <div class="affected-files-dialog__item" :class="'affected-files-dialog__item--' + file.type">
-                            <i class="bi" :class="file.type === 'main' ? 'bi-file-earmark-code' : 'bi-file-earmark'"></i>
-                            <span class="affected-files-dialog__path" x-text="file.path" :title="file.path"></span>
-                            <span class="affected-files-dialog__badge" x-text="file.type === 'main' ? 'main' : file.muid"></span>
-                        </div>
-                    </template>
+                <p class="affected-files-dialog__message">Structural files are scheduled for GitHub automatically. Translation and comment files remain available for manual publishing.</p>
+                <div class="affected-files-dialog__section" x-show="affectedFiles.some(file => file.publishMode === 'auto')">
+                    <div class="affected-files-dialog__section-header">
+                        <span>Scheduled for GitHub</span>
+                        <span x-text="affectedFiles.filter(file => file.publishMode === 'auto').length + ' files'"></span>
+                    </div>
+                    <div class="affected-files-dialog__list">
+                        <template x-for="file in affectedFiles.filter(file => file.publishMode === 'auto')" :key="file.path">
+                            <div class="affected-files-dialog__item" :class="'affected-files-dialog__item--' + file.type">
+                                <i class="bi" :class="file.type === 'main' ? 'bi-file-earmark-code' : 'bi-file-earmark'"></i>
+                                <span class="affected-files-dialog__path" x-text="file.path" :title="file.path"></span>
+                                <span class="affected-files-dialog__badge" x-text="file.type === 'main' ? 'main' : file.muid"></span>
+                                <span class="affected-files-dialog__badge">scheduled</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="affected-files-dialog__section" x-show="affectedFiles.some(file => file.publishMode === 'manual')">
+                    <div class="affected-files-dialog__section-header">
+                        <span>Manual publish required</span>
+                        <span x-text="affectedFiles.filter(file => file.publishMode === 'manual').length + ' files'"></span>
+                    </div>
+                    <div class="affected-files-dialog__list">
+                        <template x-for="file in affectedFiles.filter(file => file.publishMode === 'manual')" :key="file.path">
+                            <div class="affected-files-dialog__item" :class="'affected-files-dialog__item--' + file.type">
+                                <i class="bi" :class="file.type === 'main' ? 'bi-file-earmark-code' : 'bi-file-earmark'"></i>
+                                <span class="affected-files-dialog__path" x-text="file.path" :title="file.path"></span>
+                                <span class="affected-files-dialog__badge" x-text="file.type === 'main' ? 'main' : file.muid"></span>
+                                <span class="affected-files-dialog__badge">manual publish</span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
                 <div class="affected-files-dialog__footer">
                     <sl-button variant="default"
@@ -95,8 +118,9 @@
                         class="cc">Close
                     </sl-button>
                     <sl-button variant="primary"
+                        x-show="affectedFiles.some(file => file.publishMode === 'manual')"
                         @click="document.querySelector('.dialog-affected-files').hide(); window.open('/git_status_panel?filter=' + encodeURIComponent(affectedPrefix), '_blank', 'noopener');"
-                        class="cc cc-logo">View Unpublished Changes
+                        class="cc cc-logo">View Manual Publish Files
                     </sl-button>
                 </div>
             </div>

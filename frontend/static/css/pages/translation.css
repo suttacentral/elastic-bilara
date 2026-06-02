@@ -1831,8 +1831,31 @@ sl-dialog::part(title) {
     color: var(--color-text-emphasized);
 }
 
+.affected-files-dialog__section {
+    margin-top: 14px;
+}
+
+.affected-files-dialog__section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--color-text-emphasized);
+}
+
+.affected-files-dialog__section-header span:last-child {
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
 .affected-files-dialog__list {
-    max-height: 320px;
+    max-height: 220px;
     overflow-y: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xs);

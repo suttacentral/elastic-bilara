@@ -1063,13 +1063,19 @@ function fetchTranslation() {
                 await this.refreshHtmlProjectAfterSplitMerge(prefix);
                 this._commitSplitMergeOperation();
 
-                // Collect all affected file paths
+                const publishModeByPath = this._buildSplitMergePublishModeMap(result);
                 const affectedFiles = [
-                    { path: result.path, muid: muid, type: 'main' },
-                    ...(result.affected || []).map(a => ({ path: a.path, muid: a.muid, type: 'related' }))
+                    this._buildAffectedFile(result.path, muid, 'main', publishModeByPath),
+                    ...(result.affected || []).map(a => this._buildAffectedFile(a.path, a.muid, 'related', publishModeByPath))
                 ];
 
-                return { affectedFiles, prefix };
+                return {
+                    affectedFiles,
+                    prefix,
+                    autoPublishedPaths: result.auto_published_paths || [],
+                    manualPublishPaths: result.manual_publish_paths || [],
+                    autoPublishTaskId: result.auto_publish_task_id || null,
+                };
             } catch (error) {
                 throw error;
             }
@@ -1100,16 +1106,40 @@ function fetchTranslation() {
                 await this.refreshHtmlProjectAfterSplitMerge(prefix);
                 this._commitSplitMergeOperation();
 
-                // Collect all affected file paths
+                const publishModeByPath = this._buildSplitMergePublishModeMap(result);
                 const affectedFiles = [
-                    { path: result.path, muid: muid, type: 'main' },
-                    ...(result.affected || []).map(a => ({ path: a.path, muid: a.muid, type: 'related' }))
+                    this._buildAffectedFile(result.path, muid, 'main', publishModeByPath),
+                    ...(result.affected || []).map(a => this._buildAffectedFile(a.path, a.muid, 'related', publishModeByPath))
                 ];
 
-                return { affectedFiles, prefix };
+                return {
+                    affectedFiles,
+                    prefix,
+                    autoPublishedPaths: result.auto_published_paths || [],
+                    manualPublishPaths: result.manual_publish_paths || [],
+                    autoPublishTaskId: result.auto_publish_task_id || null,
+                };
             } catch (error) {
                 throw error;
             }
+        },
+        _buildSplitMergePublishModeMap(result) {
+            const publishModeByPath = new Map();
+            for (const path of result.auto_published_paths || []) {
+                publishModeByPath.set(path, 'auto');
+            }
+            for (const path of result.manual_publish_paths || []) {
+                publishModeByPath.set(path, 'manual');
+            }
+            return publishModeByPath;
+        },
+        _buildAffectedFile(path, muid, type, publishModeByPath) {
+            return {
+                path,
+                muid,
+                type,
+                publishMode: publishModeByPath.get(path) || 'manual',
+            };
         },
         async fetchRelatedProjects(prefix) {
             try {

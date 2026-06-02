@@ -1,5 +1,6 @@
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.config import settings
@@ -7,11 +8,83 @@ from app.core.text_types import TextType
 from app.db.schemas.user import User, UserBase
 from app.services.git import utils
 from app.services.users.utils import get_user
-# from app.tasks import commit
+from app.tasks import commit
 from search.search import Search
 from search.utils import find_root_path, get_json_data
 
 search = Search()
+
+AUTO_PUBLISH_SPLIT_MERGE_TYPES = {"root", "html", "reference", "variant"}
+MANUAL_PUBLISH_SPLIT_MERGE_TYPES = {"translation", "comment"}
+
+
+@dataclass(frozen=True)
+class SplitMergePublishResult:
+    task_id: str | None
+    auto_published_paths: list[str]
+    manual_publish_paths: list[str]
+
+
+def _relative_split_merge_path(path: Path) -> Path:
+    path = Path(path)
+    if path.is_absolute():
+        try:
+            return path.resolve().relative_to(settings.WORK_DIR.resolve())
+        except ValueError:
+            parts = path.parts
+            if "unpublished" in parts:
+                return Path(*parts[parts.index("unpublished") + 1:])
+    return Path(str(path).lstrip("/"))
+
+
+def format_split_merge_publish_path(path: Path) -> str:
+    return f"/{_relative_split_merge_path(path).as_posix()}"
+
+
+def get_split_merge_text_type(path: Path) -> str:
+    relative_path = _relative_split_merge_path(path)
+    return relative_path.parts[0] if relative_path.parts else ""
+
+
+def group_split_merge_publish_paths(paths: list[Path] | set[Path] | tuple[Path, ...]) -> tuple[list[Path], list[Path]]:
+    auto_publish_paths = []
+    manual_publish_paths = []
+    seen_paths = set()
+    for path in [Path(path) for path in paths]:
+        formatted_path = format_split_merge_publish_path(path)
+        if formatted_path in seen_paths:
+            continue
+        seen_paths.add(formatted_path)
+        text_type = get_split_merge_text_type(path)
+        if text_type in AUTO_PUBLISH_SPLIT_MERGE_TYPES:
+            auto_publish_paths.append(path)
+        else:
+            manual_publish_paths.append(path)
+    return auto_publish_paths, manual_publish_paths
+
+
+def schedule_split_merge_auto_publish(
+    user: UserBase,
+    paths: list[Path] | set[Path] | tuple[Path, ...],
+    operation: str,
+) -> SplitMergePublishResult:
+    auto_publish_paths, manual_publish_paths = group_split_merge_publish_paths(paths)
+    formatted_auto_paths = [format_split_merge_publish_path(path) for path in auto_publish_paths]
+    formatted_manual_paths = [format_split_merge_publish_path(path) for path in manual_publish_paths]
+
+    task_id = None
+    if formatted_auto_paths:
+        user_data = get_user(int(user.github_id))
+        message = f"{user.username} {operation} structural split/merge files"
+        commit_paths = [_relative_split_merge_path(path).as_posix() for path in auto_publish_paths]
+        result = commit.delay(user_data.model_dump(), commit_paths, message)
+        task_id = result.id
+
+    return SplitMergePublishResult(
+        task_id=task_id,
+        auto_published_paths=formatted_auto_paths,
+        manual_publish_paths=formatted_manual_paths,
+    )
 
 
 def sort_paths(paths: set[str]) -> list[str]:

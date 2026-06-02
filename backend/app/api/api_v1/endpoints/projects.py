@@ -28,6 +28,7 @@ from app.services.projects.models import (
 from app.services.projects.uid_expander import UIDExpander
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
+    schedule_split_merge_auto_publish,
     sort_paths,
     update_file,
     write_json_data,
@@ -210,6 +211,7 @@ async def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_use
 
     reducer = UIDReducer(user, file_path, [payload.mergee_uid], auto_commit=False)
     main_task_id, related_task_id = reducer.decrement()
+    publish_result = schedule_split_merge_auto_publish(user, related, "merged")
 
     affected_paths_data_after = {}
     for path in related:
@@ -245,6 +247,9 @@ async def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_use
     return MergeOut(
         main_task_id=main_task_id,
         related_task_id=related_task_id,
+        auto_publish_task_id=publish_result.task_id,
+        auto_published_paths=publish_result.auto_published_paths,
+        manual_publish_paths=publish_result.manual_publish_paths,
         message="Segments merged successfully!",
         path=str(file_path).replace(str(settings.WORK_DIR), ""),
         callee=callee,
@@ -264,6 +269,7 @@ async def split_segments(user: Annotated[UserBase, Depends(utils.get_current_use
     )
     uid_expander = UIDExpander(user, file_path, payload.splitter_uid)
     data, main_task_id, related_task_id = uid_expander.expand()
+    publish_result = schedule_split_merge_auto_publish(user, data.keys(), "split")
     callee = CalleeSplit(
         prefix=payload.prefix,
         muid=payload.muid,
@@ -288,6 +294,9 @@ async def split_segments(user: Annotated[UserBase, Depends(utils.get_current_use
     return SplitOut(
         main_task_id=main_task_id,
         related_task_id=related_task_id,
+        auto_publish_task_id=publish_result.task_id,
+        auto_published_paths=publish_result.auto_published_paths,
+        manual_publish_paths=publish_result.manual_publish_paths,
         message="Segments split successfully!",
         path=str(file_path).replace(str(settings.WORK_DIR), ""),
         callee=callee,

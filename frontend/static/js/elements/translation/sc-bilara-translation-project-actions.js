@@ -97,7 +97,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
                           affectedFiles = result.affectedFiles;
                           affectedPrefix = result.prefix;
                           const toast = document.querySelector('sc-bilara-toast');
-                          if (toast) toast.show('Split completed - ' + result.affectedFiles.length + (result.affectedFiles.length === 1 ? ' file modified' : ' files modified'), 'success', 5000);
+                          if (toast) toast.show('Split completed - ' + result.autoPublishedPaths.length + ' scheduled for GitHub, ' + result.manualPublishPaths.length + ' left for manual publish', 'success', 5000);
                           $nextTick(() => document.querySelector('.dialog-affected-files')?.show());
                       }
                   } catch (e) {
@@ -133,7 +133,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
                           affectedFiles = result.affectedFiles;
                           affectedPrefix = result.prefix;
                           const toast = document.querySelector('sc-bilara-toast');
-                          if (toast) toast.show('Merge completed - ' + result.affectedFiles.length + (result.affectedFiles.length === 1 ? ' file modified' : ' files modified'), 'success', 5000);
+                          if (toast) toast.show('Merge completed - ' + result.autoPublishedPaths.length + ' scheduled for GitHub, ' + result.manualPublishPaths.length + ' left for manual publish', 'success', 5000);
                           $nextTick(() => document.querySelector('.dialog-affected-files')?.show());
                       }
                   } catch (e) {
