@@ -460,6 +460,7 @@
                                         :style="getColumnStyle(colIndex)"
                                         :class="{
                                             'translation-cell--source': translation.isSource,
+                                            'translation-cell--root': translation.muid && translation.muid.startsWith('root'),
                                             'translation-cell--editable': translation.canEdit
                                         }"
                                         x-data="{
@@ -871,19 +872,21 @@
                         <!-- Collapsible Search Options -->
                         <div class="search__options" x-show="optionsExpanded" x-collapse>
                             <!-- Search Bar -->
+                            <label for="project-query" class="search__bar__label">Add project field</label>
                             <div class="search__bar">
-                                <i class="bi bi-search search__bar__icon" x-on:click="$event.target.nextElementSibling.focus()"></i>
+                                <i class="bi bi-plus-circle search__bar__icon" x-on:click="$event.target.nextElementSibling.focus()"></i>
                                 <input type="text"
                                     x-model="projectQuery"
                                     x-on:input="updateSuggestions"
                                     class="search__bar__input"
-                                    x-bind:placeholder="new URLSearchParams(window.location.search).get('muid')"
+                                    placeholder="Type a project ID to add a field, e.g. translation-en-sujato"
                                     id="project-query"/>
                                 <i x-cloak
                                     x-show="projectQuery.length"
                                     x-on:click="projectQuery = ''; updateSuggestions()"
                                     class="bi bi-x-circle search__bar__clear"></i>
                             </div>
+                            <p class="search__bar__helper">This adds a project-specific field below. It does not run the search.</p>
 
                             <!-- Suggestions -->
                             <ul class="search__suggestions">
@@ -896,22 +899,21 @@
                                 </template>
                             </ul>
 
-                            <!-- Search Fields -->
+                            <!-- Search Fields (sorted by type: translation → comment → others → root) -->
                             <div class="fields">
-                                <template x-for="(value, key) in fields">
+                                <template x-for="key in sortedFieldKeys()" :key="key">
                                     <div class="fields__item">
                                         <div class="fields__label__container">
                                             <label x-bind:for="'search-'+key" x-text="key" class="fields__label"></label>
-                                            <i x-show="key !== 'uid'"
-                                                x-cloak
+                                            <i x-cloak
                                                 class="bi bi-x-circle fields__label__cancel"
-                                                x-on:click="key !== 'uid' ? toggleSelectedProjects(key) : null"></i>
+                                                x-on:click="toggleSelectedProjects(key)"></i>
                                         </div>
                                         <input class="fields__input"
                                             type="text"
                                             x-bind:id="'search-'+key"
-                                            :placeholder="key === 'uid' ? 'an1.1:0.1' : ''"
-                                            x-model="fields[key]"/>
+                                            x-model="fields[key]"
+                                            @keydown.enter.prevent="await triggerSearch($event)"/>
                                     </div>
                                 </template>
                             </div>
@@ -921,10 +923,28 @@
                                 <div class="fields__label__container">
                                     <label for="search-replacement" class="fields__label">Replacement</label>
                                 </div>
-                                <input class="fields__input"
-                                    type="text"
-                                    id="search-replacement"
-                                    x-model="replacementText"/>
+                                <div class="fields__input-wrapper">
+                                    <i class="bi bi-arrow-left-right fields__input-icon" aria-hidden="true"></i>
+                                    <input class="fields__input fields__input--with-icon"
+                                        type="text"
+                                        id="search-replacement"
+                                        x-model="replacementText"/>
+                                </div>
+                            </div>
+
+                            <!-- UID field (always last) -->
+                            <div class="fields">
+                                <div class="fields__item">
+                                    <div class="fields__label__container">
+                                        <label for="search-uid" class="fields__label">uid</label>
+                                    </div>
+                                    <input class="fields__input"
+                                        type="text"
+                                        id="search-uid"
+                                        placeholder="an1.1:0.1"
+                                        x-model="fields.uid"
+                                        @keydown.enter.prevent="await triggerSearch($event)"/>
+                                </div>
                             </div>
 
                             <!-- Page Size -->
@@ -947,16 +967,16 @@
                                     x-cloak
                                     x-show="currentPage > 0"
                                     id="previousPage"
-                                    class="search__navigation__previous btn btn--previous">Previous</button>
+                                    class="search__navigation__previous btn btn--previous"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Previous</span></button>
                                 <button id="search"
-                                    x-on:click="await searchHandler($event); scrollTop('#resultsContainer'); if(Object.keys(results).length) optionsExpanded = false;"
-                                    class="search__navigation__search btn btn--search">Search</button>
+                                    x-on:click="await triggerSearch($event)"
+                                    class="search__navigation__search btn btn--search"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
                                 <button x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
                                     x-bind:disabled="!isNextPage"
                                     x-cloak
                                     x-show="isNextPage"
                                     id="nextPage"
-                                    class="search__navigation__next btn btn--next">Next</button>
+                                    class="search__navigation__next btn btn--next"><span>Next</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
                             </div>
                         </div>
 
@@ -967,12 +987,12 @@
                             <button x-on:click="await previousHandler(); scrollTop('#resultsContainer')"
                                 x-cloak
                                 x-show="currentPage > 0"
-                                class="search__navigation__previous btn btn--previous">Previous</button>
+                                class="search__navigation__previous btn btn--previous"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Previous</span></button>
                             <button x-on:click="await nextHandler(); scrollTop('#resultsContainer')"
                                 x-bind:disabled="!isNextPage"
                                 x-cloak
                                 x-show="isNextPage"
-                                class="search__navigation__next btn btn--next">Next</button>
+                                class="search__navigation__next btn btn--next"><span>Next</span><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
                         </div>
 
                         <!-- Results -->

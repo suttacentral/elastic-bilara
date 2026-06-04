@@ -17,6 +17,18 @@ const search = () => {
         editableMusids: {},       // { muid: bool } — cached can_edit per muid
         originalValues: {},       // { "uid::muid": string } — snapshot on focus
         resultEntries: [],        // reactive array for x-for: [ { uid, segments: [ { muid, segment } ] } ]
+        // Sorted field keys for UI rendering (uid excluded, rendered separately)
+        sortedFieldKeys() {
+            return Object.keys(this.fields)
+                .filter(k => k !== 'uid')
+                .sort((a, b) => this._fieldPriority(a) - this._fieldPriority(b));
+        },
+        _fieldPriority(key) {
+            if (key.startsWith('translation')) return 0;
+            if (key.startsWith('comment')) return 1;
+            if (key.startsWith('root')) return 3;
+            return 2; // tag, reference, variant, etc.
+        },
         // Search-and-replace support
         replacementText: "",      // bound to the Replacement input
         replacedItems: {},        // { "uid::muid": true } — replaced but not yet submitted
@@ -85,6 +97,13 @@ const search = () => {
                 await this.prefetchNextPage();
             } catch (error) {
                 throw new Error(error);
+            }
+        },
+        async triggerSearch(event = null) {
+            await this.searchHandler(event);
+            scrollTop("#resultsContainer");
+            if (Object.keys(this.results).length && "optionsExpanded" in this) {
+                this.optionsExpanded = false;
             }
         },
         async prefetchNextPage() {
