@@ -99,10 +99,11 @@ const search = () => {
                 throw new Error(error);
             }
         },
-        async triggerSearch(event = null) {
+        async triggerSearch(event = null, { collapseOptions = undefined } = {}) {
+            const shouldCollapseOptions = collapseOptions ?? event?.currentTarget?.dataset?.collapseOptions !== "false";
             await this.searchHandler(event);
-            scrollTop("#resultsContainer");
-            if (Object.keys(this.results).length && "optionsExpanded" in this) {
+            this.scrollTop("#resultsContainer");
+            if (shouldCollapseOptions && Object.keys(this.results).length && "optionsExpanded" in this) {
                 this.optionsExpanded = false;
             }
         },

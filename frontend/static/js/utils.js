@@ -185,7 +185,7 @@ const BadgeStatus = {
 };
 
 // Global user settings (loaded once on page init)
-window.userSettings = { pali_lookup: true, dblclick_search: true, hint_style: 'dropdown' };
+window.userSettings = { pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown' };
 
 async function loadUserSettings() {
     try {
@@ -195,6 +195,7 @@ async function loadUserSettings() {
             window.userSettings = {
                 pali_lookup: data.pali_lookup ?? true,
                 dblclick_search: data.dblclick_search ?? true,
+                dblclick_search_collapse_inputs: data.dblclick_search_collapse_inputs ?? true,
                 hint_style: data.hint_style ?? 'dropdown',
             };
         }

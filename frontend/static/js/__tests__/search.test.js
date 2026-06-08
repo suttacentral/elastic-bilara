@@ -46,6 +46,19 @@ function createMockSearch(overrides = {}) {
         editableMusids: {},
         originalValues: {},
         resultEntries: [],
+        optionsExpanded: true,
+        // Sorted field keys for UI rendering (uid excluded, rendered separately)
+        sortedFieldKeys() {
+            return Object.keys(this.fields)
+                .filter(k => k !== 'uid')
+                .sort((a, b) => this._fieldPriority(a) - this._fieldPriority(b));
+        },
+        _fieldPriority(key) {
+            if (key.startsWith('translation')) return 0;
+            if (key.startsWith('comment')) return 1;
+            if (key.startsWith('root')) return 3;
+            return 2; // tag, reference, variant, etc.
+        },
         // Search-and-replace support
         replacementText: '',
         replacedItems: {},
@@ -67,6 +80,21 @@ function createMockSearch(overrides = {}) {
                 return delete this.fields[project];
             }
             this.fields[project] = '';
+        },
+
+        async searchHandler(event = null) {
+            this.results = { 'mn1:1.1': { 'translation-en-sujato': 'matched text' } };
+            this.currentPage = this.page;
+            this.page++;
+        },
+
+        async triggerSearch(event = null, { collapseOptions = undefined } = {}) {
+            const shouldCollapseOptions = collapseOptions ?? event?.currentTarget?.dataset?.collapseOptions !== 'false';
+            await this.searchHandler(event);
+            this.scrollTop('#resultsContainer');
+            if (shouldCollapseOptions && Object.keys(this.results).length && 'optionsExpanded' in this) {
+                this.optionsExpanded = false;
+            }
         },
 
         constructQueryParams() {
@@ -383,6 +411,42 @@ describe('toggleSelectedProjects', () => {
         s.toggleSelectedProjects('proj-b');
         expect(s.fields['proj-a']).toBe('');
         expect(s.fields['proj-b']).toBe('');
+    });
+});
+
+// ============================================================================
+// triggerSearch Tests
+// ============================================================================
+
+describe('triggerSearch', () => {
+    test('should collapse search options after a normal search with results', async () => {
+        const s = createMockSearch({ scrollTop: jest.fn() });
+        s.optionsExpanded = true;
+
+        await s.triggerSearch({ type: 'click' });
+
+        expect(s.optionsExpanded).toBe(false);
+        expect(s.scrollTop).toHaveBeenCalledWith('#resultsContainer');
+    });
+
+    test('should keep search options expanded when collapseOptions is false', async () => {
+        const s = createMockSearch({ scrollTop: jest.fn() });
+        s.optionsExpanded = true;
+
+        await s.triggerSearch({ type: 'dblclick' }, { collapseOptions: false });
+
+        expect(s.optionsExpanded).toBe(true);
+        expect(s.scrollTop).toHaveBeenCalledWith('#resultsContainer');
+    });
+
+    test('should keep search options expanded when click target collapseOptions is false', async () => {
+        const s = createMockSearch({ scrollTop: jest.fn() });
+        s.optionsExpanded = true;
+
+        await s.triggerSearch({ currentTarget: { dataset: { collapseOptions: 'false' } } });
+
+        expect(s.optionsExpanded).toBe(true);
+        expect(s.scrollTop).toHaveBeenCalledWith('#resultsContainer');
     });
 });
 
@@ -1385,5 +1449,49 @@ describe('Replace + Submit Integration', () => {
 
         expect(seg.segment).toBe('xyz def xyz');
         expect(s.results['mn1:1.1']['translation-en-sujato']).toBe('xyz def xyz');
+    });
+});
+
+// ============================================================================
+// sortedFieldKeys Tests
+// ============================================================================
+
+describe('sortedFieldKeys', () => {
+    test('should exclude uid from sorted keys', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': '', 'root-pli-ms': '' };
+        expect(s.sortedFieldKeys()).not.toContain('uid');
+    });
+
+    test('should sort translation before root', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'root-pli-ms': '', 'translation-en-sujato': '' };
+        expect(s.sortedFieldKeys()).toEqual(['translation-en-sujato', 'root-pli-ms']);
+    });
+
+    test('should sort translation → comment → root', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'root-pli-ms': '', 'comment-en-sujato': '', 'translation-en-sujato': '' };
+        expect(s.sortedFieldKeys()).toEqual(['translation-en-sujato', 'comment-en-sujato', 'root-pli-ms']);
+    });
+
+    test('should place unknown types between comment and root', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'root-pli-ms': '', 'tag-en-sujato': '', 'translation-en-sujato': '' };
+        expect(s.sortedFieldKeys()).toEqual(['translation-en-sujato', 'tag-en-sujato', 'root-pli-ms']);
+    });
+
+    test('should return empty array when only uid exists', () => {
+        const s = createMockSearch();
+        expect(s.sortedFieldKeys()).toEqual([]);
+    });
+
+    test('should handle multiple translations maintaining stable order', () => {
+        const s = createMockSearch();
+        s.fields = { uid: '', 'translation-en-sujato': '', 'translation-de-sabbamitta': '', 'root-pli-ms': '' };
+        const keys = s.sortedFieldKeys();
+        // Both translations should come before root
+        expect(keys.indexOf('root-pli-ms')).toBeGreaterThan(keys.indexOf('translation-en-sujato'));
+        expect(keys.indexOf('root-pli-ms')).toBeGreaterThan(keys.indexOf('translation-de-sabbamitta'));
     });
 });

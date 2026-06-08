@@ -12,6 +12,7 @@ def mock_user_preference():
     pref.github_id = 1
     pref.pali_lookup = True
     pref.dblclick_search = True
+    pref.dblclick_search_collapse_inputs = True
     return pref
 
 
@@ -42,6 +43,7 @@ async def test_get_settings_no_existing_row(
     assert data["github_id"] == 1
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is True
+    assert data["dblclick_search_collapse_inputs"] is True
 
 
 @pytest.mark.asyncio
@@ -54,6 +56,7 @@ async def test_get_settings_existing_row(
     """When a preference row exists, should return its values."""
     mock_user_preference.pali_lookup = False
     mock_user_preference.dblclick_search = True
+    mock_user_preference.dblclick_search_collapse_inputs = False
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.get("/settings")
@@ -63,6 +66,7 @@ async def test_get_settings_existing_row(
     assert data["id"] == 1
     assert data["pali_lookup"] is False
     assert data["dblclick_search"] is True
+    assert data["dblclick_search_collapse_inputs"] is False
 
 
 @pytest.mark.asyncio
@@ -75,6 +79,7 @@ async def test_get_settings_null_values_default_to_true(
     """When DB columns are None, should default to True."""
     mock_user_preference.pali_lookup = None
     mock_user_preference.dblclick_search = None
+    mock_user_preference.dblclick_search_collapse_inputs = None
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.get("/settings")
@@ -83,6 +88,7 @@ async def test_get_settings_null_values_default_to_true(
     data = response.json()
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is True
+    assert data["dblclick_search_collapse_inputs"] is True
 
 
 # ── PUT /settings ──────────────────────────────────────────────
@@ -108,17 +114,19 @@ async def test_put_settings_update_existing(
     """When a preference row exists, should update matching fields."""
     mock_user_preference.pali_lookup = True
     mock_user_preference.dblclick_search = True
+    mock_user_preference.dblclick_search_collapse_inputs = True
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.put(
         "/settings",
-        json={"pali_lookup": False, "dblclick_search": False},
+        json={"pali_lookup": False, "dblclick_search": False, "dblclick_search_collapse_inputs": False},
     )
     assert response.status_code == 200
 
     data = response.json()
     assert data["pali_lookup"] is False
     assert data["dblclick_search"] is False
+    assert data["dblclick_search_collapse_inputs"] is False
 
 
 @pytest.mark.asyncio
@@ -131,6 +139,7 @@ async def test_put_settings_partial_update(
     """Only fields provided in payload should be updated; others stay unchanged."""
     mock_user_preference.pali_lookup = True
     mock_user_preference.dblclick_search = True
+    mock_user_preference.dblclick_search_collapse_inputs = False
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.put(
@@ -143,6 +152,7 @@ async def test_put_settings_partial_update(
     assert data["pali_lookup"] is False
     # dblclick_search not in payload → should remain True
     assert data["dblclick_search"] is True
+    assert data["dblclick_search_collapse_inputs"] is False
 
 
 @pytest.mark.asyncio
@@ -159,12 +169,14 @@ async def test_put_settings_create_new(
     new_pref.github_id = 1
     new_pref.pali_lookup = False
     new_pref.dblclick_search = True
+    new_pref.dblclick_search_collapse_inputs = True
 
     def fake_refresh(obj):
         obj.id = new_pref.id
         obj.github_id = new_pref.github_id
         obj.pali_lookup = new_pref.pali_lookup
         obj.dblclick_search = new_pref.dblclick_search
+        obj.dblclick_search_collapse_inputs = new_pref.dblclick_search_collapse_inputs
 
     mock_session.refresh.side_effect = fake_refresh
 
@@ -178,6 +190,7 @@ async def test_put_settings_create_new(
     data = response.json()
     assert data["pali_lookup"] is False
     assert data["dblclick_search"] is True
+    assert data["dblclick_search_collapse_inputs"] is True
 
 
 @pytest.mark.asyncio
@@ -190,6 +203,7 @@ async def test_put_settings_empty_payload(
     """Empty payload (both fields None) should not change anything."""
     mock_user_preference.pali_lookup = True
     mock_user_preference.dblclick_search = False
+    mock_user_preference.dblclick_search_collapse_inputs = False
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.put(
@@ -201,6 +215,7 @@ async def test_put_settings_empty_payload(
     data = response.json()
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is False
+    assert data["dblclick_search_collapse_inputs"] is False
 
 
 @pytest.mark.asyncio
@@ -217,12 +232,14 @@ async def test_put_settings_create_new_defaults(
     new_pref.github_id = 1
     new_pref.pali_lookup = True
     new_pref.dblclick_search = True
+    new_pref.dblclick_search_collapse_inputs = True
 
     def fake_refresh(obj):
         obj.id = new_pref.id
         obj.github_id = new_pref.github_id
         obj.pali_lookup = new_pref.pali_lookup
         obj.dblclick_search = new_pref.dblclick_search
+        obj.dblclick_search_collapse_inputs = new_pref.dblclick_search_collapse_inputs
 
     mock_session.refresh.side_effect = fake_refresh
 
@@ -235,3 +252,4 @@ async def test_put_settings_create_new_defaults(
     data = response.json()
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is True
+    assert data["dblclick_search_collapse_inputs"] is True

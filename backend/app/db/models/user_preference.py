@@ -22,6 +22,9 @@ class UserPreference(Base):
     dblclick_search: Mapped[Optional[bool]] = mapped_column(
         nullable=True, default=True
     )
+    dblclick_search_collapse_inputs: Mapped[Optional[bool]] = mapped_column(
+        nullable=True, default=True
+    )
     hint_style: Mapped[Optional[str]] = mapped_column(
         nullable=True, default="dropdown"
     )

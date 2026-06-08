@@ -19,6 +19,9 @@ with engine.connect() as conn:
     conn.execute(text(
         "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS hint_style VARCHAR"
     ))
+    conn.execute(text(
+        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS dblclick_search_collapse_inputs BOOLEAN"
+    ))
     conn.commit()
 
 app = FastAPI(

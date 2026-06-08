@@ -12,6 +12,7 @@ class UserPreferenceBase(BaseModel):
     notification_days: int
     pali_lookup: bool = True
     dblclick_search: bool = True
+    dblclick_search_collapse_inputs: bool = True
     hint_style: str = "dropdown"
 
 
@@ -23,6 +24,7 @@ class UserPreferenceUpdate(BaseModel):
 class UserPreferenceSettingsUpdate(BaseModel):
     pali_lookup: Optional[bool] = None
     dblclick_search: Optional[bool] = None
+    dblclick_search_collapse_inputs: Optional[bool] = None
     hint_style: Optional[str] = None
 
 

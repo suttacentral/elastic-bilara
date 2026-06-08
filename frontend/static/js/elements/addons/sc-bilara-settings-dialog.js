@@ -248,6 +248,7 @@ export class SCBilaraSettingsDialog extends LitElement {
     this._settings = {
       pali_lookup: true,
       dblclick_search: true,
+      dblclick_search_collapse_inputs: true,
       hint_style: 'dropdown',
     };
     this._toast = { show: false, message: '', variant: 'primary' };
@@ -271,6 +272,7 @@ export class SCBilaraSettingsDialog extends LitElement {
       this._settings = {
         pali_lookup: data.pali_lookup ?? true,
         dblclick_search: data.dblclick_search ?? true,
+        dblclick_search_collapse_inputs: data.dblclick_search_collapse_inputs ?? true,
         hint_style: data.hint_style ?? 'dropdown',
       };
     } catch (err) {
@@ -317,8 +319,14 @@ export class SCBilaraSettingsDialog extends LitElement {
     this._settings = { ...this._settings, pali_lookup: e.target.checked };
   }
 
+
   _onDblclickSearchChange(e) {
     this._settings = { ...this._settings, dblclick_search: e.target.checked };
+  }
+
+
+  _onDblclickSearchCollapseInputsChange(e) {
+    this._settings = { ...this._settings, dblclick_search_collapse_inputs: e.target.checked };
   }
 
   _onHintStyleChange(e) {
@@ -394,6 +402,22 @@ export class SCBilaraSettingsDialog extends LitElement {
                   <sl-switch
                     ?checked=${this._settings.dblclick_search}
                     @sl-change=${this._onDblclickSearchChange}
+                  ></sl-switch>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-label">
+                  <span class="title">
+                    <sl-icon library="bi" name="layout-sidebar-inset-reverse"></sl-icon>
+                    Collapse Search Inputs
+                  </span>
+                  <span class="description">Collapse search inputs after double-click search returns results</span>
+                </div>
+                <div class="setting-control">
+                  <sl-switch
+                    ?checked=${this._settings.dblclick_search_collapse_inputs}
+                    @sl-change=${this._onDblclickSearchCollapseInputsChange}
                   ></sl-switch>
                 </div>
               </div>

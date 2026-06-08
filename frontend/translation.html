@@ -594,8 +594,13 @@
                                                             if (searchInput) {
                                                                 searchInput.value = selectedText;
                                                                 searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                                                const collapseOptions = window.userSettings?.dblclick_search_collapse_inputs !== false;
                                                                 const searchBtn = document.getElementById('search');
-                                                                if (searchBtn) searchBtn.click();
+                                                                if (searchBtn) {
+                                                                    searchBtn.dataset.collapseOptions = String(collapseOptions);
+                                                                    searchBtn.click();
+                                                                    delete searchBtn.dataset.collapseOptions;
+                                                                }
                                                             }
                                                         }
                                                     }, 0);
@@ -859,6 +864,7 @@
 
                 <div class="project-container__detail-panel__search search active"
                     x-data="{...search(), optionsExpanded: true}"
+                    @double-click-search.window="await triggerSearch(null, { collapseOptions: $event.detail.collapseOptions })"
                     @toggle-search-field.window="if ($event.detail.selected && !fields[$event.detail.project]) toggleSelectedProjects($event.detail.project); else if (!$event.detail.selected && fields[$event.detail.project] !== undefined) toggleSelectedProjects($event.detail.project);">
                     <div class="search__container">
                         <div class="detail-panel__title-row">
@@ -880,6 +886,7 @@
                                     x-on:input="updateSuggestions"
                                     class="search__bar__input"
                                     placeholder="Type a project ID to add a field, e.g. translation-en-sujato"
+                                    title="Type a project ID to add a field, e.g. translation-en-sujato"
                                     id="project-query"/>
                                 <i x-cloak
                                     x-show="projectQuery.length"

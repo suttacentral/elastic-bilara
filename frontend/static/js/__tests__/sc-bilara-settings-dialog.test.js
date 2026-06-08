@@ -22,7 +22,7 @@ function createComponent() {
     open: false,
     _loading: false,
     _saving: false,
-    _settings: { pali_lookup: true, dblclick_search: true },
+    _settings: { pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true },
     _toast: { show: false, message: '', variant: 'primary' },
 
     // --- event tracking ---
@@ -50,6 +50,7 @@ function createComponent() {
         this._settings = {
           pali_lookup: data.pali_lookup ?? true,
           dblclick_search: data.dblclick_search ?? true,
+          dblclick_search_collapse_inputs: data.dblclick_search_collapse_inputs ?? true,
         };
       } catch (err) {
         this._toastError = err;
@@ -96,6 +97,10 @@ function createComponent() {
       this._settings = { ...this._settings, dblclick_search: e.target.checked };
     },
 
+    _onDblclickSearchCollapseInputsChange(e) {
+      this._settings = { ...this._settings, dblclick_search_collapse_inputs: e.target.checked };
+    },
+
     _onDialogHide() {
       this.open = false;
       this.dispatchEvent(new CustomEvent('settings-closed', { bubbles: true, composed: true }));
@@ -140,7 +145,7 @@ describe('Initial state', () => {
 
   test('should default settings to pali_lookup=true, dblclick_search=true', () => {
     const comp = createComponent();
-    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: true });
+    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true });
   });
 
   test('should have toast hidden initially', () => {
@@ -159,7 +164,7 @@ describe('show()', () => {
   test('should set open to true', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pali_lookup: true, dblclick_search: false }),
+      json: async () => ({ pali_lookup: true, dblclick_search: false, dblclick_search_collapse_inputs: true }),
     });
     const comp = createComponent();
     await comp.show();
@@ -169,7 +174,7 @@ describe('show()', () => {
   test('should call _loadSettings', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pali_lookup: false, dblclick_search: true }),
+      json: async () => ({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true }),
     });
     const comp = createComponent();
     await comp.show();
@@ -200,7 +205,7 @@ describe('_loadSettings()', () => {
   test('should fetch from /api/v1/settings with credentials', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pali_lookup: false, dblclick_search: false }),
+      json: async () => ({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false }),
     });
     const comp = createComponent();
     await comp._loadSettings();
@@ -218,7 +223,7 @@ describe('_loadSettings()', () => {
     const loadPromise = comp._loadSettings();
     expect(comp._loading).toBe(true);
 
-    resolveFetch({ ok: true, json: async () => ({ pali_lookup: true, dblclick_search: true }) });
+    resolveFetch({ ok: true, json: async () => ({ pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true }) });
     await loadPromise;
     expect(comp._loading).toBe(false);
   });
@@ -226,11 +231,11 @@ describe('_loadSettings()', () => {
   test('should update _settings from API response', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pali_lookup: false, dblclick_search: false }),
+      json: async () => ({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false }),
     });
     const comp = createComponent();
     await comp._loadSettings();
-    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false });
+    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false });
   });
 
   test('should default pali_lookup to true when API returns null', async () => {
@@ -288,13 +293,13 @@ describe('_saveSettings()', () => {
   test('should PUT settings to /api/v1/settings', async () => {
     global.fetch.mockResolvedValueOnce({ ok: true });
     const comp = createComponent();
-    comp._settings = { pali_lookup: false, dblclick_search: true };
+    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true };
     await comp._saveSettings();
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ pali_lookup: false, dblclick_search: true }),
+      body: JSON.stringify({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true }),
     });
   });
 
@@ -326,12 +331,12 @@ describe('_saveSettings()', () => {
   test('should dispatch settings-saved event with current settings', async () => {
     global.fetch.mockResolvedValueOnce({ ok: true });
     const comp = createComponent();
-    comp._settings = { pali_lookup: false, dblclick_search: true };
+    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true };
     await comp._saveSettings();
 
     const event = comp._dispatchedEvents.find(e => e.type === 'settings-saved');
     expect(event).toBeDefined();
-    expect(event.detail).toEqual({ pali_lookup: false, dblclick_search: true });
+    expect(event.detail).toEqual({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true });
     expect(event.bubbles).toBe(true);
     expect(event.composed).toBe(true);
   });
@@ -393,7 +398,7 @@ describe('_showToast()', () => {
 describe('_onPaliLookupChange()', () => {
   test('should set pali_lookup to true when checked', () => {
     const comp = createComponent();
-    comp._settings = { pali_lookup: false, dblclick_search: true };
+    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true };
     comp._onPaliLookupChange({ target: { checked: true } });
     expect(comp._settings.pali_lookup).toBe(true);
   });
@@ -406,7 +411,7 @@ describe('_onPaliLookupChange()', () => {
 
   test('should not affect dblclick_search', () => {
     const comp = createComponent();
-    comp._settings = { pali_lookup: true, dblclick_search: false };
+    comp._settings = { pali_lookup: true, dblclick_search: false, dblclick_search_collapse_inputs: true };
     comp._onPaliLookupChange({ target: { checked: false } });
     expect(comp._settings.dblclick_search).toBe(false);
   });
@@ -415,7 +420,7 @@ describe('_onPaliLookupChange()', () => {
 describe('_onDblclickSearchChange()', () => {
   test('should set dblclick_search to true when checked', () => {
     const comp = createComponent();
-    comp._settings = { pali_lookup: true, dblclick_search: false };
+    comp._settings = { pali_lookup: true, dblclick_search: false, dblclick_search_collapse_inputs: true };
     comp._onDblclickSearchChange({ target: { checked: true } });
     expect(comp._settings.dblclick_search).toBe(true);
   });
@@ -428,9 +433,24 @@ describe('_onDblclickSearchChange()', () => {
 
   test('should not affect pali_lookup', () => {
     const comp = createComponent();
-    comp._settings = { pali_lookup: false, dblclick_search: true };
+    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true };
     comp._onDblclickSearchChange({ target: { checked: false } });
     expect(comp._settings.pali_lookup).toBe(false);
+  });
+});
+
+describe('_onDblclickSearchCollapseInputsChange()', () => {
+  test('should set dblclick_search_collapse_inputs to false when unchecked', () => {
+    const comp = createComponent();
+    comp._onDblclickSearchCollapseInputsChange({ target: { checked: false } });
+    expect(comp._settings.dblclick_search_collapse_inputs).toBe(false);
+  });
+
+  test('should not affect dblclick_search', () => {
+    const comp = createComponent();
+    comp._settings = { pali_lookup: true, dblclick_search: false, dblclick_search_collapse_inputs: true };
+    comp._onDblclickSearchCollapseInputsChange({ target: { checked: false } });
+    expect(comp._settings.dblclick_search).toBe(false);
   });
 });
 
@@ -465,7 +485,7 @@ describe('Integration scenarios', () => {
     // 1. Open dialog and load settings from server
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pali_lookup: true, dblclick_search: true }),
+      json: async () => ({ pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true }),
     });
     const comp = createComponent();
     await comp.show();
@@ -496,10 +516,10 @@ describe('Integration scenarios', () => {
     // Retry succeeds
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pali_lookup: false, dblclick_search: false }),
+      json: async () => ({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false }),
     });
     await comp._loadSettings();
-    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false });
+    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false });
     expect(comp._loading).toBe(false);
   });
 
@@ -516,10 +536,10 @@ describe('Integration scenarios', () => {
     const comp = createComponent();
     comp._onPaliLookupChange({ target: { checked: false } });
     comp._onDblclickSearchChange({ target: { checked: false } });
-    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false });
+    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: true });
 
     comp._onPaliLookupChange({ target: { checked: true } });
-    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: false });
+    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: false, dblclick_search_collapse_inputs: true });
   });
 
   test('_onDialogHide after save dispatches settings-closed', async () => {
