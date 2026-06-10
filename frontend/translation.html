@@ -877,34 +877,42 @@
 
                         <!-- Collapsible Search Options -->
                         <div class="search__options" x-show="optionsExpanded" x-collapse>
-                            <!-- Search Bar -->
-                            <label for="project-query" class="search__bar__label">Add project field</label>
-                            <div class="search__bar">
-                                <i class="bi bi-plus-circle search__bar__icon" x-on:click="$event.target.nextElementSibling.focus()"></i>
-                                <input type="text"
-                                    x-model="projectQuery"
-                                    x-on:input="updateSuggestions"
-                                    class="search__bar__input"
-                                    placeholder="Type a project ID to add a field, e.g. translation-en-sujato"
-                                    title="Type a project ID to add a field, e.g. translation-en-sujato"
-                                    id="project-query"/>
-                                <i x-cloak
-                                    x-show="projectQuery.length"
-                                    x-on:click="projectQuery = ''; updateSuggestions()"
-                                    class="bi bi-x-circle search__bar__clear"></i>
-                            </div>
-                            <p class="search__bar__helper">This adds a project-specific field below. It does not run the search.</p>
+                            <!-- Add Search Field Dropdown -->
+                            <div class="search__field-picker" x-data="{ pickerOpen: false, pickerFilter: '' }">
+                                <button class="search__field-picker-btn"
+                                    @click="pickerOpen = !pickerOpen; if (pickerOpen) { pickerFilter = ''; }"
+                                    :title="pickerOpen ? 'Close project picker' : 'Add or remove search fields'">
+                                    <i class="bi bi-plus-circle"></i>
+                                    <span>Add search field</span>
+                                    <i class="bi" :class="pickerOpen ? 'bi-chevron-up' : 'bi-chevron-down'" style="margin-left: auto;"></i>
+                                </button>
 
-                            <!-- Suggestions -->
-                            <ul class="search__suggestions">
-                                <template x-for="suggestion in suggestions">
-                                    <li x-text="suggestion"
-                                        x-on:click="toggleSelectedProjects(suggestion)"
-                                        :class="{ 'search__suggestion-item--selected': selectedProjects[suggestion] }"
-                                        class="search__suggestion-item">
-                                    </li>
-                                </template>
-                            </ul>
+                                <div class="search__field-picker-dropdown" x-show="pickerOpen" x-collapse @click.outside="pickerOpen = false">
+                                    <!-- Filter input (only when projects > 10) -->
+                                    <div class="search__field-picker-filter" x-show="projects.length > 10">
+                                        <i class="bi bi-search"></i>
+                                        <input type="text" x-model="pickerFilter" placeholder="Filter projects..." class="search__field-picker-filter-input">
+                                        <i x-show="pickerFilter" @click="pickerFilter = ''" class="bi bi-x-circle search__field-picker-filter-clear" style="cursor:pointer"></i>
+                                    </div>
+
+                                    <!-- Project list -->
+                                    <div class="search__field-picker-list">
+                                        <template x-for="project in projects.filter(p => !pickerFilter || p.toLowerCase().includes(pickerFilter.toLowerCase()))" :key="project">
+                                            <div class="search__field-picker-item"
+                                                @click="toggleSelectedProjects(project)"
+                                                :class="{ 'search__field-picker-item--selected': fields[project] !== undefined }">
+                                                <span class="search__field-picker-item-check"
+                                                    x-text="fields[project] !== undefined ? '✓' : ''"></span>
+                                                <span class="search__field-picker-item-label" x-text="project"></span>
+                                            </div>
+                                        </template>
+                                        <div x-show="projects.filter(p => !pickerFilter || p.toLowerCase().includes(pickerFilter.toLowerCase())).length === 0"
+                                            class="search__field-picker-empty">
+                                            No matching projects found.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Search Fields (sorted by type: translation → comment → others → root) -->
                             <div class="fields">
