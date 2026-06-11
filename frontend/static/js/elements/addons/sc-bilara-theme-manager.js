@@ -1,4 +1,4 @@
-import { themes, defaultTheme, getThemeNames, validateTheme } from './sc-bilara-theme.js';
+import { themes, defaultTheme, getThemeNames, validateTheme, commonVariables } from './sc-bilara-theme.js';
 
 class ThemeManager {
     constructor() {
@@ -38,7 +38,7 @@ class ThemeManager {
         if (!theme) return;
 
         const tempStyle = document.createElement('style');
-        tempStyle.textContent = `:root { ${theme.cssText} }`;
+        tempStyle.textContent = `:root { ${commonVariables.cssText} ${theme.cssText} }`;
         document.head.appendChild(tempStyle);
 
         const existingThemeStyle = document.getElementById('bilara-theme-style');
@@ -78,16 +78,29 @@ class ThemeManager {
 
     getThemeDisplayName(themeName) {
         const displayNames = {
-          'suriya': 'suriya',
-          'candima': 'candima',
-          'manussa': 'manussa',
-          'yakkha': 'yakkha',
-          'deva': 'deva',
-          'asura': 'asura',
-          'gandhabba': 'gandhabba',
-          'mara': 'mara',
-          'niraya': 'niraya',
-          'suññatā': 'suññatā'
+          'aruna': 'Aruna',
+          'suriya': 'Suriya',
+          'candima': 'Candima',
+          'manussa': 'Manussa',
+          'yakkha': 'Yakkha',
+          'deva': 'Deva',
+          'asura': 'Asura',
+          'gandhabba': 'Gandhabba',
+          'mara': 'Mara',
+          'niraya': 'Niraya',
+          'suññatā': 'Suññatā',
+          'pañña': 'Pañña',
+          'samādhi': 'Samādhi',
+          'dīpā': 'Dīpā',
+          'gongque-danqing': 'Gongque-danqing',
+          'jiangnan-yanyu': 'Jiangnan-yanyu',
+          'chunshan-xincha': 'Chunshan-xincha',
+          'shuyuan-yamo': 'Shuyuan-yamo',
+          'tianqing-ruci': 'Tianqing-ruci',
+          'kasaya': 'Kasaya',
+          'pancavanna': 'Pancavanna',
+          'chanlin': 'Chanlin',
+          'ruihe': 'Ruihe'
         };
         return displayNames[themeName] || themeName;
     }

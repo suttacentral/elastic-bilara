@@ -361,3 +361,19 @@ sl-divider {
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* Theme transition rules */
+body, 
+.project-container,
+.project-container__detail-panel,
+.search__results-container,
+.fields__input,
+.search__navigation .btn,
+.modal-dialog,
+.modal-header,
+.modal-footer {
+    transition: background-color 0.25s ease, 
+                color 0.25s ease, 
+                border-color 0.25s ease, 
+                box-shadow 0.25s ease;
+}

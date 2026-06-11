@@ -2,7 +2,7 @@ import { css } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 
 export const defaultTheme = 'aruna';
 
-const commonVariables = css`
+export const commonVariables = css`
     --bilara-footer-height: 108px;
     --scrollbar-size: 8px;
     --scrollbar-minlength: 1.5rem;
@@ -116,9 +116,9 @@ export const themes = {
       --color-background: #f4f6fa;
       --color-background-secondary: #e9edf5;
       --color-background-tertiary: #dee4f1;
-      --color-text: rgba(0,0,0,0.5);
-      --color-text-emphasized: rgba(0,0,0,0.7);
-      --color-text-secondary: rgba(0,0,0,0.3);
+      --color-text: rgba(0,0,0,0.65);
+      --color-text-emphasized: rgba(0,0,0,0.85);
+      --color-text-secondary: rgba(0,0,0,0.45);
       --color-text-on-strong: #ffffff;
       --color-border: rgba(0, 0, 0, 0.1);
       --color-warning: #FF851B;
@@ -133,10 +133,10 @@ export const themes = {
   'asura': css`
       --color-primary: #92a8d1;
       --color-secondary: #c5a1a0;
-      --color-background: #7f7f7f;
-      --color-background-secondary: #727272;
-      --color-background-tertiary: #666666;
-      --color-text: #e9edf5;
+      --color-background: #555555;
+      --color-background-secondary: #484848;
+      --color-background-tertiary: #3c3c3c;
+      --color-text: #f0f4f8;
       --color-text-emphasized:  #ffffff;
       --color-text-secondary: #dee4f1;
       --color-text-on-strong: #ffffff;
@@ -218,7 +218,7 @@ export const themes = {
       --color-background-tertiary: #C8CEB6;
       --color-text: #4a3136;
       --color-text-emphasized: #2d1a1e;
-      --color-text-secondary: #7a5e64;
+      --color-text-secondary: #5c3d43;
       --color-text-on-strong: #ffffff;
       --color-border: rgba(74, 49, 54, 0.2);
       --color-warning: #94B9BB;
