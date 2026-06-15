@@ -250,6 +250,7 @@ export class SCBilaraSettingsDialog extends LitElement {
       dblclick_search: true,
       dblclick_search_collapse_inputs: true,
       hint_style: 'dropdown',
+      hint_count: 5,
     };
     this._toast = { show: false, message: '', variant: 'primary' };
   }
@@ -274,6 +275,7 @@ export class SCBilaraSettingsDialog extends LitElement {
         dblclick_search: data.dblclick_search ?? true,
         dblclick_search_collapse_inputs: data.dblclick_search_collapse_inputs ?? true,
         hint_style: data.hint_style ?? 'dropdown',
+        hint_count: data.hint_count ?? 5,
       };
     } catch (err) {
       console.error('Failed to load settings:', err);
@@ -331,6 +333,10 @@ export class SCBilaraSettingsDialog extends LitElement {
 
   _onHintStyleChange(e) {
     this._settings = { ...this._settings, hint_style: e.target.value };
+  }
+
+  _onHintCountChange(e) {
+    this._settings = { ...this._settings, hint_count: Number(e.target.value) };
   }
 
   _onRequestClose(e) {
@@ -439,6 +445,29 @@ export class SCBilaraSettingsDialog extends LitElement {
                   >
                     <sl-option value="dropdown">Dropdown</sl-option>
                     <sl-option value="inline">Inline</sl-option>
+                  </sl-select>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-label">
+                  <span class="title">
+                    <sl-icon library="bi" name="list-ol"></sl-icon>
+                    Translation Hints
+                  </span>
+                  <span class="description">Number of translation hints shown while editing</span>
+                </div>
+                <div class="setting-control">
+                  <sl-select
+                    size="small"
+                    hoist
+                    value=${String(this._settings.hint_count)}
+                    @sl-change=${this._onHintCountChange}
+                  >
+                    <sl-option value="3">3</sl-option>
+                    <sl-option value="5">5</sl-option>
+                    <sl-option value="10">10</sl-option>
+                    <sl-option value="20">20</sl-option>
                   </sl-select>
                 </div>
               </div>

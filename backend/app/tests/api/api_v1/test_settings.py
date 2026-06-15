@@ -13,6 +13,7 @@ def mock_user_preference():
     pref.pali_lookup = True
     pref.dblclick_search = True
     pref.dblclick_search_collapse_inputs = True
+    pref.hint_count = 5
     return pref
 
 
@@ -44,6 +45,7 @@ async def test_get_settings_no_existing_row(
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is True
     assert data["dblclick_search_collapse_inputs"] is True
+    assert data["hint_count"] == 5
 
 
 @pytest.mark.asyncio
@@ -57,6 +59,7 @@ async def test_get_settings_existing_row(
     mock_user_preference.pali_lookup = False
     mock_user_preference.dblclick_search = True
     mock_user_preference.dblclick_search_collapse_inputs = False
+    mock_user_preference.hint_count = 10
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.get("/settings")
@@ -67,6 +70,7 @@ async def test_get_settings_existing_row(
     assert data["pali_lookup"] is False
     assert data["dblclick_search"] is True
     assert data["dblclick_search_collapse_inputs"] is False
+    assert data["hint_count"] == 10
 
 
 @pytest.mark.asyncio
@@ -80,6 +84,7 @@ async def test_get_settings_null_values_default_to_true(
     mock_user_preference.pali_lookup = None
     mock_user_preference.dblclick_search = None
     mock_user_preference.dblclick_search_collapse_inputs = None
+    mock_user_preference.hint_count = None
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.get("/settings")
@@ -89,6 +94,7 @@ async def test_get_settings_null_values_default_to_true(
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is True
     assert data["dblclick_search_collapse_inputs"] is True
+    assert data["hint_count"] == 5
 
 
 # ── PUT /settings ──────────────────────────────────────────────
@@ -115,11 +121,17 @@ async def test_put_settings_update_existing(
     mock_user_preference.pali_lookup = True
     mock_user_preference.dblclick_search = True
     mock_user_preference.dblclick_search_collapse_inputs = True
+    mock_user_preference.hint_count = 5
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.put(
         "/settings",
-        json={"pali_lookup": False, "dblclick_search": False, "dblclick_search_collapse_inputs": False},
+        json={
+            "pali_lookup": False,
+            "dblclick_search": False,
+            "dblclick_search_collapse_inputs": False,
+            "hint_count": 10,
+        },
     )
     assert response.status_code == 200
 
@@ -127,6 +139,7 @@ async def test_put_settings_update_existing(
     assert data["pali_lookup"] is False
     assert data["dblclick_search"] is False
     assert data["dblclick_search_collapse_inputs"] is False
+    assert data["hint_count"] == 10
 
 
 @pytest.mark.asyncio
@@ -140,6 +153,7 @@ async def test_put_settings_partial_update(
     mock_user_preference.pali_lookup = True
     mock_user_preference.dblclick_search = True
     mock_user_preference.dblclick_search_collapse_inputs = False
+    mock_user_preference.hint_count = 20
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.put(
@@ -153,6 +167,7 @@ async def test_put_settings_partial_update(
     # dblclick_search not in payload → should remain True
     assert data["dblclick_search"] is True
     assert data["dblclick_search_collapse_inputs"] is False
+    assert data["hint_count"] == 20
 
 
 @pytest.mark.asyncio
@@ -170,6 +185,7 @@ async def test_put_settings_create_new(
     new_pref.pali_lookup = False
     new_pref.dblclick_search = True
     new_pref.dblclick_search_collapse_inputs = True
+    new_pref.hint_count = 5
 
     def fake_refresh(obj):
         obj.id = new_pref.id
@@ -177,6 +193,7 @@ async def test_put_settings_create_new(
         obj.pali_lookup = new_pref.pali_lookup
         obj.dblclick_search = new_pref.dblclick_search
         obj.dblclick_search_collapse_inputs = new_pref.dblclick_search_collapse_inputs
+        obj.hint_count = new_pref.hint_count
 
     mock_session.refresh.side_effect = fake_refresh
 
@@ -191,6 +208,7 @@ async def test_put_settings_create_new(
     assert data["pali_lookup"] is False
     assert data["dblclick_search"] is True
     assert data["dblclick_search_collapse_inputs"] is True
+    assert data["hint_count"] == 5
 
 
 @pytest.mark.asyncio
@@ -204,6 +222,7 @@ async def test_put_settings_empty_payload(
     mock_user_preference.pali_lookup = True
     mock_user_preference.dblclick_search = False
     mock_user_preference.dblclick_search_collapse_inputs = False
+    mock_user_preference.hint_count = 3
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user_preference
 
     response = await async_client.put(
@@ -216,6 +235,7 @@ async def test_put_settings_empty_payload(
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is False
     assert data["dblclick_search_collapse_inputs"] is False
+    assert data["hint_count"] == 3
 
 
 @pytest.mark.asyncio
@@ -233,6 +253,7 @@ async def test_put_settings_create_new_defaults(
     new_pref.pali_lookup = True
     new_pref.dblclick_search = True
     new_pref.dblclick_search_collapse_inputs = True
+    new_pref.hint_count = 5
 
     def fake_refresh(obj):
         obj.id = new_pref.id
@@ -240,6 +261,7 @@ async def test_put_settings_create_new_defaults(
         obj.pali_lookup = new_pref.pali_lookup
         obj.dblclick_search = new_pref.dblclick_search
         obj.dblclick_search_collapse_inputs = new_pref.dblclick_search_collapse_inputs
+        obj.hint_count = new_pref.hint_count
 
     mock_session.refresh.side_effect = fake_refresh
 
@@ -253,3 +275,4 @@ async def test_put_settings_create_new_defaults(
     assert data["pali_lookup"] is True
     assert data["dblclick_search"] is True
     assert data["dblclick_search_collapse_inputs"] is True
+    assert data["hint_count"] == 5

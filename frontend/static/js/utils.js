@@ -185,7 +185,7 @@ const BadgeStatus = {
 };
 
 // Global user settings (loaded once on page init)
-window.userSettings = { pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown' };
+window.userSettings = { pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 5 };
 
 async function loadUserSettings() {
     try {
@@ -197,7 +197,9 @@ async function loadUserSettings() {
                 dblclick_search: data.dblclick_search ?? true,
                 dblclick_search_collapse_inputs: data.dblclick_search_collapse_inputs ?? true,
                 hint_style: data.hint_style ?? 'dropdown',
+                hint_count: data.hint_count ?? 5,
             };
+            window.dispatchEvent(new CustomEvent('settings-loaded', { detail: { ...window.userSettings } }));
         }
     } catch (err) {
         console.error('Failed to load user settings:', err);

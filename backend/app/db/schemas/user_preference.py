@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserPreferenceBase(BaseModel):
@@ -14,6 +14,7 @@ class UserPreferenceBase(BaseModel):
     dblclick_search: bool = True
     dblclick_search_collapse_inputs: bool = True
     hint_style: str = "dropdown"
+    hint_count: int = 5
 
 
 class UserPreferenceUpdate(BaseModel):
@@ -26,6 +27,7 @@ class UserPreferenceSettingsUpdate(BaseModel):
     dblclick_search: Optional[bool] = None
     dblclick_search_collapse_inputs: Optional[bool] = None
     hint_style: Optional[str] = None
+    hint_count: Optional[int] = Field(default=None, ge=1, le=20)
 
 
 class UserPreference(UserPreferenceBase):

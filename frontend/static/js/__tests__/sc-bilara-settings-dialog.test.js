@@ -22,7 +22,7 @@ function createComponent() {
     open: false,
     _loading: false,
     _saving: false,
-    _settings: { pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true },
+    _settings: { pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 5 },
     _toast: { show: false, message: '', variant: 'primary' },
 
     // --- event tracking ---
@@ -51,6 +51,8 @@ function createComponent() {
           pali_lookup: data.pali_lookup ?? true,
           dblclick_search: data.dblclick_search ?? true,
           dblclick_search_collapse_inputs: data.dblclick_search_collapse_inputs ?? true,
+          hint_style: data.hint_style ?? 'dropdown',
+          hint_count: data.hint_count ?? 5,
         };
       } catch (err) {
         this._toastError = err;
@@ -101,6 +103,10 @@ function createComponent() {
       this._settings = { ...this._settings, dblclick_search_collapse_inputs: e.target.checked };
     },
 
+    _onHintCountChange(e) {
+      this._settings = { ...this._settings, hint_count: Number(e.target.value) };
+    },
+
     _onDialogHide() {
       this.open = false;
       this.dispatchEvent(new CustomEvent('settings-closed', { bubbles: true, composed: true }));
@@ -145,7 +151,12 @@ describe('Initial state', () => {
 
   test('should default settings to pali_lookup=true, dblclick_search=true', () => {
     const comp = createComponent();
-    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true });
+    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 5 });
+  });
+
+  test('should default hint_count to 5', () => {
+    const comp = createComponent();
+    expect(comp._settings.hint_count).toBe(5);
   });
 
   test('should have toast hidden initially', () => {
@@ -231,11 +242,21 @@ describe('_loadSettings()', () => {
   test('should update _settings from API response', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false }),
+      json: async () => ({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false, hint_count: 10 }),
     });
     const comp = createComponent();
     await comp._loadSettings();
-    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false });
+    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false, hint_style: 'dropdown', hint_count: 10 });
+  });
+
+  test('should default hint_count to 5 when API returns null', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ hint_count: null }),
+    });
+    const comp = createComponent();
+    await comp._loadSettings();
+    expect(comp._settings.hint_count).toBe(5);
   });
 
   test('should default pali_lookup to true when API returns null', async () => {
@@ -293,13 +314,13 @@ describe('_saveSettings()', () => {
   test('should PUT settings to /api/v1/settings', async () => {
     global.fetch.mockResolvedValueOnce({ ok: true });
     const comp = createComponent();
-    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true };
+    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 10 };
     await comp._saveSettings();
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true }),
+      body: JSON.stringify({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 10 }),
     });
   });
 
@@ -331,12 +352,12 @@ describe('_saveSettings()', () => {
   test('should dispatch settings-saved event with current settings', async () => {
     global.fetch.mockResolvedValueOnce({ ok: true });
     const comp = createComponent();
-    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true };
+    comp._settings = { pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 10 };
     await comp._saveSettings();
 
     const event = comp._dispatchedEvents.find(e => e.type === 'settings-saved');
     expect(event).toBeDefined();
-    expect(event.detail).toEqual({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true });
+    expect(event.detail).toEqual({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 10 });
     expect(event.bubbles).toBe(true);
     expect(event.composed).toBe(true);
   });
@@ -454,6 +475,21 @@ describe('_onDblclickSearchCollapseInputsChange()', () => {
   });
 });
 
+describe('_onHintCountChange()', () => {
+  test('should store selected hint count as a number', () => {
+    const comp = createComponent();
+    comp._onHintCountChange({ target: { value: '10' } });
+    expect(comp._settings.hint_count).toBe(10);
+  });
+
+  test('should not affect hint_style', () => {
+    const comp = createComponent();
+    comp._settings = { ...comp._settings, hint_style: 'inline' };
+    comp._onHintCountChange({ target: { value: '20' } });
+    expect(comp._settings.hint_style).toBe('inline');
+  });
+});
+
 // ============================================================================
 // _onDialogHide()
 // ============================================================================
@@ -519,7 +555,7 @@ describe('Integration scenarios', () => {
       json: async () => ({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false }),
     });
     await comp._loadSettings();
-    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false });
+    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: false, hint_style: 'dropdown', hint_count: 5 });
     expect(comp._loading).toBe(false);
   });
 
@@ -536,10 +572,10 @@ describe('Integration scenarios', () => {
     const comp = createComponent();
     comp._onPaliLookupChange({ target: { checked: false } });
     comp._onDblclickSearchChange({ target: { checked: false } });
-    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: true });
+    expect(comp._settings).toEqual({ pali_lookup: false, dblclick_search: false, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 5 });
 
     comp._onPaliLookupChange({ target: { checked: true } });
-    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: false, dblclick_search_collapse_inputs: true });
+    expect(comp._settings).toEqual({ pali_lookup: true, dblclick_search: false, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 5 });
   });
 
   test('_onDialogHide after save dispatches settings-closed', async () => {

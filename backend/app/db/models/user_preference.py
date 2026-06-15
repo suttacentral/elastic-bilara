@@ -28,3 +28,6 @@ class UserPreference(Base):
     hint_style: Mapped[Optional[str]] = mapped_column(
         nullable=True, default="dropdown"
     )
+    hint_count: Mapped[Optional[int]] = mapped_column(
+        nullable=True, default=5
+    )

@@ -469,6 +469,7 @@
                                             hintClicked: false,
                                             selectedHintIndex: -1,
                                             hintStyle: window.userSettings.hint_style || 'dropdown',
+                                            hintCount: Number(window.userSettings.hint_count) || 5,
                                             isSource: translation.isSource,
                                             isRoot: translation.isSource,
                                             muid: translation.muid,
@@ -486,7 +487,7 @@
                                                 return sourceTranslation ? sourceTranslation.data[uid] : '';
                                             },
                                             get visibleHints() {
-                                                return this.hints.slice(0, 5);
+                                                return this.hints.slice(0, this.hintCount);
                                             },
                                             selectHint(index) {
                                                 const hintsToShow = this.visibleHints;
@@ -546,7 +547,14 @@
                                                 }
                                             });
                                         "
-                                        @settings-saved.window="hintStyle = $event.detail.hint_style || 'dropdown'">
+                                        @settings-saved.window="
+                                            hintStyle = $event.detail.hint_style || 'dropdown';
+                                            hintCount = Number($event.detail.hint_count) || 5;
+                                        "
+                                        @settings-loaded.window="
+                                            hintStyle = $event.detail.hint_style || 'dropdown';
+                                            hintCount = Number($event.detail.hint_count) || 5;
+                                        ">
 
                                         <!-- Action buttons (split/merge) -->
                                         <sc-bilara-translation-project-actions
