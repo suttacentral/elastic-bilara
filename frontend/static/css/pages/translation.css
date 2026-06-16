@@ -868,8 +868,8 @@ sl-dialog::part(title) {
     flex: 1;
     min-width: 0;
     margin: 0 4px 48px 8px;
-    border-radius: var(--radius-lg);
-    background-color: var(--color-background);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    background-color: var(--color-background-tertiary);
     overflow: clip;
     position: relative;
     min-height: 100vh;
@@ -878,13 +878,41 @@ sl-dialog::part(title) {
 .translation-grid__header {
     display: flex;
     background-color: var(--color-background-tertiary);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    overflow: hidden;
-    box-shadow: inset 0 0 0 1px var(--color-border), 0 1px 0 var(--color-border);
+    border-radius: 0;
+    overflow: visible;
     min-height: 32px;
     position: sticky;
     top: 0;
     z-index: 20;
+}
+
+.translation-grid__header::before,
+.translation-grid__header::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    width: var(--radius-lg);
+    height: var(--radius-lg);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.translation-grid__header::before {
+    left: 0;
+    background: radial-gradient(
+        circle at 100% 100%,
+        transparent calc(var(--radius-lg) - 1px),
+        var(--color-background-tertiary) var(--radius-lg)
+    );
+}
+
+.translation-grid__header::after {
+    right: 0;
+    background: radial-gradient(
+        circle at 0 100%,
+        transparent calc(var(--radius-lg) - 1px),
+        var(--color-background-tertiary) var(--radius-lg)
+    );
 }
 
 .translation-grid__header-cell {
@@ -953,7 +981,7 @@ sl-dialog::part(title) {
     height: fit-content;
     overflow-y: auto;
     overflow-x: hidden;
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    border-radius: var(--radius-lg);
     background-color: var(--color-background);
 }
 
@@ -1017,6 +1045,8 @@ sl-dialog::part(title) {
 
 .translation-row:first-of-type {
     padding: 8px 0 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    overflow: clip;
 }
 
 .translation-row:last-of-type {
@@ -1028,6 +1058,11 @@ sl-dialog::part(title) {
     display: flex;
     align-items: stretch;
     min-width: 0;
+}
+
+.translation-row:first-of-type .translation-row__cells {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    overflow: clip;
 }
 
 .translation-cell {
