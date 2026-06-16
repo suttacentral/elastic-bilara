@@ -63,6 +63,46 @@ describe('Fallback Prefix Functions', () => {
         });
     });
 
+    describe('translation ownership helpers', () => {
+        test('identifies current user translation muids', () => {
+            context.currentUsername = 'sujato';
+
+            expect(context.getMuidOwner('translation-en-sujato')).toBe('sujato');
+            expect(context.isCurrentUserMuid('translation-en-sujato')).toBe(true);
+            expect(context.getTranslationOwner('translation-en-sujato')).toBe('sujato');
+            expect(context.isCurrentUserTranslation('translation-en-sujato')).toBe(true);
+            expect(context.isCurrentUserTranslation('translation-en-bodhi')).toBe(false);
+            expect(context.isCurrentUserTranslation('root-pli-ms')).toBe(false);
+        });
+
+        test('identifies current user comment muids', () => {
+            context.currentUsername = 'sujato';
+
+            expect(context.getMuidOwner('comment-en-sujato')).toBe('sujato');
+            expect(context.isCurrentUserMuid('comment-en-sujato')).toBe(true);
+            expect(context.isCurrentUserMuid('comment-en-bodhi')).toBe(false);
+        });
+
+        test('does not treat structural edition muids as user-owned', () => {
+            context.currentUsername = 'ms';
+
+            expect(context.getMuidOwner('root-pli-ms')).toBeNull();
+            expect(context.getMuidOwner('html-pli-ms')).toBeNull();
+            expect(context.getMuidOwner('reference-pli-ms')).toBeNull();
+            expect(context.getMuidOwner('variant-pli-ms')).toBeNull();
+            expect(context.isCurrentUserMuid('html-pli-ms')).toBe(false);
+        });
+
+        test('supports usernames containing hyphens', () => {
+            context.currentUsername = 'a-user-name';
+
+            expect(context.getMuidOwner('comment-en-a-user-name')).toBe('a-user-name');
+            expect(context.isCurrentUserMuid('comment-en-a-user-name')).toBe(true);
+            expect(context.getTranslationOwner('translation-en-a-user-name')).toBe('a-user-name');
+            expect(context.isCurrentUserTranslation('translation-en-a-user-name')).toBe(true);
+        });
+    });
+
     describe('parseHyphenatedPrefixRange', () => {
         test('should correctly parse valid hyphenated ranges', () => {
             expect(context.parseHyphenatedPrefixRange('sn49.1-12')).toEqual({

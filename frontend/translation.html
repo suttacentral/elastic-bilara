@@ -410,9 +410,18 @@
                             @drop="onHeaderDrop(index, $event)"
                             @dragend="onHeaderDragEnd($event)"
                             @keydown="onHeaderKeydown(index, $event)">
-                            <span class="translation-grid__header-title" x-text="isRemarkProject(translation.muid) ? getRemarkLabel(translation.muid) : translation.muid"
-                                :class="'translation-grid__header-badge--' + (isRemarkProject(translation.muid) ? 'remarks' : (translation.muid || '').split('-')[0])">
-                            </span>
+                            <div class="translation-grid__header-label">
+                                <span class="translation-grid__header-title" x-text="isRemarkProject(translation.muid) ? getRemarkLabel(translation.muid) : translation.muid"
+                                    :class="'translation-grid__header-badge--' + (isRemarkProject(translation.muid) ? 'remarks' : (translation.muid || '').split('-')[0])">
+                                </span>
+                                <span class="translation-grid__header-owner"
+                                    x-show="isCurrentUserMuid(translation.muid)"
+                                    x-cloak
+                                    title="My text"
+                                    aria-label="My text">
+                                    <i class="bi bi-person-check-fill" aria-hidden="true"></i>
+                                </span>
+                            </div>
 
                             <!-- Resizer handle (Not shown in the last column) -->
                             <div x-show="index < translations.length - 1"
@@ -461,6 +470,7 @@
                                         :class="{
                                             'translation-cell--source': translation.isSource,
                                             'translation-cell--root': translation.muid && translation.muid.startsWith('root'),
+                                            'translation-cell--own-text': isCurrentUserMuid(translation.muid),
                                             'translation-cell--editable': translation.canEdit
                                         }"
                                         x-data="{
@@ -1055,7 +1065,8 @@
                                             <li class="search__results-list-item"
                                                 :class="{
                                                     'search__results-list-item--editable': canEditMuid(seg.muid, isAdmin),
-                                                    'search__results-list-item--root': seg.muid.startsWith('root-')
+                                                    'search__results-list-item--root': seg.muid.startsWith('root-'),
+                                                    'search__results-list-item--own-text': isCurrentUserMuid(seg.muid)
                                                 }">
                                                 <span class="search__results-key" x-text="seg.muid"></span>
                                                 <!-- Editable textarea for muids user can edit (admin only) -->

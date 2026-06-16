@@ -52,6 +52,25 @@ function fetchTranslation() {
             if (key.startsWith('tag')) return 'tag';
             return 'other';
         },
+        getMuidOwner(key) {
+            const ownedTypes = new Set(['translation', 'comment']);
+            const type = this.getProjectType(key);
+            if (!ownedTypes.has(type)) return null;
+            const parts = key.split('-');
+            if (parts.length < 3) return null;
+            return parts.slice(2).join('-').toLowerCase();
+        },
+        getTranslationOwner(key) {
+            if (!key || !key.startsWith('translation-')) return null;
+            return this.getMuidOwner(key);
+        },
+        isCurrentUserMuid(key) {
+            const username = (this.currentUsername || '').toLowerCase();
+            return !!username && this.getMuidOwner(key) === username;
+        },
+        isCurrentUserTranslation(key) {
+            return !!key && key.startsWith('translation-') && this.isCurrentUserMuid(key);
+        },
         async init() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
