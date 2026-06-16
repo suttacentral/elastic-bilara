@@ -1053,7 +1053,10 @@
                                     <ul class="search__results-list">
                                         <template x-for="seg in entry.segments" :key="seg.muid">
                                             <li class="search__results-list-item"
-                                                :class="{ 'search__results-list-item--editable': canEditMuid(seg.muid, isAdmin) }">
+                                                :class="{
+                                                    'search__results-list-item--editable': canEditMuid(seg.muid, isAdmin),
+                                                    'search__results-list-item--root': seg.muid.startsWith('root-')
+                                                }">
                                                 <span class="search__results-key" x-text="seg.muid"></span>
                                                 <!-- Editable textarea for muids user can edit (admin only) -->
                                                 <template x-if="canEditMuid(seg.muid, isAdmin)">

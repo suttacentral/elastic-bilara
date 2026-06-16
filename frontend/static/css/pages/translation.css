@@ -721,6 +721,7 @@
 }
 
 .search__results-text {
+    font-family: var(--font-serif);
     font-size: var(--text-sm);
     color: var(--color-text);
 }
@@ -776,6 +777,12 @@
     pointer-events: none;
     z-index: 0;
     background-color: transparent;
+}
+
+.search__results-list-item--root .search__results-text,
+.search__results-list-item--root .search__results-textarea,
+.search__results-list-item--root .search__results-highlight-backdrop {
+    font-family: var(--font-sans);
 }
 
 .search__highlight {
