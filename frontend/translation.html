@@ -472,6 +472,7 @@
                                         :class="{
                                             'translation-cell--source': translation.isSource,
                                             'translation-cell--root': translation.muid && translation.muid.startsWith('root'),
+                                            'translation-cell--translation': translation.muid && translation.muid.startsWith('translation-'),
                                             'translation-cell--own-text': isCurrentUserMuid(translation.muid),
                                             'translation-cell--editable': translation.canEdit
                                         }"
@@ -1069,6 +1070,7 @@
                                                 :class="{
                                                     'search__results-list-item--editable': canEditMuid(seg.muid, isAdmin),
                                                     'search__results-list-item--root': seg.muid.startsWith('root-'),
+                                                    'search__results-list-item--translation': seg.muid.startsWith('translation-'),
                                                     'search__results-list-item--own-text': isCurrentUserMuid(seg.muid)
                                                 }">
                                                 <span class="search__results-key" x-text="seg.muid"></span>
