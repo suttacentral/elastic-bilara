@@ -1246,6 +1246,109 @@ function isMergeSplitConditionMet(uid, key) {
     return (regex.test(uid) || sectionRegex.test(uid));
 }
 
+function escapeHtml(text) {
+    const el = document.createElement('span');
+    el.textContent = text || '';
+    return el.innerHTML;
+}
+
+function tokenizeForRootMatch(text) {
+    const tokens = [];
+    const tokenRegex = /[\p{L}\p{M}\p{N}]+/gu;
+    const value = String(text || '');
+    let match;
+
+    while ((match = tokenRegex.exec(value)) !== null) {
+        tokens.push({
+            value: match[0].normalize('NFC').toLocaleLowerCase(),
+            start: match.index,
+            end: match.index + match[0].length,
+        });
+    }
+
+    return tokens;
+}
+
+function findRootMatchSpans(hintTokens, rootTokens) {
+    const runs = [];
+
+    for (let hintIndex = 0; hintIndex < hintTokens.length; hintIndex++) {
+        for (let rootIndex = 0; rootIndex < rootTokens.length; rootIndex++) {
+            if (hintTokens[hintIndex].value !== rootTokens[rootIndex].value) continue;
+            if (
+                hintIndex > 0 &&
+                rootIndex > 0 &&
+                hintTokens[hintIndex - 1].value === rootTokens[rootIndex - 1].value
+            ) {
+                continue;
+            }
+
+            let length = 0;
+            while (
+                hintIndex + length < hintTokens.length &&
+                rootIndex + length < rootTokens.length &&
+                hintTokens[hintIndex + length].value === rootTokens[rootIndex + length].value
+            ) {
+                length++;
+            }
+
+            runs.push({
+                startToken: hintIndex,
+                endToken: hintIndex + length - 1,
+                length,
+            });
+        }
+    }
+
+    const usedTokens = new Array(hintTokens.length).fill(false);
+    return runs
+        .sort((a, b) => b.length - a.length || a.startToken - b.startToken)
+        .filter(run => {
+            for (let index = run.startToken; index <= run.endToken; index++) {
+                if (usedTokens[index]) return false;
+            }
+            for (let index = run.startToken; index <= run.endToken; index++) {
+                usedTokens[index] = true;
+            }
+            return true;
+        })
+        .map(run => ({
+            start: hintTokens[run.startToken].start,
+            end: hintTokens[run.endToken].end,
+        }))
+        .sort((a, b) => a.start - b.start);
+}
+
+function highlightRootMatches(hintSegment, rootText) {
+    const segment = String(hintSegment || '');
+    const hintTokens = tokenizeForRootMatch(segment);
+    const rootTokens = tokenizeForRootMatch(rootText);
+
+    if (hintTokens.length === 0 || rootTokens.length === 0) {
+        return escapeHtml(segment);
+    }
+
+    const spans = findRootMatchSpans(hintTokens, rootTokens);
+    if (spans.length === 0) {
+        return escapeHtml(segment);
+    }
+
+    let highlighted = '';
+    let cursor = 0;
+    for (const span of spans) {
+        highlighted += escapeHtml(segment.slice(cursor, span.start));
+        highlighted += `<mark class="translation-cell__hints-match">${escapeHtml(segment.slice(span.start, span.end))}</mark>`;
+        cursor = span.end;
+    }
+    highlighted += escapeHtml(segment.slice(cursor));
+
+    return highlighted;
+}
+
+if (typeof window !== 'undefined') {
+    window.highlightRootMatches = highlightRootMatches;
+}
+
 async function getHints(uid, muid, sourceMuid, sourceValue) {
     const params = new URLSearchParams({
         segment_id: uid,

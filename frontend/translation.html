@@ -452,6 +452,7 @@
                                  rowHintsSelectedIdx: -1,
                                  rowHintsHoverCallback: null,
                                  rowHintsActiveIndex: -1,
+                                 rowHintsSourceValue: '',
                                  get sourceIndex() { return translations.findIndex(t => t.isSource); }
                              }"
                              @sync-row-hints.stop="
@@ -461,6 +462,7 @@
                                  rowHintsSelectedIdx = $event.detail.selectedIndex;
                                  rowHintsHoverCallback = $event.detail.hoverCallback;
                                  rowHintsActiveIndex = $event.detail.activeIndex;
+                                 rowHintsSourceValue = $event.detail.sourceValue;
                              ">
                             <!-- Cells for each translation project -->
                             <div class="translation-row__cells">
@@ -547,6 +549,7 @@
                                                 show: hints.length > 0 && showHints && !translation.isSource && hintStyle === 'inline',
                                                 selectedIndex: selectedHintIndex,
                                                 activeIndex: colIndex,
+                                                sourceValue: sourceValue,
                                                 selectCallback: (index) => {
                                                     selectHint(index);
                                                     const ta = $el.querySelector('textarea');
@@ -708,7 +711,7 @@
                                                             x-show="hintStyle !== 'inline'"
                                                             x-text="hint.uid"></span>
                                                         <div class="translation-cell__hints-content">
-                                                            <div class="translation-cell__hints-source" x-text="hint.segment"></div>
+                                                            <div class="translation-cell__hints-source" x-html="highlightRootMatches(hint.segment, sourceValue)"></div>
                                                             <div class="translation-cell__hints-translation">
                                                                 <span class="translation-cell__hints-text" x-text="hint.translation_hints"></span>
                                                                 <span class="translation-cell__hints-strength"
@@ -778,7 +781,7 @@
                                             <div class="translation-cell__hints-content" :style="getColumnGridStyle()">
                                                 <div class="translation-cell__hints-column" :style="getColumnPlacementStyle(sourceIndex)">
                                                     <div class="translation-cell__hints-source">
-                                                        <span x-text="hint.segment"></span>
+                                                        <span x-html="highlightRootMatches(hint.segment, rowHintsSourceValue)"></span>
                                                     </div>
                                                 </div>
                                                 <div class="translation-cell__hints-column" :style="getColumnPlacementStyle(rowHintsActiveIndex)">

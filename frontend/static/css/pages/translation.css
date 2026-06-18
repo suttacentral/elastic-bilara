@@ -1491,6 +1491,13 @@ sl-dialog::part(title) {
     background-color: var(--color-background-secondary);
 }
 
+.translation-cell__hints-match {
+    background-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+    color: inherit;
+    padding: 0 1px;
+    border-radius: 2px;
+}
+
 .translation-cell__hints-item:last-child {
     border-bottom: none;
 }
