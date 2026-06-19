@@ -214,22 +214,22 @@ export class SCBilaraDictionary extends LitElement {
       border-collapse: collapse;
       margin: 1.5rem 0;
       font-size: 0.95rem;
-      background-color: var(--sl-color-neutral-0);
+      background-color: var(--color-background-secondary);
       border-radius: var(--sl-border-radius-medium);
       overflow: hidden;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
     .html-content th, .html-content td {
-      border: 1px solid var(--sl-color-neutral-200);
+      border: 1px solid var(--color-border);
       padding: 0.75rem 1rem;
       text-align: left;
     }
 
     .html-content th {
-      background-color: var(--sl-color-neutral-50);
+      background-color: var(--color-background-tertiary);
       font-weight: 600;
-      color: var(--sl-color-neutral-700);
+      color: var(--color-text-emphasized);
       width: 25%;
     }
 
@@ -274,6 +274,27 @@ export class SCBilaraDictionary extends LitElement {
       background-color: var(--color-background-tertiary);
     }
 
+    .pagination-button::part(base) {
+      background-color: var(--color-background-secondary);
+      border-color: var(--color-text-secondary);
+      color: var(--color-text-emphasized);
+      box-shadow: none;
+    }
+
+    .pagination-button:hover::part(base),
+    .pagination-button:focus-within::part(base) {
+      background-color: var(--color-background);
+      border-color: var(--color-primary);
+      color: var(--color-text-emphasized);
+    }
+
+    .pagination-button[disabled]::part(base) {
+      background-color: var(--color-background-secondary);
+      border-color: var(--color-border);
+      color: var(--color-text-secondary);
+      opacity: 0.7;
+    }
+
     /* Notes section */
     .notes-card {
       margin-top: 2rem;
@@ -281,8 +302,13 @@ export class SCBilaraDictionary extends LitElement {
     }
 
     .notes-card::part(base) {
-      border: 1px solid var(--sl-color-primary-200);
+      border: 1px solid var(--color-border);
       box-shadow: var(--sl-shadow-sm);
+    }
+
+    .section-card-header {
+      font-weight: 600;
+      color: var(--color-text-emphasized);
     }
 
     .notes-header {
@@ -290,7 +316,18 @@ export class SCBilaraDictionary extends LitElement {
       align-items: center;
       gap: 0.5rem;
       font-weight: 600;
-      color: var(--sl-color-primary-700);
+      color: var(--color-text-emphasized);
+    }
+
+    .empty-list-message {
+      padding: 1rem;
+      color: var(--color-text-secondary);
+      text-align: center;
+    }
+
+    .pagination-label {
+      font-size: 0.9rem;
+      color: var(--color-text-secondary);
     }
 
     .notes-actions {
@@ -333,8 +370,45 @@ export class SCBilaraDictionary extends LitElement {
     }
 
     .notes-textarea {
+      --sl-input-background-color: var(--color-background-secondary);
+      --sl-input-background-color-hover: var(--color-background-tertiary);
+      --sl-input-background-color-focus: var(--color-background);
+      --sl-input-border-color: var(--color-border);
       --sl-input-border-color-focus: var(--sl-color-primary-400);
+      --sl-input-color: var(--color-text-emphasized);
+      --sl-input-placeholder-color: var(--color-text-secondary);
+      --sl-input-color-focus: var(--color-text-emphasized);
       --sl-focus-ring-color: var(--sl-color-primary-100);
+    }
+
+    .notes-textarea::part(base) {
+      background-color: var(--color-background-secondary);
+      border-color: var(--color-border);
+    }
+
+    .notes-textarea::part(textarea) {
+      background-color: transparent;
+      color: var(--color-text-emphasized);
+      -webkit-text-fill-color: var(--color-text-emphasized);
+      caret-color: var(--color-text-emphasized);
+      opacity: 1;
+    }
+
+    .notes-textarea::part(textarea)::placeholder {
+      color: var(--color-text-secondary);
+      -webkit-text-fill-color: var(--color-text-secondary);
+      opacity: 1;
+    }
+
+    .notes-textarea:focus-within::part(base) {
+      background-color: var(--color-background);
+      border-color: var(--sl-color-primary-400);
+    }
+
+    .notes-textarea:focus-within::part(textarea) {
+      color: var(--color-text-emphasized);
+      -webkit-text-fill-color: var(--color-text-emphasized);
+      caret-color: var(--color-text-emphasized);
     }
   `;
 
@@ -680,7 +754,7 @@ export class SCBilaraDictionary extends LitElement {
                       ` : ''}
                     </div>
                   `)}
-                  ${this.words.length === 0 ? html`<div style="padding: 1rem; color: var(--sl-color-neutral-500); text-align: center;">No words found</div>` : ''}
+                  ${this.words.length === 0 ? html`<div class="empty-list-message">No words found</div>` : ''}
                 </div>
               `
           }
@@ -688,11 +762,11 @@ export class SCBilaraDictionary extends LitElement {
           <!-- Pagination -->
           ${this.page > 0 || this.hasMore ? html`
             <div class="pagination">
-              <sl-button size="small" circle ?disabled=${this.page === 0} @click=${this.prevPage}>
+              <sl-button class="pagination-button" size="small" circle ?disabled=${this.page === 0} @click=${this.prevPage}>
                 <sl-icon library="bi" name="chevron-left"></sl-icon>
               </sl-button>
-              <span style="font-size: 0.9rem; color: var(--sl-color-neutral-600);">Page ${this.page + 1}</span>
-              <sl-button size="small" circle ?disabled=${!this.hasMore} @click=${this.nextPage}>
+              <span class="pagination-label">Page ${this.page + 1}</span>
+              <sl-button class="pagination-button" size="small" circle ?disabled=${!this.hasMore} @click=${this.nextPage}>
                 <sl-icon library="bi" name="chevron-right"></sl-icon>
               </sl-button>
             </div>
@@ -712,14 +786,14 @@ export class SCBilaraDictionary extends LitElement {
 
             ${!this.detailLoading && this.selectedWordDetail?.summary_html ? html`
               <sl-card style="margin-bottom: 2rem; width: 100%;">
-                <div slot="header" style="font-weight: 600; color: var(--sl-color-neutral-600);">Summary</div>
+                <div slot="header" class="section-card-header">Summary</div>
                 <div class="html-content" .innerHTML=${this.selectedWordDetail.summary_html} @click=${this.handleHtmlClick}></div>
               </sl-card>
             ` : ''}
 
             ${!this.detailLoading && this.selectedWordDetail?.dpd_html ? html`
               <sl-card style="width: 100%;">
-                <div slot="header" style="font-weight: 600; color: var(--sl-color-neutral-600);">Detailed Definition (DPD)</div>
+                <div slot="header" class="section-card-header">Detailed Definition (DPD)</div>
                 <div class="html-content" .innerHTML=${this.selectedWordDetail.dpd_html} @click=${this.handleHtmlClick}></div>
               </sl-card>
             ` : ''}
