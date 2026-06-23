@@ -88,6 +88,32 @@ def _is_user_file_allowed(file_path: str, username: str) -> bool:
     return any(part.lower() == username_lower for part in Path(file_path).parts)
 
 
+def _has_meaningful_json_value(value) -> bool:
+    if isinstance(value, dict):
+        return any(_has_meaningful_json_value(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_has_meaningful_json_value(item) for item in value)
+    if isinstance(value, str):
+        return bool(value.strip())
+    return value is not None
+
+
+def _is_meaningful_untracked_file(repo_path: Path, file_path: str) -> bool:
+    """Exclude untouched blank templates while keeping actual new content."""
+    relative_path = Path(file_path)
+    if not relative_path.parts or relative_path.parts[0] not in {"translation", "comment", "tag"}:
+        return True
+    if relative_path.suffix.lower() != ".json":
+        return True
+
+    try:
+        data = json.loads((repo_path / relative_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return True
+
+    return _has_meaningful_json_value(data)
+
+
 @router.get(
     "/status",
     response_model=GitStatusResponse,
@@ -96,38 +122,45 @@ def _is_user_file_allowed(file_path: str, username: str) -> bool:
 )
 async def get_git_status(
     token_data: Annotated[TokenData, Depends(utils.get_current_user)],
+    include_other_users: bool = False,
 ) -> GitStatusResponse:
-    """Get status of all modified files in unpublished repository.
+    """Get modified files in the unpublished repository.
 
-    Admins see all files; regular users only see files whose path
-    contains their username.
+    Users, including admins, see their own namespace by default.
+    Admins may explicitly request other users' files.
     """
     repo_path = settings.WORK_DIR
     ensure_safe_directory(repo_path)
 
     current_user: UserBase = get_user(int(token_data.github_id))
     is_admin = current_user.role in [Role.ADMIN.value, Role.SUPERUSER.value]
+    show_other_users = is_admin and include_other_users
 
     try:
         repo = Repository(str(repo_path))
 
         files = []
-        status_dict = repo.status()
+        status_dict = repo.status(untracked_files="all")
 
         for filepath, status_code in status_dict.items():
-            # 0 means unmodified; skip new/untracked files
-            if status_code != 0 and not (status_code & (GIT_STATUS_WT_NEW | GIT_STATUS_INDEX_NEW)) and fileFilter(Path(filepath)):
-                # Non-admin users can only see files in own namespace
-                if (not is_admin and not _is_user_file_allowed(
-                    filepath,
-                    current_user.username,
-                )):
-                    continue
-                files.append(FileStatus(
-                    path=filepath,
-                    status=get_status_name(status_code),
-                    status_code=status_code
-                ))
+            if status_code == 0 or not fileFilter(Path(filepath)):
+                continue
+            if not show_other_users and not _is_user_file_allowed(
+                filepath,
+                current_user.username,
+            ):
+                continue
+            if (
+                status_code & GIT_STATUS_WT_NEW
+                and not (status_code & GIT_STATUS_INDEX_NEW)
+                and not _is_meaningful_untracked_file(repo_path, filepath)
+            ):
+                continue
+            files.append(FileStatus(
+                path=filepath,
+                status=get_status_name(status_code),
+                status_code=status_code
+            ))
 
         # Sort by path
         files.sort(key=lambda x: x.path)

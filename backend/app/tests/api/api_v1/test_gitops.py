@@ -146,10 +146,37 @@ async def test_sync_repository_data_valid_branch(
 class TestGetGitStatus:
     """Tests for GET /git/status endpoint"""
 
+    def test_untracked_user_text_file_requires_meaningful_content(self, tmp_path):
+        blank_path = tmp_path / "translation/en/ihongda/blank.json"
+        blank_path.parent.mkdir(parents=True)
+        blank_path.write_text(json.dumps({"uid:1": "", "uid:2": "  "}))
+
+        edited_path = tmp_path / "translation/en/ihongda/edited.json"
+        edited_path.write_text(json.dumps({"uid:1": "", "uid:2": "translated"}))
+
+        assert git_ops._is_meaningful_untracked_file(
+            tmp_path,
+            blank_path.relative_to(tmp_path).as_posix(),
+        ) is False
+        assert git_ops._is_meaningful_untracked_file(
+            tmp_path,
+            edited_path.relative_to(tmp_path).as_posix(),
+        ) is True
+
+    def test_untracked_structural_file_is_always_visible(self, tmp_path):
+        root_path = tmp_path / "root/pli/ms/test.json"
+        root_path.parent.mkdir(parents=True)
+        root_path.write_text(json.dumps({"uid:1": ""}))
+
+        assert git_ops._is_meaningful_untracked_file(
+            tmp_path,
+            root_path.relative_to(tmp_path).as_posix(),
+        ) is True
+
     @pytest.mark.asyncio
     async def test_get_git_status_unauthorized(self, async_client):
         """Test that unauthorized users cannot access git status"""
-        response = await async_client.get("/git/status")
+        response = await async_client.get("/git/status?include_other_users=true")
         assert response.status_code == 401
 
     @pytest.mark.asyncio
@@ -163,7 +190,7 @@ class TestGetGitStatus:
         mock_repository_class.return_value = mock_repo
         mock_repo.status.return_value = {}
 
-        response = await async_client.get("/git/status")
+        response = await async_client.get("/git/status?include_other_users=true")
 
         assert response.status_code == 200
         assert response.json() == {"files": [], "total": 0}
@@ -176,7 +203,7 @@ class TestGetGitStatus:
     async def test_get_git_status_with_modified_files(
         self, mock_ensure_safe, mock_repository_class, mock_get_status_name, async_client, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active
     ):
-        """Test git status with tracked modified/deleted files only."""
+        """Test git status includes tracked changes and untracked files."""
         mock_repo = MagicMock()
         mock_repository_class.return_value = mock_repo
         mock_repo.status.return_value = {
@@ -186,20 +213,52 @@ class TestGetGitStatus:
         }
         mock_get_status_name.side_effect = lambda x: {
             GIT_STATUS_WT_MODIFIED: "modified",
-            GIT_STATUS_WT_NEW: "new",
+            GIT_STATUS_WT_NEW: "untracked",
             GIT_STATUS_WT_DELETED: "deleted",
         }[x]
+
+        response = await async_client.get("/git/status?include_other_users=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        assert len(data["files"]) == 3
+        # Verify files are sorted by path
+        paths = [f["path"] for f in data["files"]]
+        assert "comment/en/test.json" in paths
+        assert paths == sorted(paths)
+        mock_repo.status.assert_called_once_with(untracked_files="all")
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.git_ops.get_status_name", return_value="modified")
+    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.ensure_safe_directory")
+    async def test_get_git_status_admin_defaults_to_own_namespace(
+        self,
+        mock_ensure_safe,
+        mock_repository_class,
+        mock_get_status_name,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
+    ):
+        mock_repo = MagicMock()
+        mock_repository_class.return_value = mock_repo
+        mock_repo.status.return_value = {
+            "translation/en/test_admin/own.json": GIT_STATUS_WT_MODIFIED,
+            "translation/en/other/other.json": GIT_STATUS_WT_MODIFIED,
+        }
 
         response = await async_client.get("/git/status")
 
         assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 2
-        assert len(data["files"]) == 2
-        # Verify files are sorted by path
-        paths = [f["path"] for f in data["files"]]
-        assert "comment/en/test.json" not in paths
-        assert paths == sorted(paths)
+        assert response.json()["files"] == [
+            {
+                "path": "translation/en/test_admin/own.json",
+                "status": "modified",
+                "status_code": GIT_STATUS_WT_MODIFIED,
+            }
+        ]
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
@@ -219,7 +278,7 @@ class TestGetGitStatus:
         }
 
         with patch("app.api.api_v1.endpoints.git_ops.get_status_name", return_value="modified"):
-            response = await async_client.get("/git/status")
+            response = await async_client.get("/git/status?include_other_users=true")
 
         assert response.status_code == 200
         data = response.json()
@@ -318,6 +377,50 @@ class TestGetGitStatus:
         data = response.json()
         assert data["total"] == 1
         assert data["files"][0]["path"] == "translation/en/ann/s2.json"
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.git_ops.get_status_name", return_value="modified")
+    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.ensure_safe_directory")
+    async def test_non_admin_cannot_bypass_namespace_via_include_other_users(
+        self,
+        mock_ensure_safe,
+        mock_repository_class,
+        mock_get_status_name,
+        async_client,
+        mock_get_current_user,
+        mock_is_admin_or_superuser_is_active,
+    ):
+        """Non-admin passing ?include_other_users=true must still only see own files."""
+        mock_repo = MagicMock()
+        mock_repository_class.return_value = mock_repo
+        mock_repo.status.return_value = {
+            "translation/en/ann/own.json": GIT_STATUS_WT_MODIFIED,
+            "translation/en/other/secret.json": GIT_STATUS_WT_MODIFIED,
+        }
+
+        non_admin_user = User(
+            id=2,
+            github_id=123,
+            username="ann",
+            email="ann@example.com",
+            avatar_url="some_url.com",
+            role=Role.WRITER.value,
+            created_on=datetime.datetime.utcnow(),
+            last_login=datetime.datetime.utcnow(),
+            is_active=True,
+        )
+
+        with patch(
+            "app.api.api_v1.endpoints.git_ops.get_user",
+            return_value=non_admin_user,
+        ):
+            response = await async_client.get("/git/status?include_other_users=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["files"][0]["path"] == "translation/en/ann/own.json"
 
 
 # Tests for get_file_diff endpoint

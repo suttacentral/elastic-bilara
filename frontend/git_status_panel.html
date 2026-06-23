@@ -52,34 +52,34 @@
                 <div class="panel-title">
                     <i class="bi-files"></i>
                     <span>Changed Files</span>
-                    <span x-show="!loading && files.length > 0" class="badge" x-text="files.length"></span>
+                    <span x-show="!loading && files.length > 0" class="badge" x-text="filteredFiles.length"></span>
                 </div>
                 <div class="file-list-loading-indicator" x-show="loading" x-cloak>
                     <span class="spinner spinner-sm"></span>
                     <span>Loading files</span>
                 </div>
                 <div class="summary-stats" x-show="!loading && files.length > 0">
-                    <div class="stat-chip modified" x-show="stats.modified > 0">
+                    <div class="stat-chip modified" x-show="visibleStats.modified > 0">
                         <i class="bi-pencil-fill"></i>
-                        <span x-text="stats.modified"></span>
+                        <span x-text="visibleStats.modified"></span>
                     </div>
-                    <div class="stat-chip untracked" x-show="stats.untracked > 0">
+                    <div class="stat-chip untracked" x-show="visibleStats.untracked > 0">
                         <i class="bi-plus-circle-fill"></i>
-                        <span x-text="stats.untracked"></span>
+                        <span x-text="visibleStats.untracked"></span>
                     </div>
-                    <div class="stat-chip deleted" x-show="stats.deleted > 0">
+                    <div class="stat-chip deleted" x-show="visibleStats.deleted > 0">
                         <i class="bi-trash-fill"></i>
-                        <span x-text="stats.deleted"></span>
+                        <span x-text="visibleStats.deleted"></span>
                     </div>
-                    <div class="stat-chip staged" x-show="stats.staged > 0">
+                    <div class="stat-chip staged" x-show="visibleStats.staged > 0">
                         <i class="bi-check-circle-fill"></i>
-                        <span x-text="stats.staged"></span>
+                        <span x-text="visibleStats.staged"></span>
                     </div>
                 </div>
             </div>
 
             <!-- Filter and Sort Controls -->
-            <div class="filter-controls" x-show="!loading && files.length > 0">
+            <div class="filter-controls" x-show="!loading && (files.length > 0 || isAdmin)">
                 <div class="filter-left-section">
                     <div class="search-box">
                         <i class="bi-search"></i>
@@ -96,6 +96,13 @@
                         </button>
                     </div>
                 </div>
+                <label class="admin-scope-toggle" x-show="isAdmin" x-cloak>
+                    <input type="checkbox"
+                           :checked="showOtherUsersChanges"
+                           @change="setShowOtherUsersChanges($event.target.checked)">
+                    <span class="admin-scope-toggle__track" aria-hidden="true"></span>
+                    <span class="admin-scope-toggle__label">Show other users</span>
+                </label>
                 <div class="sort-switch-wrapper">
                     <span class="sort-label" :class="{ active: sortMode === 'default' }">
                         <i class="bi-sort-alpha-down"></i>
@@ -145,7 +152,7 @@
                     </template>
                 </div>
 
-                <div x-show="!loading && files.length === 0" class="empty-state">
+                <div x-show="!loading && files.length === 0 && (!isAdmin || showOtherUsersChanges)" class="empty-state">
                     <i class="bi-check-circle"></i>
                     <div>
                         <strong>Working directory clean</strong>
@@ -153,7 +160,7 @@
                     </div>
                 </div>
 
-                <div x-show="!loading && files.length > 0" class="file-list">
+                <div x-show="!loading && (files.length > 0 || (isAdmin && !showOtherUsersChanges))" class="file-list">
                     <!-- Select All Header -->
                     <div class="file-list-header" x-show="false">
                         <label class="checkbox-wrapper select-all">
@@ -166,7 +173,7 @@
                         </label>
                     </div>
 
-                    <div x-show="filteredFiles.length === 0 && !filterText && !isAdmin" class="empty-state">
+                    <div x-show="filteredFiles.length === 0 && !filterText && (!isAdmin || !showOtherUsersChanges)" class="empty-state">
                         <i class="bi-inbox"></i>
                         <div>
                             <strong>No files for your user</strong>

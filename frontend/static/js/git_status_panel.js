@@ -44,12 +44,7 @@ function gitStatusPanel() {
         loadingDiff: false,
         diffContent: '',
         diffError: null,
-        stats: {
-            modified: 0,
-            untracked: 0,
-            deleted: 0,
-            staged: 0
-        },
+
         // Discard related state
         showConfirmModal: false,
         fileToDiscard: null,
@@ -78,6 +73,7 @@ function gitStatusPanel() {
         userInfo: null,
         isAdmin: false,
         username: '',
+        showOtherUsersChanges: false,
         // Multi-selection state
         selectedFiles: [],
         batchPublishing: false,
@@ -114,10 +110,11 @@ function gitStatusPanel() {
 
         get filteredFiles() {
             const searchText = this.filterText.trim().toLowerCase();
-            const username = this.isAdmin ? '' : (this.username || '').toLowerCase();
+            const filterByOwner = !this.isAdmin || !this.showOtherUsersChanges;
             const cacheKey = [
                 this.isAdmin ? 'admin' : 'user',
-                username,
+                this.showOtherUsersChanges ? 'all-users' : 'own-files',
+                (this.username || '').toLowerCase(),
                 searchText,
                 this.sortMode
             ].join('|');
@@ -137,10 +134,8 @@ function gitStatusPanel() {
                 ? sortedFilesCache.dateOrder
                 : sortedFilesCache.defaultOrder;
 
-            if (username) {
-                filtered = filtered.filter(file =>
-                    (file.search_path || file.path.toLowerCase()).includes(username)
-                );
+            if (filterByOwner && this.username) {
+                filtered = filtered.filter(file => this.isFileOwnedByCurrentUser(file));
             }
 
             if (searchText) {
@@ -153,6 +148,44 @@ function gitStatusPanel() {
             filteredFilesCache.key = cacheKey;
             filteredFilesCache.value = filtered;
             return filteredFilesCache.value;
+        },
+
+        isFileOwnedByCurrentUser(file) {
+            const username = (this.username || '').toLowerCase();
+            if (!username || !file?.path) return false;
+            return file.path.split('/').some(part => part.toLowerCase() === username);
+        },
+
+        async setShowOtherUsersChanges(showOtherUsersChanges) {
+            if (!this.isAdmin) return;
+
+            this.showOtherUsersChanges = Boolean(showOtherUsersChanges);
+            this.currentPage = 1;
+            this.selectedFile = null;
+            this.selectedFileData = null;
+            this.diffContent = '';
+            this.parsedDiffLines = [];
+            this.diffError = null;
+            this.selectedFiles = [];
+            await this.fetchStatus();
+        },
+
+        get visibleStats() {
+            const stats = {
+                modified: 0,
+                untracked: 0,
+                deleted: 0,
+                staged: 0
+            };
+
+            for (const file of this.filteredFiles) {
+                if (file.status === 'modified') stats.modified++;
+                else if (file.status === 'untracked') stats.untracked++;
+                else if (file.status === 'deleted') stats.deleted++;
+                else if (file.status.startsWith('staged')) stats.staged++;
+            }
+
+            return stats;
         },
 
         get totalPages() {
@@ -195,7 +228,10 @@ function gitStatusPanel() {
         async fetchStatus() {
             this.loading = true;
             try {
-                const response = await fetch('/api/v1/git/status', {
+                const statusUrl = this.isAdmin && this.showOtherUsersChanges
+                    ? '/api/v1/git/status?include_other_users=true'
+                    : '/api/v1/git/status';
+                const response = await fetch(statusUrl, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
                     }
@@ -214,7 +250,7 @@ function gitStatusPanel() {
                 filteredFilesCache.source = null;
                 filteredFilesCache.key = null;
                 filteredFilesCache.value = [];
-                this.calculateStats();
+
             } catch (error) {
                 console.error('Error fetching git status:', error);
                 this.files = [];
@@ -226,21 +262,7 @@ function gitStatusPanel() {
             }
         },
 
-        calculateStats() {
-            this.stats = {
-                modified: 0,
-                untracked: 0,
-                deleted: 0,
-                staged: 0
-            };
 
-            for (const file of this.files) {
-                if (file.status === 'modified') this.stats.modified++;
-                else if (file.status === 'untracked') this.stats.untracked++;
-                else if (file.status === 'deleted') this.stats.deleted++;
-                else if (file.status.startsWith('staged')) this.stats.staged++;
-            }
-        },
 
         async selectFile(file) {
             if (this.selectedFile === file.path) return;
@@ -677,11 +699,6 @@ function gitStatusPanel() {
                 this.batchPublishing = false;
             }
         },
-        showToast(message, type = 'success') {
-            this.toast = { show: true, message, type };
-            setTimeout(() => {
-                this.toast.show = false;
-            }, 3000);
-        }
+
     };
 }
