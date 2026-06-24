@@ -19,9 +19,11 @@ class TestUserUtils:
     def test_is_user_in_muid_valid(self) -> None:
         assert is_username_in_muid("username", "translation-en-username")
 
+    def test_is_user_in_muid_valid_case_insensitive(self) -> None:
+        assert is_username_in_muid("username", "translation-en-USERNAME")
+
     def test_is_user_in_muid_invalid(self) -> None:
         assert not is_username_in_muid("username", "translation-en-test")
-        assert not is_username_in_muid("username", "translation-en-USERNAME")
         assert not is_username_in_muid("username", "")
         assert not is_username_in_muid("", "translation-en-username")
 

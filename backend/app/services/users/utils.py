@@ -19,7 +19,7 @@ def get_user(github_id: int) -> User:
 def is_username_in_muid(username: str, muid: str) -> bool:
     if not username or not muid:
         return False
-    return username == muid.split("-", 2)[2]
+    return username.lower() == muid.split("-", 2)[2].lower()
 
 
 def check_creator_github_handle_in_list(username: str, item_list: list[dict]) -> bool:
