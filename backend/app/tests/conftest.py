@@ -314,11 +314,30 @@ def mock_users():
 
 @pytest.fixture
 def mock_is_admin_or_superuser_is_active(mock_user: User) -> Generator[None, Any, None]:
+    requester = User.model_validate(mock_user).model_copy(update={"role": Role.ADMIN.value})
+
     async def override_dependency():
-        return False
+        return requester
 
     app.dependency_overrides[permissions.is_admin_or_superuser] = override_dependency
     app.dependency_overrides[permissions.is_user_active] = override_dependency
+
+    yield
+    app.dependency_overrides = {}
+
+
+@pytest.fixture
+def mock_superuser_is_active(mock_user: User) -> Generator[None, Any, None]:
+    requester = User.model_validate(mock_user).model_copy(update={"role": Role.SUPERUSER.value})
+
+    async def override_privileged_user():
+        return requester
+
+    async def override_active_user():
+        return True
+
+    app.dependency_overrides[permissions.is_admin_or_superuser] = override_privileged_user
+    app.dependency_overrides[permissions.is_user_active] = override_active_user
 
     yield
     app.dependency_overrides = {}

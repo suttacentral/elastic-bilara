@@ -41,16 +41,29 @@ async def test_get_users_authenticated(
     async_client,
     mock_session,
     mock_users,
+    mock_is_admin_or_superuser_is_active,
 ):
-    app.dependency_overrides[permissions.is_admin_or_superuser] = lambda: None
-    app.dependency_overrides[permissions.is_user_active] = lambda: None
-
     mock_session.query.return_value.all.return_value = mock_users
 
     response = await async_client.get("/users/")
     assert response.status_code == 200
     assert len(response.json()) == len(mock_users)
-    app.dependency_overrides = {}
+    assert response.json()[0]["email"] == mock_users[0].email
+
+
+@pytest.mark.asyncio
+async def test_get_users_hides_email_from_superuser(
+    async_client,
+    mock_session,
+    mock_users,
+    mock_superuser_is_active,
+):
+    mock_session.query.return_value.all.return_value = mock_users
+
+    response = await async_client.get("/users/")
+
+    assert response.status_code == 200
+    assert all("email" not in user for user in response.json())
 
 
 @pytest.mark.asyncio
@@ -177,6 +190,21 @@ async def test_get_user_success(
 
     response = await async_client.get("/users/123/")
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_get_user_hides_email_from_superuser(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+
+    response = await async_client.get("/users/123/")
+
+    assert response.status_code == 200
+    assert "email" not in response.json()
 
 
 @pytest.mark.asyncio
@@ -375,6 +403,22 @@ async def test_user_role_change_success(
 
 
 @pytest.mark.asyncio
+async def test_user_role_change_hides_email_from_superuser(
+    async_client,
+    mock_session,
+    mock_user,
+    mock_superuser_is_active,
+):
+    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
+    mock_session.add.return_value = None
+
+    response = await async_client.patch("/users/123/role", params={"role": "writer"})
+
+    assert response.status_code == 200
+    assert "email" not in response.json()
+
+
+@pytest.mark.asyncio
 async def test_user_role_invalid(
     async_client,
     mock_session,
@@ -444,6 +488,7 @@ async def test_get_current_user_data(async_client, mock_session, mock_user, mock
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user
     response = await async_client.get("/users/me")
     assert response.status_code == 200
+    assert response.json()["email"] == mock_user.email
 
 
 @pytest.mark.asyncio

@@ -29,6 +29,22 @@ class User(UserBase):
     is_active: bool
 
 
+class UserWithoutEmail(BaseModel):
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
+    github_id: int
+    username: str
+    avatar_url: str | None
+    role: str
+    id: int
+    created_on: datetime.datetime
+    last_login: datetime.datetime
+    is_active: bool
+
+
+UserResponse = User | UserWithoutEmail
+
+
 class UserUpdatePayload(TypedDict, total=False):
     is_active: bool
     username: str

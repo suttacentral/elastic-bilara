@@ -59,11 +59,11 @@ def get_user_from_cookie(request: Request) -> User:
     return user
 
 
-def is_admin_or_superuser(request: Request) -> bool:
+def is_admin_or_superuser(request: Request) -> User:
     user: User = get_user_from_cookie(request)
     if not is_user_in_admin_group(user):
         raise get_credentials_exception()
-    return True
+    return user
 
 
 def is_user_active(request: Request) -> bool:

@@ -8,7 +8,7 @@ export class ScBilaraAdminUsers extends LitElement {
 
     render() {
         return html`
-          <div x-data="dataTypes.users" x-init="await getUsers()">
+          <div x-data="dataTypes.users">
               <div class="admin-section-header">
                   <h1 class="admin-section-title">User Management</h1>
               </div>
@@ -70,10 +70,12 @@ export class ScBilaraAdminUsers extends LitElement {
                                       <span class="admin-info-label">Username</span>
                                       <span class="admin-info-value" x-text="user.username"></span>
                                   </div>
-                                  <div class="admin-info-card">
-                                      <span class="admin-info-label">Email</span>
-                                      <span class="admin-info-value" x-text="user.email"></span>
-                                  </div>
+                                  <template x-if="canViewUserEmail()">
+                                      <div class="admin-info-card">
+                                          <span class="admin-info-label">Email</span>
+                                          <span class="admin-info-value" x-text="user.email"></span>
+                                      </div>
+                                  </template>
                                   <div class="admin-info-card">
                                       <span class="admin-info-label">Joined</span>
                                       <span class="admin-info-value" x-text="formatDate(user.created_on)"></span>

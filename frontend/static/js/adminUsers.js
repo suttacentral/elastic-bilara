@@ -2,6 +2,16 @@ function users() {
     return {
         isVisible: false,
         users: [],
+        currentUserRole: "",
+        async init() {
+            const userInfo = getUserInfo();
+            await userInfo.getRole();
+            this.currentUserRole = userInfo.role;
+            await this.getUsers();
+        },
+        canViewUserEmail() {
+            return this.currentUserRole === ROLES.admin;
+        },
         async getUsers() {
             try {
                 const response = await requestWithTokenRetry("users/");
