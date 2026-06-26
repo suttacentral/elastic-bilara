@@ -815,9 +815,12 @@
                     alignToButton() {
                         const btn = document.querySelector('[data-related-btn]');
                         if (!btn) return;
+                        const container = $el.closest('.project-container');
+                        if (!container) return;
                         const btnRect = btn.getBoundingClientRect();
-                        const containerRect = $el.offsetParent.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
                         $el.style.left = (btnRect.left - containerRect.left) + 'px';
+                        $el.style.top = (btnRect.bottom - containerRect.top + 4) + 'px';
                     }
                 }"
                 @toggle-detail-panel.window="
