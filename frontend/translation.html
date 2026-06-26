@@ -481,6 +481,7 @@
                                             showHints: false,
                                             hintClicked: false,
                                             selectedHintIndex: -1,
+                                            hintSelectionViaKeyboard: false,
                                             hintStyle: window.userSettings.hint_style || 'dropdown',
                                             hintCount: Number(window.userSettings.hint_count) || 5,
                                             isSource: translation.isSource,
@@ -509,6 +510,7 @@
                                                     this.hintClicked = true;
                                                     this.showHints = false;
                                                     this.selectedHintIndex = -1;
+                                                    this.hintSelectionViaKeyboard = false;
                                                 }
                                             },
                                             filterTagSuggestions(value) {
@@ -557,6 +559,7 @@
                                                     if (ta) ta.focus();
                                                 },
                                                 hoverCallback: (index) => {
+                                                    hintSelectionViaKeyboard = false;
                                                     selectedHintIndex = index;
                                                 }
                                             });
@@ -633,6 +636,7 @@
                                                     }
                                                     hintClicked = false;
                                                     selectedHintIndex = -1;
+                                                    hintSelectionViaKeyboard = false;
                                                     if (isTag) {
                                                         filterTagSuggestions(getValue(translation, uid) || '');
                                                     } else if (hints.length === 0 && muid.startsWith('translation')) {
@@ -675,6 +679,7 @@
                                                         selectedTagIndex = selectedTagIndex <= 0 ? Math.min(tagSuggestions.length, tagSuggestionLimit) - 1 : selectedTagIndex - 1;
                                                     } else if (showHints && visibleHints.length > 0) {
                                                         selectedHintIndex = selectedHintIndex <= 0 ? visibleHints.length - 1 : selectedHintIndex - 1;
+                                                        hintSelectionViaKeyboard = true;
                                                     }
                                                 "
                                                 x-on:keydown.down.prevent="
@@ -682,12 +687,13 @@
                                                         selectedTagIndex = selectedTagIndex >= Math.min(tagSuggestions.length, tagSuggestionLimit) - 1 ? 0 : selectedTagIndex + 1;
                                                     } else if (showHints && visibleHints.length > 0) {
                                                         selectedHintIndex = selectedHintIndex >= visibleHints.length - 1 ? 0 : selectedHintIndex + 1;
+                                                        hintSelectionViaKeyboard = true;
                                                     }
                                                 "
                                                 x-on:keydown.enter.prevent="
                                                     if (isTag && showTagSuggestions && selectedTagIndex >= 0 && selectedTagIndex < tagSuggestions.length) {
                                                         selectTag(selectedTagIndex);
-                                                    } else if (showHints && selectedHintIndex >= 0 && selectedHintIndex < visibleHints.length) {
+                                                    } else if (hintSelectionViaKeyboard && showHints && selectedHintIndex >= 0 && selectedHintIndex < visibleHints.length) {
                                                         selectHint(selectedHintIndex);
                                                     } else {
                                                         await handleEnter($event, uid, getValue(translation, uid), translation, originalValue);
@@ -707,7 +713,7 @@
                                                         :class="{ 'translation-cell__hints-item--selected': selectedHintIndex === hintIndex }"
                                                         tabindex="-1"
                                                         @click="selectHint(hintIndex); $el.closest('.translation-cell').querySelector('textarea').focus();"
-                                                        @mouseenter="selectedHintIndex = hintIndex">
+                                                        @mouseenter="hintSelectionViaKeyboard = false; selectedHintIndex = hintIndex">
                                                         <span class="translation-cell__hints-uid"
                                                             x-show="hintStyle !== 'inline'"
                                                             x-text="hint.uid"></span>
