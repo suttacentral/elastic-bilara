@@ -16,7 +16,7 @@ def can_edit_translation(github_id: int, muid: str) -> bool:
         return is_user_in_admin_group(user)
     if user.role == Role.REVIEWER.value:
         return False
-    if muid.startswith("translation") and is_username_in_muid(user.username, muid):
+    if muid.startswith(("translation", "comment")) and is_username_in_muid(user.username, muid):
         return True
     projects: list[dict] = get_json_data(settings.WORK_DIR / "_project-v2.json")
     if user.role == Role.WRITER.value:
