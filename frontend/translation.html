@@ -575,7 +575,7 @@
 
                                         <!-- Action buttons (split/merge) -->
                                         <sc-bilara-translation-project-actions
-                                            :style="(!translation.canEdit || isRemarkProject(translation.muid)) ? 'visibility: hidden;' : ''"
+                                            :style="isRemarkProject(translation.muid) ? 'visibility: hidden;' : ''"
                                             class="translation-cell__actions">
                                         </sc-bilara-translation-project-actions>
 
