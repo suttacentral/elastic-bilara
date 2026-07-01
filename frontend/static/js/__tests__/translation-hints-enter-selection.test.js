@@ -7,6 +7,12 @@ const translationHtml = fs.readFileSync(
 );
 
 describe('translation hint Enter behavior', () => {
+    test('accepts TM hints through the focused textarea edit path', () => {
+        expect(translationHtml).toContain('applyHintToTextarea(value) {');
+        expect(translationHtml).toContain("document.execCommand('insertText', false, value)");
+        expect(translationHtml).toContain("textarea.dispatchEvent(new Event('input', { bubbles: true }))");
+    });
+
     test('accepts TM hints on Enter only after explicit keyboard navigation', () => {
         expect(translationHtml).toContain('hintSelectionViaKeyboard');
         expect(translationHtml).toContain('hintSelectionViaKeyboard && showHints && selectedHintIndex >= 0 && selectedHintIndex < visibleHints.length');

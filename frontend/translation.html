@@ -503,11 +503,19 @@
                                             get visibleHints() {
                                                 return this.hints.slice(0, this.hintCount);
                                             },
+                                            applyHintToTextarea(value) {
+                                                const textarea = this.$el.querySelector('textarea');
+                                                if (!textarea) return;
+                                                textarea.focus();
+                                                textarea.setSelectionRange(0, textarea.value.length);
+                                                document.execCommand('insertText', false, value);
+                                                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                                            },
                                             selectHint(index) {
                                                 const hintsToShow = this.visibleHints;
                                                 if (index >= 0 && index < hintsToShow.length) {
-                                                    setValue(translation, uid, hintsToShow[index].translation_hints);
                                                     this.hintClicked = true;
+                                                    this.applyHintToTextarea(hintsToShow[index].translation_hints);
                                                     this.showHints = false;
                                                     this.selectedHintIndex = -1;
                                                     this.hintSelectionViaKeyboard = false;
