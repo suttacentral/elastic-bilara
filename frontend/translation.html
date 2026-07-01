@@ -450,7 +450,7 @@
                                  rowHintsShow: false,
                                  rowHintsSelectCallback: null,
                                  rowHintsSelectedIdx: -1,
-                                 rowHintsHoverCallback: null,
+                                 rowHintsClearSelectionCallback: null,
                                  rowHintsActiveIndex: -1,
                                  rowHintsSourceValue: '',
                                  get sourceIndex() { return translations.findIndex(t => t.isSource); }
@@ -460,7 +460,7 @@
                                  rowHintsShow = $event.detail.show;
                                  rowHintsSelectCallback = $event.detail.selectCallback;
                                  rowHintsSelectedIdx = $event.detail.selectedIndex;
-                                 rowHintsHoverCallback = $event.detail.hoverCallback;
+                                 rowHintsClearSelectionCallback = $event.detail.clearSelectionCallback;
                                  rowHintsActiveIndex = $event.detail.activeIndex;
                                  rowHintsSourceValue = $event.detail.sourceValue;
                              ">
@@ -566,9 +566,9 @@
                                                     const ta = $el.querySelector('textarea');
                                                     if (ta) ta.focus();
                                                 },
-                                                hoverCallback: (index) => {
+                                                clearSelectionCallback: () => {
                                                     hintSelectionViaKeyboard = false;
-                                                    selectedHintIndex = index;
+                                                    selectedHintIndex = -1;
                                                 }
                                             });
                                         "
@@ -721,7 +721,7 @@
                                                         :class="{ 'translation-cell__hints-item--selected': selectedHintIndex === hintIndex }"
                                                         tabindex="-1"
                                                         @click="selectHint(hintIndex); $el.closest('.translation-cell').querySelector('textarea').focus();"
-                                                        @mouseenter="hintSelectionViaKeyboard = false; selectedHintIndex = hintIndex">
+                                                        @mouseenter="hintSelectionViaKeyboard = false; selectedHintIndex = -1">
                                                         <span class="translation-cell__hints-uid"
                                                             x-show="hintStyle !== 'inline'"
                                                             x-text="hint.uid"></span>
@@ -792,7 +792,7 @@
                                             :class="{ 'translation-cell__hints-item--selected': rowHintsSelectedIdx === hintIndex }"
                                             tabindex="-1"
                                             @click="if (rowHintsSelectCallback) rowHintsSelectCallback(hintIndex)"
-                                            @mouseenter="if (rowHintsHoverCallback) rowHintsHoverCallback(hintIndex)">
+                                            @mouseenter="if (rowHintsClearSelectionCallback) rowHintsClearSelectionCallback()">
                                             <div class="translation-cell__hints-content" :style="getColumnGridStyle()">
                                                 <div class="translation-cell__hints-column" :style="getColumnPlacementStyle(sourceIndex)">
                                                     <div class="translation-cell__hints-source">

@@ -1348,9 +1348,14 @@ sl-dialog::part(title) {
     background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 
+.translation-cell--editable:focus-within {
+    background-color: color-mix(in srgb, var(--color-primary) 9%, var(--color-background));
+    box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
 .translation-cell__textarea:focus {
     outline: none;
-    background-color: transparent;
+    background-color: color-mix(in srgb, var(--color-primary) 7%, var(--color-background));
 }
 
 .translation-cell__textarea--readonly {

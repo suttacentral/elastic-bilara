@@ -19,7 +19,8 @@ describe('translation hint Enter behavior', () => {
     });
 
     test('mouse hover over TM hints does not make Enter accept that hint', () => {
-        expect(translationHtml).toContain('@mouseenter="hintSelectionViaKeyboard = false; selectedHintIndex = hintIndex"');
-        expect(translationHtml).toContain('hoverCallback: (index) => {\n                                                    hintSelectionViaKeyboard = false;\n                                                    selectedHintIndex = index;\n                                                }');
+        expect(translationHtml).not.toContain('@mouseenter="hintSelectionViaKeyboard = false; selectedHintIndex = hintIndex"');
+        expect(translationHtml).not.toContain('rowHintsHoverCallback');
+        expect(translationHtml).not.toContain('hoverCallback:');
     });
 });
