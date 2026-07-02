@@ -223,14 +223,28 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
                           <i class="bi bi-collection" style="margin-right: 6px;"></i>Related
                       </sl-button>
                   </li>
-                   <li class="project-header__nav-item project-header__search-toggle">
-                      <sl-button size="small"
-                           @click="$dispatch('toggle-search-panel')"
-                           x-data="{ panelVisible: window.innerWidth >= 1280 }"
-                           @toggle-search-panel.window="panelVisible = !panelVisible"
-                           @show-search-panel.window="panelVisible = true"
-                           @resize.window="if(window.innerWidth >= 1280) panelVisible = true"
-                           :title="panelVisible ? 'Hide search panel' : 'Show search panel'">
+                      <li class="project-header__nav-item project-header__search-toggle">
+                          <sl-button size="small"
+                               @click="$dispatch('toggle-search-panel')"
+                               x-data="{
+                                   searchPanelPreferenceKey: 'bilara:translation:search-panel-visible',
+                                   panelVisible: false,
+                                   init() {
+                                       this.panelVisible = this.getStoredSearchPanelVisible();
+                                   },
+                                   getStoredSearchPanelVisible() {
+                                       const stored = localStorage.getItem(this.searchPanelPreferenceKey);
+                                       return stored === null ? window.innerWidth >= 1280 : stored === 'true';
+                                   },
+                                   togglePanelVisible() {
+                                       this.panelVisible = !this.panelVisible;
+                                       localStorage.setItem(this.searchPanelPreferenceKey, String(this.panelVisible));
+                                   }
+                               }"
+                               @toggle-search-panel.window="togglePanelVisible()"
+                               @show-search-panel.window="panelVisible = true"
+                               @resize.window="if(localStorage.getItem(searchPanelPreferenceKey) === null && window.innerWidth >= 1280) panelVisible = true"
+                               :title="panelVisible ? 'Hide search panel' : 'Show search panel'">
                            <i class="bi" :class="panelVisible ? 'bi-layout-sidebar-reverse' : 'bi-layout-sidebar'" style="margin-right: 6px;"></i>
                           <span x-text="panelVisible ? 'Hide Search Panel' : 'Show Search Panel'"></span>
                       </sl-button>
