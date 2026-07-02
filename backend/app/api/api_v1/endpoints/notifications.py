@@ -156,11 +156,15 @@ def get_unread_git_updates(
     )
 
 
-def get_unread_git_update_items(user: str):
-    return get_git_update_items(user, include_done=False)
+def get_unread_git_update_items(user: str, limit: int | None = None):
+    return get_git_update_items(user, include_done=False, limit=limit)
 
 
-def get_git_update_items(user: str, include_done: bool = False):
+def get_git_update_items(
+    user: str,
+    include_done: bool = False,
+    limit: int | None = None,
+):
     recent_commits = []
     working_directory = settings.WORK_DIR
 
@@ -321,6 +325,8 @@ def get_git_update_items(user: str, include_done: bool = False):
             }
             if include_done or commit not in all_done_commit_ids:
                 recent_commits.append(git_detail)
+                if limit is not None and len(recent_commits) >= limit:
+                    break
     else:
         print(f"Error: {error.decode('utf-8')}")
     return recent_commits
@@ -400,14 +406,15 @@ def _feed_sort_key(item: dict) -> datetime:
 @router.get("/feed", response_model=NotificationFeedOut)
 def get_notifications_feed(
     include_read: bool = False,
+    limit: int = 100,
     user: str = Depends(auth_utils.get_current_user),
 ):
     commit_items = []
 
     if include_read:
-        commit_source = get_git_update_items(user, include_done=True)
+        commit_source = get_git_update_items(user, include_done=True, limit=limit)
     else:
-        commit_source = get_unread_git_update_items(user)
+        commit_source = get_unread_git_update_items(user, limit=limit)
 
     for item in commit_source:
         commit_items.append(
@@ -423,7 +430,7 @@ def get_notifications_feed(
         include_done=include_read,
     )
     notifications = sorted(commit_items + remark_items, key=_feed_sort_key, reverse=True)
-    return NotificationFeedOut(notifications=notifications)
+    return NotificationFeedOut(notifications=notifications[:limit])
 
 
 def get_all_commit_ids_in_db(github_id):
@@ -442,20 +449,24 @@ def build_suttacentral_url(uid: str, lang: str, author_id: str) -> str:
 
 def parse_git_show_details(git_show_details_text):
     file_change_detail = []
-    diff_git_pattern = re.compile(r"diff --git a/([^\s]+)")
-    diff_content_pattern = re.compile(r'@@.*?@@(.*?)diff --git', re.DOTALL)
-    diff_git_matches = diff_git_pattern.findall(git_show_details_text)
-    change_blocks = diff_content_pattern.findall(
-        f'{git_show_details_text}diff --git'
-    )
+    diff_git_pattern = re.compile(r"^diff --git a/([^\s]+)", re.MULTILINE)
+    diff_git_matches = list(diff_git_pattern.finditer(git_show_details_text))
 
-    file_change_detail.extend(
-        {
-            "file_name": match.split("/")[-1],
-            "change_detail": change_blocks[i].strip(),
-        }
-        for i, match in enumerate(diff_git_matches)
-    )
+    for i, match in enumerate(diff_git_matches):
+        section_end = (
+            diff_git_matches[i + 1].start()
+            if i + 1 < len(diff_git_matches)
+            else len(git_show_details_text)
+        )
+        section = git_show_details_text[match.start():section_end]
+        change_match = re.search(r"@@.*?@@(.*)", section, re.DOTALL)
+        change_detail = change_match.group(1).strip() if change_match else ""
+        file_change_detail.append(
+            {
+                "file_name": match.group(1).split("/")[-1],
+                "change_detail": change_detail,
+            }
+        )
     return file_change_detail
 
 

@@ -73,6 +73,31 @@ index 123..456 100644
     assert result[1]['file_name'] == 'mn2_translation-en-sujato.json'
 
 
+def test_parse_git_show_details_handles_diff_without_hunks():
+    git_output = """
+diff --git a/mn1_translation-en-sujato.json b/mn1_translation-en-sujato.json
+old mode 100644
+new mode 100755
+diff --git a/mn2_translation-en-sujato.json b/mn2_translation-en-sujato.json
+index 123..456 100644
+--- a/mn2_translation-en-sujato.json
++++ b/mn2_translation-en-sujato.json
+@@ -1 +1 @@
+-foo
++bar
+"""
+    result = parse_git_show_details(git_output)
+
+    assert len(result) == 2
+    assert result[0] == {
+        "file_name": "mn1_translation-en-sujato.json",
+        "change_detail": "",
+    }
+    assert result[1]["file_name"] == "mn2_translation-en-sujato.json"
+    assert "-foo" in result[1]["change_detail"]
+    assert "+bar" in result[1]["change_detail"]
+
+
 def test_get_change_detail():
     parsed_details = [
         {'file_name': 'file1.json', 'change_detail': 'detail1'},
@@ -187,6 +212,22 @@ def test_get_notifications_feed_merges_and_sorts():
     assert len(result.notifications) == 2
     assert result.notifications[0]["notification_type"] == "remark"
     assert result.notifications[1]["notification_type"] == "commit"
+
+
+def test_get_notifications_feed_passes_limit_to_commit_source():
+    user = Mock(github_id=123)
+
+    with patch(
+        "app.api.api_v1.endpoints.notifications.get_git_update_items",
+        return_value=[],
+    ) as git_update_items, patch(
+        "app.api.api_v1.endpoints.notifications._build_remark_notification_items",
+        return_value=[],
+    ):
+        result = get_notifications_feed(include_read=True, limit=50, user=user)
+
+    git_update_items.assert_called_once_with(user, include_done=True, limit=50)
+    assert result.notifications == []
 
 
 def test_mark_notification_as_done_by_type_commit_uses_legacy_endpoint():

@@ -157,7 +157,7 @@ function notificationsPanel() {
             this.loading = true;
             try {
                 const response = await requestWithTokenRetry(
-                    'notifications/feed?include_read=true'
+                    'notifications/feed?include_read=true&limit=100'
                 );
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
