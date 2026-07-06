@@ -2,6 +2,7 @@ function fetchTranslation() {
     const REMARKS_PREFIX = "remarks:";
     return {
         translations: [],
+        loading: true,
         relatedProjects: [],
         remarkUsers: [],
         currentUserGithubId: null,
@@ -72,6 +73,14 @@ function fetchTranslation() {
             return !!key && key.startsWith('translation-') && this.isCurrentUserMuid(key);
         },
         async init() {
+            this.loading = true;
+            try {
+                await this.initialize();
+            } finally {
+                this.loading = false;
+            }
+        },
+        async initialize() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
             const muid = params.get("muid");

@@ -178,7 +178,29 @@
             @toggle-search-panel.window="toggleSearchPanel()"
             @show-search-panel.window="showSearchPanelTemporarily()"
             @resize.window="if(localStorage.getItem(searchPanelPreferenceKey) === null && window.innerWidth >= 1280) searchPanelVisible = true">
+            <div class="translation-grid-skeleton"
+                x-show="loading"
+                x-cloak
+                role="status"
+                aria-label="Loading translation text">
+                <div class="translation-grid-skeleton__header">
+                    <div class="translation-grid-skeleton__block translation-grid-skeleton__title"></div>
+                    <div class="translation-grid-skeleton__block translation-grid-skeleton__title"></div>
+                </div>
+                <div class="translation-grid-skeleton__body">
+                    <template x-for="row in 8" :key="row">
+                        <div class="translation-grid-skeleton__row">
+                            <div class="translation-grid-skeleton__block translation-grid-skeleton__uid"></div>
+                            <div class="translation-grid-skeleton__block translation-grid-skeleton__text"></div>
+                            <div class="translation-grid-skeleton__block translation-grid-skeleton__text"></div>
+                        </div>
+                    </template>
+                </div>
+                <span class="translation-grid-skeleton__status">Loading translation text</span>
+            </div>
             <div class="translation-grid"
+                x-show="!loading"
+                x-cloak
                 x-data="{
                     columnWidths: [],
                     isDragging: false,

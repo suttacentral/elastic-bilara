@@ -886,6 +886,110 @@ sl-dialog::part(title) {
     margin-top: var(--space-sm);
 }
 
+.translation-grid-skeleton {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    margin: 0 4px 48px 8px;
+    padding: var(--space-sm);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    background-color: var(--color-background-tertiary);
+    overflow: clip;
+    position: relative;
+    min-height: 100vh;
+}
+
+.translation-grid-skeleton__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-sm);
+    padding-left: 112px;
+    margin-bottom: var(--space-sm);
+    min-height: 32px;
+}
+
+.translation-grid-skeleton__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.translation-grid-skeleton__row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-sm);
+    min-height: 84px;
+}
+
+.translation-grid-skeleton__block {
+    background: linear-gradient(
+        90deg,
+        var(--color-background-secondary) 0%,
+        var(--color-background) 50%,
+        var(--color-background-secondary) 100%
+    );
+    background-size: 200% 100%;
+    border-radius: var(--radius-sm);
+    animation: translation-grid-skeleton-loading 1.4s ease-in-out infinite;
+}
+
+.translation-grid-skeleton__title {
+    height: 24px;
+}
+
+.translation-grid-skeleton__uid {
+    height: 20px;
+}
+
+.translation-grid-skeleton__text {
+    height: 76px;
+}
+
+.translation-grid-skeleton__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@keyframes translation-grid-skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .translation-grid-skeleton__header {
+        grid-template-columns: minmax(0, 1fr);
+        padding-left: 80px;
+    }
+
+    .translation-grid-skeleton__header .translation-grid-skeleton__title:last-child,
+    .translation-grid-skeleton__row .translation-grid-skeleton__text:last-child {
+        display: none;
+    }
+
+    .translation-grid-skeleton__row {
+        grid-template-columns: 72px minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .translation-grid-skeleton__block {
+        animation: none;
+    }
+}
+
 .translation-grid {
     display: flex;
     flex-direction: column;
