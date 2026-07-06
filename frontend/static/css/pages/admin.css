@@ -8,8 +8,8 @@
 .admin-main {
     flex: 1;
     display: flex;
-    gap: var(--space-xl);
-    padding: var(--space-xl);
+    gap: var(--space-md);
+    padding: var(--space-md);
     max-width: 1600px;
     margin: 0 auto;
     width: 100%;
@@ -17,8 +17,8 @@
 }
 
 .admin-sidebar {
-    width: 240px;
-    min-width: 240px;
+    width: 180px;
+    min-width: 180px;
     flex-shrink: 0;
 }
 
