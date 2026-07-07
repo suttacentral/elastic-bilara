@@ -49,6 +49,16 @@ def get_muid(file_path: Path) -> str:
     return "-".join(after_unpublished[:3])
 
 
+def muid_from_relative_path(path: str | None) -> str | None:
+    """Extract muid from a relative path by joining the first 3 segments with '-'."""
+    if not path:
+        return None
+    parts = [part for part in Path(path).parts if part and part != "/"]
+    if len(parts) < 3:
+        return None
+    return "-".join(parts[:3])
+
+
 def yield_file_path(work_dir: Path, level: int = 0) -> Generator[Path, None, None]:
     for file in os.listdir(work_dir):
         if file.startswith("."):

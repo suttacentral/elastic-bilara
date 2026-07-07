@@ -379,6 +379,52 @@ class TestGetGitStatus:
         assert data["files"][0]["path"] == "translation/en/ann/s2.json"
 
     @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.git_ops.permissions.can_edit_translation")
+    @patch("app.api.api_v1.endpoints.git_ops.get_status_name", return_value="modified")
+    @patch("app.api.api_v1.endpoints.git_ops.Repository")
+    @patch("app.api.api_v1.endpoints.git_ops.ensure_safe_directory")
+    async def test_get_git_status_non_admin_includes_project_authorized_file(
+        self,
+        mock_ensure_safe,
+        mock_repository_class,
+        mock_get_status_name,
+        mock_can_edit_translation,
+        async_client,
+        mock_get_current_user,
+        mock_is_admin_or_superuser_is_active,
+    ):
+        mock_repo = MagicMock()
+        mock_repository_class.return_value = mock_repo
+        mock_repo.status.return_value = {
+            "translation/zh/blurb/an-blurbs_translation-zh.json": GIT_STATUS_WT_MODIFIED,
+            "translation/en/other/secret.json": GIT_STATUS_WT_MODIFIED,
+        }
+        mock_can_edit_translation.side_effect = lambda github_id, muid: muid == "translation-zh-blurb"
+
+        non_admin_user = User(
+            id=2,
+            github_id=245489521,
+            username="dhammaisland",
+            email="dhammaisland@example.com",
+            avatar_url="some_url.com",
+            role=Role.WRITER.value,
+            created_on=datetime.datetime.utcnow(),
+            last_login=datetime.datetime.utcnow(),
+            is_active=True,
+        )
+
+        with patch(
+            "app.api.api_v1.endpoints.git_ops.get_user",
+            return_value=non_admin_user,
+        ):
+            response = await async_client.get("/git/status")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["files"][0]["path"] == "translation/zh/blurb/an-blurbs_translation-zh.json"
+
+    @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.git_ops.get_status_name", return_value="modified")
     @patch("app.api.api_v1.endpoints.git_ops.Repository")
     @patch("app.api.api_v1.endpoints.git_ops.ensure_safe_directory")

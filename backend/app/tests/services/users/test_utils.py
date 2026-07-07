@@ -5,6 +5,7 @@ from app.db.models.user import User as mUser
 from app.db.schemas.user import User
 from app.services.users.utils import (
     add_user_to_db,
+    check_creator_github_handle_in_list,
     get_roles,
     get_user,
     is_user_active,
@@ -33,6 +34,31 @@ class TestUserUtils:
         assert any(
             username in publication["creator_github_handle"]
             for publication in publications(creator_github_handle=username)
+        )
+
+    def test_check_creator_github_handle_in_list_accepts_creator_list(self) -> None:
+        assert check_creator_github_handle_in_list(
+            "wcang",
+            [
+                {
+                    "creator_github_handle": [
+                        "ihongda",
+                        "tsungmaolee",
+                        "wcang",
+                        "YingChen-Jane",
+                    ]
+                }
+            ],
+        )
+
+    def test_check_creator_github_handle_in_list_accepts_comma_separated_creator_string(self) -> None:
+        assert check_creator_github_handle_in_list(
+            "dhammaisland",
+            [
+                {
+                    "creator_github_handle": "ihongda,tsungmaolee,wcang,YingChen-Jane,dhammaisland"
+                }
+            ],
         )
 
     def test_check_creator_github_handle_not_in_list(self, github_data, projects, publications) -> None:

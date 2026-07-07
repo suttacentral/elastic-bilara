@@ -22,8 +22,20 @@ def is_username_in_muid(username: str, muid: str) -> bool:
     return username.lower() == muid.split("-", 2)[2].lower()
 
 
+def creator_github_handle_matches(username: str, creator_github_handle: str | list[str] | None) -> bool:
+    if isinstance(creator_github_handle, list):
+        return any(_creator_github_handle_matches(username, handle) for handle in creator_github_handle)
+    if isinstance(creator_github_handle, str):
+        return any(_creator_github_handle_matches(username, handle) for handle in creator_github_handle.split(","))
+    return False
+
+
+def _creator_github_handle_matches(username: str, creator_github_handle: str) -> bool:
+    return creator_github_handle.strip().lower() == username.lower()
+
+
 def check_creator_github_handle_in_list(username: str, item_list: list[dict]) -> bool:
-    return username in [item["creator_github_handle"] for item in item_list]
+    return any(creator_github_handle_matches(username, item.get("creator_github_handle")) for item in item_list)
 
 
 def add_user_to_db(data: dict[str, str | int]) -> tuple[bool, UserBase | None]:

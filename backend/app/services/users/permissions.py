@@ -2,26 +2,28 @@ from app.core.config import settings
 from app.db.models.user import Role
 from app.db.schemas.user import User, UserBase
 from app.services.auth.utils import get_credentials_exception
-from app.services.users.utils import get_user, is_username_in_muid
+from app.services.users.utils import creator_github_handle_matches, get_user, is_username_in_muid
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
-from search.utils import get_json_data
+from search.utils import get_json_data, muid_from_relative_path
 
 
-def can_edit_translation(github_id: int, muid: str) -> bool:
+def can_edit_translation(
+    github_id: int, muid: str, *, projects: list[dict] | None = None
+) -> bool:
     user: UserBase = get_user(github_id)
     if user.role == Role.ADMIN.value:
         return True
     if muid.startswith("tag"):
         return is_user_in_admin_group(user)
+    if projects is None:
+        projects = get_json_data(settings.WORK_DIR / "_project-v2.json")
+    if any(owns_project(user.username, project, muid) for project in projects):
+        return True
     if user.role == Role.REVIEWER.value:
         return False
     if muid.startswith(("translation", "comment")) and is_username_in_muid(user.username, muid):
         return True
-    projects: list[dict] = get_json_data(settings.WORK_DIR / "_project-v2.json")
-    if user.role == Role.WRITER.value:
-        if any(owns_project(user.username, project, muid) for project in projects):
-            return True
     return False
 
 
@@ -30,7 +32,15 @@ def owns_project(
     project: dict,
     muid: str,
 ) -> bool:
-    return project.get("translation_muids") == muid and project.get("creator_github_handle") == username
+    return _project_matches_muid(project, muid) and creator_github_handle_matches(
+        username, project.get("creator_github_handle")
+    )
+
+
+def _project_matches_muid(project: dict, muid: str) -> bool:
+    if project.get("translation_muids") == muid:
+        return True
+    return muid_from_relative_path(project.get("translation_path")) == muid
 
 
 def is_user_in_admin_group(user: UserBase) -> bool:

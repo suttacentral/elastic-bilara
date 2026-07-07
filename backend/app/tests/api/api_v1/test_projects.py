@@ -133,6 +133,35 @@ class TestProjects:
         }
 
     @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.search.add_to_index")
+    @patch("app.api.api_v1.endpoints.projects.yield_file_path")
+    @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
+    @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
+    @patch("app.api.api_v1.endpoints.projects.get_json_data")
+    async def test_get_json_data_for_prefix_in_project_discovers_unindexed_project_file(
+        self,
+        mock_get_json_data,
+        mock_can_edit_translation,
+        mock_get_file_paths,
+        mock_yield_file_path,
+        mock_add_to_index,
+        async_client,
+        mock_get_current_user,
+    ) -> None:
+        file_path = settings.WORK_DIR / "translation/zh/blurb/an-blurbs_translation-zh.json"
+        mock_get_file_paths.return_value = set()
+        mock_yield_file_path.return_value = [file_path]
+        mock_can_edit_translation.return_value = True
+        mock_get_json_data.return_value = {"an1:0.1": "Test"}
+
+        response = await async_client.get("/projects/translation-zh-blurb/an-blurbs/")
+
+        assert response.status_code == 200
+        assert response.json()["can_edit"] is True
+        assert response.json()["data"] == {"an1:0.1": "Test"}
+        mock_add_to_index.assert_called_once_with(file_path)
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "can_edit, data",
         [

@@ -38,6 +38,18 @@ describe('git status administrator visibility', () => {
         expect(panel.isFileOwnedByCurrentUser(panel.files[1])).toBe(false);
     });
 
+    test('non-admin users see project-authorized files returned by the backend', () => {
+        panel.isAdmin = false;
+        panel.username = 'dhammaisland';
+        panel.files = [
+            { path: 'translation/zh/blurb/an-blurbs_translation-zh.json', status: 'modified' }
+        ];
+
+        expect(panel.filteredFiles.map(file => file.path)).toEqual([
+            'translation/zh/blurb/an-blurbs_translation-zh.json'
+        ]);
+    });
+
     test('hiding other users clears a hidden selected file and resets pagination', async () => {
         panel.showOtherUsersChanges = true;
         panel.selectedFile = panel.files[2].path;

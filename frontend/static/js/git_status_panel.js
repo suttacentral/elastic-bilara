@@ -110,7 +110,7 @@ function gitStatusPanel() {
 
         get filteredFiles() {
             const searchText = this.filterText.trim().toLowerCase();
-            const filterByOwner = !this.isAdmin || !this.showOtherUsersChanges;
+            const filterByOwner = this.isAdmin && !this.showOtherUsersChanges;
             const cacheKey = [
                 this.isAdmin ? 'admin' : 'user',
                 this.showOtherUsersChanges ? 'all-users' : 'own-files',

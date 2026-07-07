@@ -15,6 +15,7 @@ from app.services.git.manager import GitManager
 from app.services.users import permissions
 from app.services.users.utils import get_user
 from app.tasks import commit, pull, push
+from search.utils import get_json_data, muid_from_relative_path
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pygit2 import (
     GitError,
@@ -88,6 +89,21 @@ def _is_user_file_allowed(file_path: str, username: str) -> bool:
     return any(part.lower() == username_lower for part in Path(file_path).parts)
 
 
+def _can_user_access_file(
+    file_path: str, user: UserBase, *, projects: list[dict] | None = None
+) -> bool:
+    if _is_user_file_allowed(file_path, user.username):
+        return True
+
+    muid = muid_from_relative_path(file_path)
+    if not muid:
+        return False
+
+    return permissions.can_edit_translation(
+        int(user.github_id), muid, projects=projects
+    )
+
+
 def _has_meaningful_json_value(value) -> bool:
     if isinstance(value, dict):
         return any(_has_meaningful_json_value(item) for item in value.values())
@@ -136,6 +152,10 @@ async def get_git_status(
     is_admin = current_user.role in [Role.ADMIN.value, Role.SUPERUSER.value]
     show_other_users = is_admin and include_other_users
 
+    projects: list[dict] | None = None
+    if not is_admin and not show_other_users:
+        projects = get_json_data(settings.WORK_DIR / "_project-v2.json")
+
     try:
         repo = Repository(str(repo_path))
 
@@ -145,11 +165,14 @@ async def get_git_status(
         for filepath, status_code in status_dict.items():
             if status_code == 0 or not fileFilter(Path(filepath)):
                 continue
-            if not show_other_users and not _is_user_file_allowed(
-                filepath,
-                current_user.username,
-            ):
-                continue
+            if not show_other_users:
+                can_access = (
+                    _is_user_file_allowed(filepath, current_user.username)
+                    if is_admin
+                    else _can_user_access_file(filepath, current_user, projects=projects)
+                )
+                if not can_access:
+                    continue
             if (
                 status_code & GIT_STATUS_WT_NEW
                 and not (status_code & GIT_STATUS_INDEX_NEW)
@@ -211,10 +234,7 @@ async def get_file_diff(
     repo_path = settings.WORK_DIR
     file_path = _validate_file_path(file_path, repo_path)
 
-    if not is_admin and not _is_user_file_allowed(
-        file_path,
-        current_user.username,
-    ):
+    if not is_admin and not _can_user_access_file(file_path, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to view this file's diff",
@@ -353,10 +373,7 @@ async def discard_file_changes(
     repo_path = settings.WORK_DIR
     file_path = _validate_file_path(request.file_path, repo_path)
 
-    if not is_admin and not _is_user_file_allowed(
-        file_path,
-        current_user.username,
-    ):
+    if not is_admin and not _can_user_access_file(file_path, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to discard changes to this file",

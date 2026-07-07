@@ -25,18 +25,26 @@ class TestUserPermissions:
             (Role.REVIEWER.value, False),
         ],
     )
+    @patch("app.services.users.permissions.get_json_data")
     @patch("app.services.users.permissions.get_user")
-    def test_can_edit_translation_based_on_role(self, mock_get_user, user, muids, role, expected) -> None:
+    def test_can_edit_translation_based_on_role(
+        self, mock_get_user, mock_get_json_data, user, muids, role, expected
+    ) -> None:
         user.role = role
         mock_get_user.return_value = user
+        mock_get_json_data.return_value = []
 
         assert can_edit_translation(user.github_id, muids[0]) == expected
 
+    @patch("app.services.users.permissions.get_json_data")
     @patch("app.services.users.permissions.get_user")
     @patch("app.services.users.permissions.is_username_in_muid")
-    def test_can_edit_translation_username_in_muid(self, mock_is_user_in_muid, mock_get_user, user, muids) -> None:
+    def test_can_edit_translation_username_in_muid(
+        self, mock_is_user_in_muid, mock_get_user, mock_get_json_data, user, muids
+    ) -> None:
         mock_is_user_in_muid.return_value = True
         mock_get_user.return_value = user
+        mock_get_json_data.return_value = []
         assert can_edit_translation(user.github_id, muids[0])
 
     @pytest.mark.parametrize(
@@ -68,6 +76,24 @@ class TestUserPermissions:
         mock_get_json_data.return_value = projects()
 
         assert can_edit_translation(user.github_id, muids[0]) == expected
+
+    @patch("app.services.users.permissions.get_user")
+    @patch("app.services.users.permissions.get_json_data")
+    def test_can_edit_translation_uses_project_translation_path_and_creator_list(
+        self, mock_get_json_data, mock_get_user, user
+    ) -> None:
+        user.role = Role.REVIEWER.value
+        user.username = "wcang"
+        mock_get_user.return_value = user
+        mock_get_json_data.return_value = [
+            {
+                "translation_path": "translation/zh/blurb",
+                "translation_muids": "translation-zh",
+                "creator_github_handle": ["ihongda", "tsungmaolee", "wcang", "YingChen-Jane"],
+            }
+        ]
+
+        assert can_edit_translation(user.github_id, "translation-zh-blurb")
 
     @pytest.mark.parametrize(
         "role, expected",

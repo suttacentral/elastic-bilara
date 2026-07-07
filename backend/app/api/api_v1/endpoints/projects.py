@@ -74,6 +74,39 @@ def _write_project_v2(data: list[dict]):
         f.write("\n")
 
 
+def _get_project_file_paths(muid: str, prefix: str) -> set[str]:
+    file_paths: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True, _type="file_path")
+    if file_paths:
+        return file_paths
+
+    file_path = _find_project_file_on_disk(muid, prefix)
+    if not file_path:
+        return set()
+
+    search.add_to_index(file_path)
+    return {str(file_path)}
+
+
+def _find_project_file_on_disk(muid: str, prefix: str) -> Path | None:
+    # split("-", 2) yields at most 3 parts:
+    #   2-segment muids (e.g. "translation-zh") → returns None (safe; ES handles these)
+    #   4-segment muids (e.g. "translation-pt-laera-quaresma") → merged into 3 parts,
+    #     producing the correct directory path "translation/pt/laera-quaresma"
+    parts = muid.split("-", 2)
+    if len(parts) != 3:
+        return None
+
+    project_dir = settings.WORK_DIR.joinpath(*parts)
+    if not project_dir.exists():
+        return None
+
+    for file_path in yield_file_path(project_dir, level=1):
+        if get_prefix(file_path) == prefix and get_muid(file_path) == muid:
+            return file_path
+
+    return None
+
+
 class ProjectV2In(BaseModel):
     project_uid: str
     name: str = ""
@@ -343,17 +376,7 @@ async def get_can_edit(user: Annotated[UserBase, Depends(utils.get_current_user)
 async def get_json_data_for_prefix_in_project(
     user: Annotated[UserBase, Depends(utils.get_current_user)], muid: str, prefix: str
 ) -> JSONDataOut:
-    file: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True, _type="file_path")
-
-    # Auto-discover and index tag files that exist on disk but aren't in ES
-    if not file and muid.startswith("tag"):
-        tag_dir = settings.WORK_DIR / "tag"
-        if tag_dir.exists():
-            for f in yield_file_path(tag_dir, level=1):
-                if get_prefix(f) == prefix:
-                    search.add_to_index(f)
-                    file = {str(f)}
-                    break
+    file: set[str] = _get_project_file_paths(muid, prefix)
 
     if not file:
         raise HTTPException(
@@ -393,17 +416,7 @@ async def update_json_data_for_prefix_in_project(
                     detail=f"Invalid tags: {', '.join(invalid_tags)}. Tags must be defined in the tag list.",
                 )
 
-    file: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True, _type="file_path")
-
-    # Auto-discover and index tag files that exist on disk but aren't in ES
-    if not file and muid.startswith("tag"):
-        tag_dir = settings.WORK_DIR / "tag"
-        if tag_dir.exists():
-            for f in yield_file_path(tag_dir, level=1):
-                if get_prefix(f) == prefix:
-                    search.add_to_index(f)
-                    file = {str(f)}
-                    break
+    file: set[str] = _get_project_file_paths(muid, prefix)
 
     if not file:
         raise HTTPException(
