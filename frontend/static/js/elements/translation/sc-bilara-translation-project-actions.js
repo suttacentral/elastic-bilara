@@ -79,7 +79,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
           <button
               x-data="{params: new URLSearchParams(window.location.search), processing: false}"
               class="project-header__nav-button btn--split btn--confirm-split-merge"
-              x-show="translation.canEdit && isAdmin && splitting && isRoot && uid === splittingUid"
+              x-show="isAdmin && splitting && isRoot && uid === splittingUid"
               :disabled="processing || splitMergeProcessing"
               :class="{'btn--disabled': processing || splitMergeProcessing}"
               @click="
@@ -115,7 +115,7 @@ export class ScBilaraTranslationProjectActions extends LitElement {
           <button
               x-data="{params: new URLSearchParams(window.location.search), processing: false}"
               class="project-header__nav-button btn--merge btn--confirm-split-merge"
-              x-show="translation.canEdit && isAdmin && merging && isRoot && uid === mergingUid"
+              x-show="isAdmin && merging && isRoot && uid === mergingUid"
               :disabled="processing || splitMergeProcessing"
               :class="{'btn--disabled': processing || splitMergeProcessing}"
               @click="
