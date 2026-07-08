@@ -1264,6 +1264,10 @@ sl-dialog::part(title) {
     visibility: hidden;
 }
 
+.project-container__content-body__action sc-bilara-translation-project-actions {
+    display: contents;
+}
+
 .btn--split:hover,
 .btn--merge:hover,
 .btn--cancel:hover {

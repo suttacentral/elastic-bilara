@@ -16,11 +16,6 @@ export class ScBilaraTranslationProjectActions extends LitElement {
 
   render() {
     return html`
-      <div class="project-container__content-body__action">
-          <span class="project-container__content-body__text-uid"
-              :class="{'project-container__content-body__text--hide': translation.muid !== new URLSearchParams(window.location.search).get('source')}"
-              x-text="uid">
-          </span>
           <button class="project-header__nav-button btn--split btn--preview-action"
               x-data="{ caption: 'split', previewProcessing: false }"
               @click="withGuard($data, 'previewProcessing', async () => {
@@ -152,7 +147,6 @@ export class ScBilaraTranslationProjectActions extends LitElement {
                   Processing...
               </span>
           </button>
-      </div>
     `;
   }
 }

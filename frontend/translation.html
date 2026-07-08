@@ -618,11 +618,19 @@
                                             hintCount = Number($event.detail.hint_count) || 5;
                                         ">
 
-                                        <!-- Action buttons (split/merge) -->
-                                        <sc-bilara-translation-project-actions
-                                            :style="isRemarkProject(translation.muid) ? 'visibility: hidden;' : ''"
-                                            class="translation-cell__actions">
-                                        </sc-bilara-translation-project-actions>
+                                        <!-- Source uid and admin-only split/merge actions -->
+                                        <div class="translation-cell__actions"
+                                            :style="isRemarkProject(translation.muid) ? 'visibility: hidden;' : ''">
+                                            <div class="project-container__content-body__action">
+                                                <span class="project-container__content-body__text-uid"
+                                                    :class="{'project-container__content-body__text--hide': !translation.isSource}"
+                                                    x-text="uid">
+                                                </span>
+                                                <template x-if="isAdmin && isActive && translation.isSource">
+                                                    <sc-bilara-translation-project-actions></sc-bilara-translation-project-actions>
+                                                </template>
+                                            </div>
+                                        </div>
 
                                         <div class="translation-cell__textarea-wrapper">
                                             <template x-if="merging && uid === merger_uid && getMergePreviewParts(translation, uid)">
