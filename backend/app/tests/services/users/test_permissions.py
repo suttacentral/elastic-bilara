@@ -36,6 +36,23 @@ class TestUserPermissions:
 
         assert can_edit_translation(user.github_id, muids[0]) == expected
 
+    @pytest.mark.parametrize("muid", ["root-pli-test", "html-en-test"])
+    @patch("app.services.users.permissions.get_user")
+    def test_superuser_can_edit_root_and_html_text(self, mock_get_user, user, muid) -> None:
+        user.role = Role.SUPERUSER.value
+        mock_get_user.return_value = user
+
+        assert can_edit_translation(user.github_id, muid, projects=[])
+
+    @patch("app.services.users.permissions.get_user")
+    def test_can_edit_translation_reuses_provided_user(self, mock_get_user, user) -> None:
+        user.role = Role.ADMIN.value
+
+        assert can_edit_translation(
+            user.github_id, "translation-en-test", projects=[], user=user
+        )
+        mock_get_user.assert_not_called()
+
     @patch("app.services.users.permissions.get_json_data")
     @patch("app.services.users.permissions.get_user")
     @patch("app.services.users.permissions.is_username_in_muid")

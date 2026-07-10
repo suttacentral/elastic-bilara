@@ -399,7 +399,9 @@ class TestGetGitStatus:
             "translation/zh/blurb/an-blurbs_translation-zh.json": GIT_STATUS_WT_MODIFIED,
             "translation/en/other/secret.json": GIT_STATUS_WT_MODIFIED,
         }
-        mock_can_edit_translation.side_effect = lambda github_id, muid: muid == "translation-zh-blurb"
+        mock_can_edit_translation.side_effect = (
+            lambda github_id, muid, **kwargs: muid == "translation-zh-blurb"
+        )
 
         non_admin_user = User(
             id=2,

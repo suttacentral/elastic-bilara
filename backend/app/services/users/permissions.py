@@ -9,10 +9,17 @@ from search.utils import get_json_data, muid_from_relative_path
 
 
 def can_edit_translation(
-    github_id: int, muid: str, *, projects: list[dict] | None = None
+    github_id: int,
+    muid: str,
+    *,
+    projects: list[dict] | None = None,
+    user: UserBase | None = None,
 ) -> bool:
-    user: UserBase = get_user(github_id)
-    if user.role == Role.ADMIN.value:
+    if user is None:
+        user = get_user(github_id)
+    if user.role == Role.ADMIN.value or (
+        user.role == Role.SUPERUSER.value and (muid.startswith("root") or muid.startswith("html"))
+    ):
         return True
     if muid.startswith("tag"):
         return is_user_in_admin_group(user)

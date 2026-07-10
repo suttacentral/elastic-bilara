@@ -100,7 +100,7 @@ def _can_user_access_file(
         return False
 
     return permissions.can_edit_translation(
-        int(user.github_id), muid, projects=projects
+        int(user.github_id), muid, projects=projects, user=user
     )
 
 

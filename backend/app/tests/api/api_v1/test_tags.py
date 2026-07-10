@@ -272,10 +272,12 @@ class TestTagDataFile:
         assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
 
     @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.tags.Path.exists", return_value=True)
     @patch("app.api.api_v1.endpoints.tags.yield_file_path")
     @patch("app.api.api_v1.endpoints.tags.search")
     async def test_reindex_tag_files_admin(
-        self, mock_search, mock_yield, mock_get_current_user_admin, mock_is_admin_or_superuser_is_active, user, async_client
+        self, mock_search, mock_yield, mock_exists, mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active, user, async_client
     ):
         """Admin can reindex all tag files."""
         mock_file1 = Path("/app/checkouts/unpublished/tag/pli/ms/sutta/sn/sn1/sn1.1_tag.json")
