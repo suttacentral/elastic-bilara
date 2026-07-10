@@ -237,6 +237,8 @@ export class SCBilaraSettingsDialog extends LitElement {
     _loading: { type: Boolean, state: true },
     _saving: { type: Boolean, state: true },
     _settings: { type: Object, state: true },
+    _canUseStructureEditing: { type: Boolean, state: true },
+    _structureEditingEnabled: { type: Boolean, state: true },
     _toast: { type: Object, state: true },
   };
 
@@ -252,12 +254,19 @@ export class SCBilaraSettingsDialog extends LitElement {
       hint_style: 'dropdown',
       hint_count: 5,
     };
+    this._structureEditingPreferenceKey = 'bilara:translation:structure-editing-enabled';
+    this._canUseStructureEditing = false;
+    this._structureEditingEnabled = false;
     this._toast = { show: false, message: '', variant: 'primary' };
   }
 
   async show() {
     this.open = true;
-    await this._loadSettings();
+    this._structureEditingEnabled = this._getStoredStructureEditingEnabled();
+    await Promise.all([
+      this._loadSettings(),
+      this._loadUserAccess(),
+    ]);
   }
 
   hide() {
@@ -285,6 +294,30 @@ export class SCBilaraSettingsDialog extends LitElement {
     }
   }
 
+  async _loadUserAccess() {
+    this._canUseStructureEditing = false;
+    try {
+      if (typeof getUserInfo !== 'function') return;
+      const userInfo = getUserInfo();
+      await userInfo.getRole();
+      const adminRole = typeof ROLES !== 'undefined' ? ROLES.admin : 'administrator';
+      const superuserRole = typeof ROLES !== 'undefined' ? ROLES.superuser : 'superuser';
+      this._canUseStructureEditing = !!userInfo.isActive &&
+        (userInfo.role === adminRole || userInfo.role === superuserRole);
+    } catch (err) {
+      console.error('Failed to load user access for settings:', err);
+      this._canUseStructureEditing = false;
+    }
+  }
+
+  _getStoredStructureEditingEnabled() {
+    return localStorage.getItem(this._structureEditingPreferenceKey) === 'true';
+  }
+
+  _saveStructureEditingPreference() {
+    localStorage.setItem(this._structureEditingPreferenceKey, String(this._structureEditingEnabled));
+  }
+
   async _saveSettings() {
     this._saving = true;
     try {
@@ -295,9 +328,17 @@ export class SCBilaraSettingsDialog extends LitElement {
         body: JSON.stringify(this._settings),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      if (this._canUseStructureEditing) {
+        this._saveStructureEditingPreference();
+      }
       this._showToast('Settings saved', 'success');
       this.dispatchEvent(new CustomEvent('settings-saved', {
-        detail: { ...this._settings },
+        detail: {
+          ...this._settings,
+          structure_editing_enabled: this._canUseStructureEditing
+            ? this._structureEditingEnabled
+            : this._getStoredStructureEditingEnabled(),
+        },
         bubbles: true,
         composed: true,
       }));
@@ -337,6 +378,10 @@ export class SCBilaraSettingsDialog extends LitElement {
 
   _onHintCountChange(e) {
     this._settings = { ...this._settings, hint_count: Number(e.target.value) };
+  }
+
+  _onStructureEditingChange(e) {
+    this._structureEditingEnabled = e.target.checked;
   }
 
   _onRequestClose(e) {
@@ -471,6 +516,26 @@ export class SCBilaraSettingsDialog extends LitElement {
                   </sl-select>
                 </div>
               </div>
+
+              ${this._canUseStructureEditing
+                ? html`
+                  <div class="setting-row">
+                    <div class="setting-label">
+                      <span class="title">
+                        <sl-icon library="bi" name="tools"></sl-icon>
+                        Structure Editing
+                      </span>
+                      <span class="description">Show split and merge controls in source text cells</span>
+                    </div>
+                    <div class="setting-control">
+                      <sl-switch
+                        ?checked=${this._structureEditingEnabled}
+                        @sl-change=${this._onStructureEditingChange}
+                      ></sl-switch>
+                    </div>
+                  </div>
+                `
+                : ''}
             </div>
           `}
 

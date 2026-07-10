@@ -131,7 +131,9 @@
         <div class="project-container"
             x-data="{
                 searchPanelPreferenceKey: 'bilara:translation:search-panel-visible',
+                structureEditingPreferenceKey: 'bilara:translation:structure-editing-enabled',
                 searchPanelVisible: false,
+                structureEditingEnabled: false,
                 searchPanelWidth: 280,
                 isPanelDragging: false,
                 panelStartX: 0,
@@ -140,14 +142,22 @@
                 maxPanelWidth: 500,
                 init() {
                     this.searchPanelVisible = this.getStoredSearchPanelVisible();
+                    this.structureEditingEnabled = this.getStoredStructureEditingEnabled();
                 },
                 getStoredSearchPanelVisible() {
                     const stored = localStorage.getItem(this.searchPanelPreferenceKey);
                     return stored === null ? window.innerWidth >= 1280 : stored === 'true';
                 },
+                getStoredStructureEditingEnabled() {
+                    return localStorage.getItem(this.structureEditingPreferenceKey) === 'true';
+                },
                 toggleSearchPanel() {
                     this.searchPanelVisible = !this.searchPanelVisible;
                     localStorage.setItem(this.searchPanelPreferenceKey, String(this.searchPanelVisible));
+                },
+                setStructureEditingEnabled(enabled) {
+                    this.structureEditingEnabled = !!enabled;
+                    localStorage.setItem(this.structureEditingPreferenceKey, String(this.structureEditingEnabled));
                 },
                 showSearchPanelTemporarily() {
                     this.searchPanelVisible = true;
@@ -176,6 +186,7 @@
             @mousemove.window="onPanelResize($event)"
             @mouseup.window="stopPanelResize()"
             @toggle-search-panel.window="toggleSearchPanel()"
+            @settings-saved.window="if ($event.detail && 'structure_editing_enabled' in $event.detail) setStructureEditingEnabled($event.detail.structure_editing_enabled)"
             @show-search-panel.window="showSearchPanelTemporarily()"
             @resize.window="if(localStorage.getItem(searchPanelPreferenceKey) === null && window.innerWidth >= 1280) searchPanelVisible = true">
             <div class="translation-grid-skeleton"
@@ -626,7 +637,7 @@
                                                     :class="{'project-container__content-body__text--hide': !translation.isSource}"
                                                     x-text="uid">
                                                 </span>
-                                                <template x-if="isAdmin && isActive && translation.isSource">
+                                                <template x-if="isAdmin && isActive && translation.isSource && structureEditingEnabled">
                                                     <sc-bilara-translation-project-actions></sc-bilara-translation-project-actions>
                                                 </template>
                                             </div>

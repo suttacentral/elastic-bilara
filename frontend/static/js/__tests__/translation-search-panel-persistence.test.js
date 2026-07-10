@@ -34,4 +34,12 @@ describe('translation search panel persistence', () => {
         expect(projectHeaderJs).toContain('localStorage.setItem(this.searchPanelPreferenceKey, String(this.panelVisible));');
         expect(projectHeaderJs).toContain('@show-search-panel.window="panelVisible = true"');
     });
+
+    test('header message alert style stays centered and fills available space', () => {
+        expect(projectHeaderJs).toContain('flex: 1 1 auto;');
+        expect(projectHeaderJs).toContain('.project-header__message--show');
+        expect(projectHeaderJs).toContain('justify-content: center;');
+        expect(projectHeaderJs).toContain('color: var(--color-text-on-strong);');
+        expect(projectHeaderJs).toContain('flex: 0 1 360px;');
+    });
 });

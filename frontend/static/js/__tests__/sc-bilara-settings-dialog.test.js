@@ -23,6 +23,9 @@ function createComponent() {
     _loading: false,
     _saving: false,
     _settings: { pali_lookup: true, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 5 },
+    _structureEditingPreferenceKey: 'bilara:translation:structure-editing-enabled',
+    _canUseStructureEditing: false,
+    _structureEditingEnabled: false,
     _toast: { show: false, message: '', variant: 'primary' },
 
     // --- event tracking ---
@@ -34,7 +37,11 @@ function createComponent() {
     // --- methods copied from the real component ---
     async show() {
       this.open = true;
-      await this._loadSettings();
+      this._structureEditingEnabled = this._getStoredStructureEditingEnabled();
+      await Promise.all([
+        this._loadSettings(),
+        this._loadUserAccess(),
+      ]);
     },
 
     hide() {
@@ -62,6 +69,30 @@ function createComponent() {
       }
     },
 
+    async _loadUserAccess() {
+      this._canUseStructureEditing = false;
+      try {
+        if (typeof getUserInfo !== 'function') return;
+        const userInfo = getUserInfo();
+        await userInfo.getRole();
+        const adminRole = typeof ROLES !== 'undefined' ? ROLES.admin : 'administrator';
+        const superuserRole = typeof ROLES !== 'undefined' ? ROLES.superuser : 'superuser';
+        this._canUseStructureEditing = !!userInfo.isActive &&
+          (userInfo.role === adminRole || userInfo.role === superuserRole);
+      } catch (err) {
+        this._accessError = err;
+        this._canUseStructureEditing = false;
+      }
+    },
+
+    _getStoredStructureEditingEnabled() {
+      return localStorage.getItem(this._structureEditingPreferenceKey) === 'true';
+    },
+
+    _saveStructureEditingPreference() {
+      localStorage.setItem(this._structureEditingPreferenceKey, String(this._structureEditingEnabled));
+    },
+
     async _saveSettings() {
       this._saving = true;
       try {
@@ -72,9 +103,17 @@ function createComponent() {
           body: JSON.stringify(this._settings),
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        if (this._canUseStructureEditing) {
+          this._saveStructureEditingPreference();
+        }
         this._showToast('Settings saved', 'success');
         this.dispatchEvent(new CustomEvent('settings-saved', {
-          detail: { ...this._settings },
+          detail: {
+            ...this._settings,
+            structure_editing_enabled: this._canUseStructureEditing
+              ? this._structureEditingEnabled
+              : this._getStoredStructureEditingEnabled(),
+          },
           bubbles: true,
           composed: true,
         }));
@@ -107,6 +146,10 @@ function createComponent() {
       this._settings = { ...this._settings, hint_count: Number(e.target.value) };
     },
 
+    _onStructureEditingChange(e) {
+      this._structureEditingEnabled = e.target.checked;
+    },
+
     _onDialogHide() {
       this.open = false;
       this.dispatchEvent(new CustomEvent('settings-closed', { bubbles: true, composed: true }));
@@ -122,6 +165,9 @@ function createComponent() {
 beforeEach(() => {
   jest.useFakeTimers();
   global.fetch = jest.fn();
+  localStorage.clear();
+  delete global.getUserInfo;
+  delete global.ROLES;
 });
 
 afterEach(() => {
@@ -157,6 +203,12 @@ describe('Initial state', () => {
   test('should default hint_count to 5', () => {
     const comp = createComponent();
     expect(comp._settings.hint_count).toBe(5);
+  });
+
+  test('should default structure editing to disabled', () => {
+    const comp = createComponent();
+    expect(comp._canUseStructureEditing).toBe(false);
+    expect(comp._structureEditingEnabled).toBe(false);
   });
 
   test('should have toast hidden initially', () => {
@@ -357,7 +409,14 @@ describe('_saveSettings()', () => {
 
     const event = comp._dispatchedEvents.find(e => e.type === 'settings-saved');
     expect(event).toBeDefined();
-    expect(event.detail).toEqual({ pali_lookup: false, dblclick_search: true, dblclick_search_collapse_inputs: true, hint_style: 'dropdown', hint_count: 10 });
+    expect(event.detail).toEqual({
+      pali_lookup: false,
+      dblclick_search: true,
+      dblclick_search_collapse_inputs: true,
+      hint_style: 'dropdown',
+      hint_count: 10,
+      structure_editing_enabled: false,
+    });
     expect(event.bubbles).toBe(true);
     expect(event.composed).toBe(true);
   });
@@ -490,6 +549,85 @@ describe('_onHintCountChange()', () => {
   });
 });
 
+describe('structure editing setting', () => {
+  test('should load active admin access for structure editing', async () => {
+    global.ROLES = { admin: 'administrator', superuser: 'superuser' };
+    global.getUserInfo = jest.fn(() => ({
+      isActive: false,
+      role: '',
+      getRole: jest.fn().mockImplementation(function () {
+        this.isActive = true;
+        this.role = 'administrator';
+      }),
+    }));
+    const comp = createComponent();
+
+    await comp._loadUserAccess();
+
+    expect(comp._canUseStructureEditing).toBe(true);
+  });
+
+  test('should not allow structure editing for non-admin users', async () => {
+    global.ROLES = { admin: 'administrator', superuser: 'superuser' };
+    global.getUserInfo = jest.fn(() => ({
+      isActive: true,
+      role: 'writer',
+      getRole: jest.fn(),
+    }));
+    const comp = createComponent();
+
+    await comp._loadUserAccess();
+
+    expect(comp._canUseStructureEditing).toBe(false);
+  });
+
+  test('should read structure editing from localStorage when shown', async () => {
+    localStorage.setItem('bilara:translation:structure-editing-enabled', 'true');
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({}),
+    });
+    const comp = createComponent();
+
+    await comp.show();
+
+    expect(comp._structureEditingEnabled).toBe(true);
+  });
+
+  test('should update staged structure editing value from switch changes', () => {
+    const comp = createComponent();
+
+    comp._onStructureEditingChange({ target: { checked: true } });
+
+    expect(comp._structureEditingEnabled).toBe(true);
+  });
+
+  test('should save structure editing to localStorage only when admin access is available', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    const comp = createComponent();
+    comp._canUseStructureEditing = true;
+    comp._structureEditingEnabled = true;
+
+    await comp._saveSettings();
+
+    expect(localStorage.getItem('bilara:translation:structure-editing-enabled')).toBe('true');
+    const event = comp._dispatchedEvents.find(e => e.type === 'settings-saved');
+    expect(event.detail.structure_editing_enabled).toBe(true);
+  });
+
+  test('should not include structure editing in the settings API payload', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    const comp = createComponent();
+    comp._canUseStructureEditing = true;
+    comp._structureEditingEnabled = true;
+
+    await comp._saveSettings();
+
+    const payload = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(payload.structure_editing_enabled).toBeUndefined();
+  });
+});
+
 // ============================================================================
 // _onDialogHide()
 // ============================================================================
@@ -600,6 +738,8 @@ describe('Static properties definition', () => {
     _loading: { type: Boolean, state: true },
     _saving: { type: Boolean, state: true },
     _settings: { type: Object, state: true },
+    _canUseStructureEditing: { type: Boolean, state: true },
+    _structureEditingEnabled: { type: Boolean, state: true },
     _toast: { type: Object, state: true },
   };
 
@@ -621,6 +761,16 @@ describe('Static properties definition', () => {
   test('_settings should be Object and internal state', () => {
     expect(expectedProperties._settings.type).toBe(Object);
     expect(expectedProperties._settings.state).toBe(true);
+  });
+
+  test('_canUseStructureEditing should be Boolean and internal state', () => {
+    expect(expectedProperties._canUseStructureEditing.type).toBe(Boolean);
+    expect(expectedProperties._canUseStructureEditing.state).toBe(true);
+  });
+
+  test('_structureEditingEnabled should be Boolean and internal state', () => {
+    expect(expectedProperties._structureEditingEnabled.type).toBe(Boolean);
+    expect(expectedProperties._structureEditingEnabled.state).toBe(true);
   });
 
   test('_toast should be Object and internal state', () => {
