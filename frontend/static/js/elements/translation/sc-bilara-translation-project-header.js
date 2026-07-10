@@ -20,24 +20,46 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              padding: 0px 5px 0px 20px;
+              min-height: 52px;
+              padding: 8px 12px;
               background-color: transparent;
               border-radius: 0;
               box-shadow: none;
               border: none;
               border-bottom: 1px solid var(--color-background-tertiary);
-              gap: 12px;
+              gap: 10px;
           }
 
           .project-header__message {
+              flex: 1 1 auto;
+              min-width: 0;
               font-weight: 600;
               margin: 0;
               color: var(--color-primary);
               letter-spacing: var(--letter-spacing);
               text-transform: uppercase;
               position: relative;
-              padding-left: 0px;
-              flex-shrink: 0;
+              padding-left: 0;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+          }
+
+          .project-header__message--show {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 34px;
+              padding: 0 16px;
+              margin: 0;
+              border-radius: 6px;
+              color: var(--color-text-on-strong);
+              text-align: center;
+              box-shadow: var(--shadow-sm);
+          }
+
+          .project-header__message--failure {
+              color: var(--color-text-on-strong);
           }
 
           /* Progress Bar - Horizontal */
@@ -45,8 +67,8 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
               display: flex;
               align-items: center;
               gap: 8px;
-              flex: 1;
-              max-width: 350px;
+              flex: 0 1 360px;
+              max-width: 360px;
               min-width: 120px;
           }
 
@@ -158,9 +180,14 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
                   gap: 6px;
               }
 
+              .project-header__message {
+                  flex-basis: 100%;
+              }
+
               .project-header__progress {
                   order: 3;
                   width: 100%;
+                  flex-basis: 100%;
                   max-width: none;
               }
           }
