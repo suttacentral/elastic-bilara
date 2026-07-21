@@ -187,15 +187,9 @@ function fetchTranslation() {
             }
 
             const validSaved = savedRelated.filter(p => this.relatedProjects.includes(p));
-            for (const project of validSaved) {
-                try {
-                    await this.findOrCreateObject(project, this.prefix);
-                } catch (error) {
-                    console.error(`Failed to restore related project ${project}:`, error);
-                }
-            }
+            const loadedSaved = await this.restoreRelatedProjectsInOrder(validSaved);
             // Build the list of all loaded projects for the restore event
-            const allLoaded = [...validSaved];
+            const allLoaded = [...loadedSaved];
             if (shouldAutoLoadRemarks && myRemarkKey && !allLoaded.includes(myRemarkKey)) {
                 allLoaded.push(myRemarkKey);
             }
@@ -1232,6 +1226,27 @@ function fetchTranslation() {
         saveRelatedProjects(projects) {
             const key = `relatedProjects_${this.muid}`;
             localStorage.setItem(key, JSON.stringify(projects));
+        },
+        async restoreRelatedProjectsInOrder(projects) {
+            const results = await Promise.all(projects.map(async project => {
+                try {
+                    const obj = await this.createObject(project, this.prefix);
+                    return { project, obj };
+                } catch (error) {
+                    console.error(`Failed to restore related project ${project}:`, error);
+                    return { project, obj: null };
+                }
+            }));
+
+            const loadedProjects = [];
+            for (const { project, obj } of results) {
+                if (!obj) continue;
+                if (!this.translations.some(item => item.muid === obj.muid)) {
+                    this.translations.push(obj);
+                }
+                loadedProjects.push(project);
+            }
+            return loadedProjects;
         },
     };
 }

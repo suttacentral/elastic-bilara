@@ -273,7 +273,7 @@ describe('init() restoration of saved related projects', () => {
                 return obj;
             },
             async createObject(key, prefix) {
-                return { canEdit: false, muid: key, prefix, data: {} };
+                return { canEdit: false, muid: key, prefix, data: { 'mn1:1.1': `data-${key}` } };
             },
             async fetchRelatedProjects() {
                 return ['pli-ms', 'en-sujato', 'de-sabbamitta', 'fr-noeismet', 'html-pli-ms'];
@@ -289,6 +289,27 @@ describe('init() restoration of saved related projects', () => {
             saveRelatedProjects(projects) {
                 const key = `relatedProjects_${this.muid}`;
                 localStorage.setItem(key, JSON.stringify(projects));
+            },
+            async restoreRelatedProjectsInOrder(projects) {
+                const results = await Promise.all(projects.map(async project => {
+                    try {
+                        const obj = await this.createObject(project, this.prefix);
+                        return { project, obj };
+                    } catch (error) {
+                        console.error(`Failed to restore related project ${project}:`, error);
+                        return { project, obj: null };
+                    }
+                }));
+
+                const loadedProjects = [];
+                for (const { project, obj } of results) {
+                    if (!obj) continue;
+                    if (!this.translations.some(item => item.muid === obj.muid)) {
+                        this.translations.push(obj);
+                    }
+                    loadedProjects.push(project);
+                }
+                return loadedProjects;
             },
             updateProgress() {},
 
@@ -314,14 +335,8 @@ describe('init() restoration of saved related projects', () => {
 
                 const savedRelated = this.getSavedRelatedProjects();
                 const validSaved = savedRelated.filter(p => this.relatedProjects.includes(p));
-                for (const project of validSaved) {
-                    try {
-                        await this.findOrCreateObject(project, this.prefix);
-                    } catch (error) {
-                        console.error(`Failed to restore related project ${project}:`, error);
-                    }
-                }
-                window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: validSaved } }));
+                const loadedSaved = await this.restoreRelatedProjectsInOrder(validSaved);
+                window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: loadedSaved } }));
 
                 this.updateProgress();
             },
@@ -395,10 +410,10 @@ describe('init() restoration of saved related projects', () => {
         getItemSpy.mockReturnValue(JSON.stringify(['de-sabbamitta', 'fr-noeismet']));
 
         const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        const originalFindOrCreate = mockContext.findOrCreateObject.bind(mockContext);
-        mockContext.findOrCreateObject = async function (key, prefix, source) {
+        const originalCreateObject = mockContext.createObject.bind(mockContext);
+        mockContext.createObject = async function (key, prefix) {
             if (key === 'de-sabbamitta') throw new Error('Network error');
-            return originalFindOrCreate(key, prefix, source);
+            return originalCreateObject(key, prefix);
         };
 
         await mockContext.init();
@@ -421,5 +436,27 @@ describe('init() restoration of saved related projects', () => {
         expect(mockContext.translations).toHaveLength(4);
         expect(mockContext.translations[2].muid).toBe('fr-noeismet');
         expect(mockContext.translations[3].muid).toBe('de-sabbamitta');
+    });
+
+    test('should start restoring saved projects in parallel while preserving saved order', async () => {
+        const resolvers = {};
+        mockContext.createObject = jest.fn(project => new Promise(resolve => {
+            resolvers[project] = resolve;
+        }));
+
+        const restorePromise = mockContext.restoreRelatedProjectsInOrder(['fr-noeismet', 'de-sabbamitta']);
+        await Promise.resolve();
+
+        expect(mockContext.createObject).toHaveBeenCalledTimes(2);
+        expect(mockContext.createObject).toHaveBeenNthCalledWith(1, 'fr-noeismet', mockContext.prefix);
+        expect(mockContext.createObject).toHaveBeenNthCalledWith(2, 'de-sabbamitta', mockContext.prefix);
+
+        resolvers['de-sabbamitta']({ canEdit: false, muid: 'de-sabbamitta', prefix: mockContext.prefix, data: {} });
+        resolvers['fr-noeismet']({ canEdit: false, muid: 'fr-noeismet', prefix: mockContext.prefix, data: {} });
+
+        const loadedProjects = await restorePromise;
+
+        expect(loadedProjects).toEqual(['fr-noeismet', 'de-sabbamitta']);
+        expect(mockContext.translations.map(t => t.muid)).toEqual(['fr-noeismet', 'de-sabbamitta']);
     });
 });
