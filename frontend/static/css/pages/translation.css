@@ -1147,6 +1147,8 @@ sl-dialog::part(title) {
     flex-wrap: wrap;
     transition: background-color 0.15s ease;
     background-color: var(--color-background);
+    content-visibility: auto;
+    contain-intrinsic-size: auto 90px;
 }
 
 .translation-row:focus-within {
