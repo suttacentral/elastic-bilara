@@ -19,6 +19,82 @@
     width: 100%;
 }
 
+.navigation-tree-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+}
+
+.navigation-tree-skeleton__row {
+    display: grid;
+    grid-template-columns: 18px minmax(96px, 42%);
+    gap: var(--space-sm);
+    align-items: center;
+    min-height: 30px;
+    padding-left: var(--navigation-skeleton-indent, 0);
+}
+
+.navigation-tree-skeleton__row--indent-sm {
+    --navigation-skeleton-indent: var(--space-lg);
+}
+
+.navigation-tree-skeleton__row--indent-md {
+    --navigation-skeleton-indent: var(--space-xxl);
+}
+
+.navigation-tree-skeleton__icon,
+.navigation-tree-skeleton__label {
+    display: block;
+    background: linear-gradient(
+        90deg,
+        var(--color-background-secondary) 0%,
+        var(--color-background) 50%,
+        var(--color-background-secondary) 100%
+    );
+    background-size: 200% 100%;
+    animation: navigation-tree-skeleton-loading 1.4s ease-in-out infinite;
+}
+
+.navigation-tree-skeleton__icon {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+}
+
+.navigation-tree-skeleton__label {
+    width: 100%;
+    height: 18px;
+    border-radius: var(--radius-sm);
+}
+
+.navigation-tree-skeleton__label--wide {
+    width: 58%;
+}
+
+.navigation-tree-skeleton__label--short {
+    width: 34%;
+}
+
+@keyframes navigation-tree-skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navigation-tree-skeleton__icon,
+    .navigation-tree-skeleton__label {
+        animation: none;
+        background-position: 0 0;
+    }
+}
+
 .mdi::before {
     color: var(--color-primary);
     display: inline-block;
@@ -78,6 +154,23 @@
     .navigation-container {
         font-size: var(--text-md);
         margin: var(--space-lg) var(--space-xs);
+    }
+
+    .navigation-tree-skeleton {
+        padding: var(--space-xs) 0;
+    }
+
+    .navigation-tree-skeleton__row {
+        grid-template-columns: 16px minmax(80px, 1fr);
+        gap: var(--space-xs);
+    }
+
+    .navigation-tree-skeleton__row--indent-sm {
+        --navigation-skeleton-indent: var(--space-md);
+    }
+
+    .navigation-tree-skeleton__row--indent-md {
+        --navigation-skeleton-indent: var(--space-xl);
     }
 
     .navigation-list__item-link:has( .mdi-file-document-outline) {

@@ -257,6 +257,66 @@ describe('nav.js SWR cache behavior', () => {
         expect(r1).toEqual(r2);
     });
 
+    test('init exposes loading state while directory data is loading', async () => {
+        let resolveDirectories;
+        const directoriesJson = new Promise((resolve) => {
+            resolveDirectories = resolve;
+        });
+
+        requestWithTokenRetry.mockImplementation(async (endpoint) => {
+            if (endpoint === 'directories/') {
+                return {
+                    ok: true,
+                    json: () => directoriesJson,
+                };
+            }
+
+            return {
+                ok: true,
+                json: async () => ({}),
+            };
+        });
+
+        const { treeFactory } = loadNavRuntime({
+            requestWithTokenRetry,
+            getUserInfo,
+            getMuid,
+            getPrefix,
+        });
+
+        const tree = treeFactory();
+        tree.showAllContent = true;
+
+        const initPromise = tree.init();
+        await Promise.resolve();
+
+        expect(tree.loading).toBe(true);
+
+        resolveDirectories({ directories: ['translation/'], base: null });
+        await initPromise;
+
+        expect(tree.loading).toBe(false);
+        expect(tree.data).toHaveLength(1);
+    });
+
+    test('init clears loading state when directory loading fails', async () => {
+        requestWithTokenRetry.mockRejectedValue(new Error('network failed'));
+
+        const { treeFactory } = loadNavRuntime({
+            requestWithTokenRetry,
+            getUserInfo,
+            getMuid,
+            getPrefix,
+        });
+
+        const tree = treeFactory();
+        tree.showAllContent = true;
+
+        await expect(tree.init()).rejects.toThrow('network failed');
+
+        expect(tree.loading).toBe(false);
+    });
+
     test('toggleShowAll clears directory cache', () => {
         const { treeFactory } = loadNavRuntime({
             requestWithTokenRetry,

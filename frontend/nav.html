@@ -58,10 +58,35 @@
           </div>
         </div>
         <div class="navigation-container navigation-container--pushdown">
-          <div x-cloak x-show="loading" class="modal">
-            <div class="spinner"></div>
+          <div
+            x-cloak
+            x-show="loading"
+            class="navigation-tree-skeleton"
+            role="status"
+            aria-label="Loading navigation"
+          >
+            <div class="navigation-tree-skeleton__row">
+              <span class="navigation-tree-skeleton__icon"></span>
+              <span class="navigation-tree-skeleton__label navigation-tree-skeleton__label--wide"></span>
+            </div>
+            <div class="navigation-tree-skeleton__row navigation-tree-skeleton__row--indent-sm">
+              <span class="navigation-tree-skeleton__icon"></span>
+              <span class="navigation-tree-skeleton__label"></span>
+            </div>
+            <div class="navigation-tree-skeleton__row navigation-tree-skeleton__row--indent-md">
+              <span class="navigation-tree-skeleton__icon"></span>
+              <span class="navigation-tree-skeleton__label navigation-tree-skeleton__label--short"></span>
+            </div>
+            <div class="navigation-tree-skeleton__row navigation-tree-skeleton__row--indent-md">
+              <span class="navigation-tree-skeleton__icon"></span>
+              <span class="navigation-tree-skeleton__label"></span>
+            </div>
+            <div class="navigation-tree-skeleton__row navigation-tree-skeleton__row--indent-sm">
+              <span class="navigation-tree-skeleton__icon"></span>
+              <span class="navigation-tree-skeleton__label navigation-tree-skeleton__label--wide"></span>
+            </div>
           </div>
-          <ul class="navigation-list">
+          <ul class="navigation-list" x-cloak x-show="!loading">
             <template x-for="item in data" :key="item.fullName">
               <li class="navigation-list__item" x-html="renderNode(item)"></li>
             </template>

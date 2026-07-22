@@ -20,73 +20,78 @@ function tree() {
             }
         },
         async init() {
-            const userInfo = getUserInfo();
-            await userInfo.getRole();
-            this.filterUsername = userInfo.username;
-            this.userRole = userInfo.role;
+            this.loading = true;
+            try {
+                const userInfo = getUserInfo();
+                await userInfo.getRole();
+                this.filterUsername = userInfo.username;
+                this.userRole = userInfo.role;
 
-            if (!this.showAllContent) {
-                const response = await requestWithTokenRetry(`directories/search/${this.filterUsername}/`);
-                const { matches } = await response.json();
+                if (!this.showAllContent) {
+                    const response = await requestWithTokenRetry(`directories/search/${this.filterUsername}/`);
+                    const { matches } = await response.json();
 
-                if (matches.length === 0 || matches.total_matches === 0) {
+                    if (matches.length === 0 || matches.total_matches === 0) {
+                        await this.loadAllDirectories();
+                        return;
+                    }
+
+                    const rootElementsMap = new Map();
+                    for (const match of matches) {
+                        const pathParts = match.path.split('/').filter(part => part !== '');
+
+                        if (pathParts.length === 0) continue;
+
+                        let currentElement = null;
+                        let currentBase = null;
+
+                        for (let i = 0; i < pathParts.length; i++) {
+                            const pathPart = pathParts[i] + '/';
+
+                            if (i === 0) {
+                                if (!rootElementsMap.has(pathPart)) {
+                                    const newElement = new Element(pathPart + "/", null, true, false);
+                                    rootElementsMap.set(pathPart, newElement);
+                                    this.data.push(newElement);
+                                }
+                                currentElement = rootElementsMap.get(pathPart);
+                                currentBase = pathPart;
+                            } else {
+                                let childElement = currentElement.children.find(child =>
+                                    child.name === pathPart + "/"
+                                );
+
+                                if (!childElement) {
+                                    childElement = new Element(pathPart + "/", currentBase, i < 4, false);
+                                    currentElement.add(childElement);
+                                }
+                                currentElement = childElement;
+                                currentBase = currentBase + "/" + pathPart;
+                            }
+                        }
+                    }
+
+                    const expandNodes = async (elements) => {
+                        for (const el of elements) {
+                            if (el.isOpen && el.children.length === 0 && !el.isFile) {
+                                try {
+                                    await this.addData(el);
+                                } catch (e) {
+                                    console.error('Failed to auto-expand directory', el.fullName, e);
+                                }
+                            }
+                            if (el.children.length > 0) {
+                                await expandNodes(el.children);
+                            }
+                        }
+                    };
+                    await expandNodes(this.data);
+
+                } else {
                     await this.loadAllDirectories();
-                    return;
                 }
-
-                const rootElementsMap = new Map();
-                for (const match of matches) {
-                    const pathParts = match.path.split('/').filter(part => part !== '');
-
-                    if (pathParts.length === 0) continue;
-
-                    let currentElement = null;
-                    let currentBase = null;
-
-                    for (let i = 0; i < pathParts.length; i++) {
-                        const pathPart = pathParts[i] + '/';
-
-                        if (i === 0) {
-                            if (!rootElementsMap.has(pathPart)) {
-                                const newElement = new Element(pathPart + "/", null, true, false);
-                                rootElementsMap.set(pathPart, newElement);
-                                this.data.push(newElement);
-                            }
-                            currentElement = rootElementsMap.get(pathPart);
-                            currentBase = pathPart;
-                        } else {
-                            let childElement = currentElement.children.find(child =>
-                                child.name === pathPart + "/"
-                            );
-
-                            if (!childElement) {
-                                childElement = new Element(pathPart + "/", currentBase, i < 4, false);
-                                currentElement.add(childElement);
-                            }
-                            currentElement = childElement;
-                            currentBase = currentBase + "/" + pathPart;
-                        }
-                    }
-                }
-
-                const expandNodes = async (elements) => {
-                    for (const el of elements) {
-                        if (el.isOpen && el.children.length === 0 && !el.isFile) {
-                            try {
-                                await this.addData(el);
-                            } catch (e) {
-                                console.error('Failed to auto-expand directory', el.fullName, e);
-                            }
-                        }
-                        if (el.children.length > 0) {
-                            await expandNodes(el.children);
-                        }
-                    }
-                };
-                await expandNodes(this.data);
-
-            } else {
-                await this.loadAllDirectories();
+            } finally {
+                this.loading = false;
             }
         },
         toggleShowAll() {
