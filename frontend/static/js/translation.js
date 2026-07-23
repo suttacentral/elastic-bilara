@@ -428,8 +428,9 @@ function fetchTranslation() {
 
             if (this.hasActiveOperation()) {
                 const confirmed = confirm(
-                    'You have an unsaved split/merge operation. ' +
-                    'Do you want to discard it and start a new split?'
+                    'You have an unsaved split/merge operation.\n\n' +
+                    'Click OK to discard it and start a new split. ' +
+                    'Click Cancel to continue the current operation.'
                 );
                 if (!confirmed) {
                     return false;
