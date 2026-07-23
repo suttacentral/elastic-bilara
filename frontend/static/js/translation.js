@@ -13,6 +13,11 @@ function fetchTranslation() {
         tagProject: null,
         availableTags: [],
         hyphenatedPrefixRanges: [],
+        progressState: {
+            translationMuid: null,
+            translated: 0,
+            total: 0,
+        },
         originalTranslations: null,
         splitter_uid: null,
         merger_uid: null,
@@ -292,8 +297,34 @@ function fetchTranslation() {
             if (!translation.data) {
                 translation.data = {};
             }
+            const previousValue = translation.data[uid] || "";
             translation.data[uid] = value;
-            this.updateProgress();
+            this.updateProgressForValueChange(translation, uid, previousValue, value);
+        },
+        hasTranslatedText(value) {
+            return typeof value === "string" && value.trim() !== "";
+        },
+        updateProgressForValueChange(translation, uid, previousValue, nextValue) {
+            if (translation.muid !== this.progressState.translationMuid) {
+                return;
+            }
+
+            const sourceTranslation = this.translations.find(t => t.isSource);
+            if (
+                !sourceTranslation?.data ||
+                !Object.prototype.hasOwnProperty.call(sourceTranslation.data, uid)
+            ) {
+                return;
+            }
+
+            const wasTranslated = this.hasTranslatedText(previousValue);
+            const isTranslated = this.hasTranslatedText(nextValue);
+            if (wasTranslated === isTranslated) {
+                return;
+            }
+
+            this.progressState.translated += isTranslated ? 1 : -1;
+            this.publishProgress();
         },
         /**
          * Calculate translation progress
@@ -320,7 +351,7 @@ function fetchTranslation() {
             let translatedCount = 0;
             for (const key of Object.keys(sourceData)) {
                 const value = translationData[key];
-                if (value && value.trim() !== '') {
+                if (this.hasTranslatedText(value)) {
                     translatedCount++;
                 }
             }
@@ -330,8 +361,21 @@ function fetchTranslation() {
         },
         updateProgress() {
             const progressData = this.getTranslationProgress();
+            const editableTranslation = this.translations.find(
+                t => t.canEdit && !t.isSource && !this.isRemarkProject(t.muid)
+            );
+            this.progressState.translationMuid = editableTranslation?.muid || null;
+            this.progressState.translated = progressData.translated;
+            this.progressState.total = progressData.total;
+            this.publishProgress();
+        },
+        publishProgress() {
+            const { translated, total } = this.progressState;
+            const percentage = total > 0
+                ? Math.round((translated / total) * 100)
+                : 0;
             window.dispatchEvent(new CustomEvent('translation-progress-update', {
-                detail: progressData
+                detail: { translated, total, percentage }
             }));
         },
         _backupTranslations() {
