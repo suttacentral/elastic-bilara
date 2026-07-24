@@ -2,11 +2,21 @@ const fs = require('fs');
 const path = require('path');
 
 const translationJsContent = fs.readFileSync(path.resolve(__dirname, '../translation.js'), 'utf8');
+const translationHtmlContent = fs.readFileSync(path.resolve(__dirname, '../../../translation.html'), 'utf8');
 eval(translationJsContent);
 
 describe('Translation initial loading state', () => {
     test('starts in the loading state', () => {
         expect(fetchTranslation().loading).toBe(true);
+    });
+
+    test('does not mount the translation grid while loading', () => {
+        expect(translationHtmlContent).toMatch(
+            /<template\s+x-if="!loading">\s*<div class="translation-grid"/,
+        );
+        expect(translationHtmlContent).not.toMatch(
+            /<div class="translation-grid"\s+x-show="!loading"/,
+        );
     });
 
     test('clears loading after initialization succeeds', async () => {

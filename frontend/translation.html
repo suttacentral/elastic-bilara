@@ -209,10 +209,9 @@
                 </div>
                 <span class="translation-grid-skeleton__status">Loading translation text</span>
             </div>
-            <div class="translation-grid"
-                x-show="!loading"
-                x-cloak
-                x-data="{
+            <template x-if="!loading">
+                <div class="translation-grid"
+                    x-data="{
                     columnWidths: [],
                     isDragging: false,
                     dragIndex: -1,
@@ -867,8 +866,9 @@
                             </div>
                         </div>
                     </template>
+                    </div>
                 </div>
-            </div>
+            </template>
 
             <!-- Related Projects Dropdown - rendered independently of search panel visibility -->
             <div class="project-container__detail-panel__related"
