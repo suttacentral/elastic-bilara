@@ -12,6 +12,75 @@ function tree() {
         publishingFile: null,
         isPublishing: false,
         userRole: "",
+        historyStateRead: false,
+        getSavedHistoryState() {
+            const state = window.history?.state?.bilaraNav;
+            if (
+                !state
+                || state.version !== 1
+                || typeof state.showAllContent !== 'boolean'
+                || !Array.isArray(state.openDirectories)
+                || !state.openDirectories.every(path => typeof path === 'string')
+                || typeof state.scrollY !== 'number'
+                || !Number.isFinite(state.scrollY)
+            ) {
+                return null;
+            }
+            return state;
+        },
+        createHistoryState() {
+            const openDirectories = [];
+
+            const collectOpenDirectories = (elements) => {
+                for (const element of elements) {
+                    if (!element.isFile && element.isOpen) {
+                        openDirectories.push(element.fullName);
+                        collectOpenDirectories(element.children);
+                    }
+                }
+            };
+
+            collectOpenDirectories(this.data);
+            return {
+                version: 1,
+                showAllContent: this.showAllContent,
+                openDirectories,
+                scrollY: window.scrollY,
+            };
+        },
+        saveHistoryState() {
+            const currentState = (
+                window.history.state && typeof window.history.state === 'object'
+            ) ? window.history.state : {};
+            window.history.replaceState(
+                { ...currentState, bilaraNav: this.createHistoryState() },
+                '',
+            );
+        },
+        async restoreOpenDirectories(openDirectories) {
+            const closeDirectories = (elements) => {
+                for (const element of elements) {
+                    if (!element.isFile) {
+                        element.isOpen = false;
+                        closeDirectories(element.children);
+                    }
+                }
+            };
+            closeDirectories(this.data);
+
+            const paths = [...openDirectories].sort((left, right) => {
+                const leftDepth = left.split('/').filter(Boolean).length;
+                const rightDepth = right.split('/').filter(Boolean).length;
+                return leftDepth - rightDepth;
+            });
+
+            for (const path of paths) {
+                const element = this.getElementByName(path);
+                if (element && !element.isFile) {
+                    await this.open(element);
+                }
+            }
+        },
         async loadAllDirectories() {
             const response = await requestWithTokenRetry("directories/");
             const { directories, base } = await response.json();
@@ -20,6 +89,14 @@ function tree() {
             }
         },
         async init() {
+            let savedState = null;
+            if (!this.historyStateRead) {
+                savedState = this.getSavedHistoryState();
+                this.historyStateRead = true;
+                if (savedState) {
+                    this.showAllContent = savedState.showAllContent;
+                }
+            }
             this.loading = true;
             try {
                 const userInfo = getUserInfo();
@@ -33,7 +110,6 @@ function tree() {
 
                     if (matches.length === 0 || matches.total_matches === 0) {
                         await this.loadAllDirectories();
-                        return;
                     }
 
                     const rootElementsMap = new Map();
@@ -89,6 +165,11 @@ function tree() {
 
                 } else {
                     await this.loadAllDirectories();
+                }
+                if (savedState) {
+                    await this.restoreOpenDirectories(savedState.openDirectories);
+                    await this.$nextTick();
+                    window.scrollTo(0, savedState.scrollY);
                 }
             } finally {
                 this.loading = false;
@@ -465,6 +546,7 @@ function tree() {
             const response = await requestWithTokenRetry(`projects/${element.fullName}/source/`);
             const { muid: source } = await response.json();
             const muid = element.muid === source ? "" : element.muid;
+            this.saveHistoryState();
             return (window.location.href = `/translation?prefix=${element.prefix}&muid=${muid}&source=${source}`);
         },
         close(element) {
