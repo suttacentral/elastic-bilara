@@ -319,12 +319,20 @@ function tree() {
         renderNode(element) {
             if (!element) return "";
 
+            const href = element.isFile
+                ? this.getTranslationHref(element).replaceAll('&', '&amp;')
+                : '#';
+            const clickHandlers = element.isFile
+                ? `x-on:click="fileLinkClicked($event, '${element.fullName}')"
+                    x-on:auxclick="fileLinkClicked($event, '${element.fullName}')"
+                    x-on:contextmenu="saveHistoryState()"`
+                : `x-on:click.prevent="itemClicked('${element.fullName}')"`;
+
             // Render node links
             let result = `
-                <a href="#"
+                <a href="${href}"
                     class="navigation-list__item-link ${element.isOpen ? 'navigation-list--open' : ''}"
-                    onclick="event.preventDefault();"
-                    x-on:click.prevent="itemClicked('${element.fullName}')">
+                    ${clickHandlers}>
                     <i class="mdi ${element.isFile ? 'mdi-file-outline' : (element.isOpen ? 'mdi-folder-open-outline' : 'mdi-folder-outline')}"></i>
                     ${element.name.split("/").join("")}
                 </a>`;
@@ -364,6 +372,27 @@ function tree() {
             }
 
             return result;
+        },
+        getTranslationHref(element) {
+            const prefix = encodeURIComponent(element.prefix || '');
+            const muid = encodeURIComponent(element.muid || '');
+            const path = encodeURIComponent(element.fullName);
+            return `/translation?prefix=${prefix}&muid=${muid}&path=${path}`;
+        },
+        fileLinkClicked(event, name) {
+            this.saveHistoryState();
+            const isUnmodifiedPrimaryClick = (
+                event.button === 0
+                && !event.ctrlKey
+                && !event.metaKey
+                && !event.shiftKey
+                && !event.altKey
+            );
+            if (!isUnmodifiedPrimaryClick) {
+                return;
+            }
+            event.preventDefault();
+            return this.itemClicked(name);
         },
         itemClicked(name) {
             const element = this.getElementByName(name);

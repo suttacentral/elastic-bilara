@@ -88,8 +88,8 @@ function fetchTranslation() {
         async initialize() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
+            const source = await this.resolveSource(params);
             const muid = params.get("muid");
-            const source = params.get("source");
 
             this.muid = muid;
             this.sourceMuid = source;
@@ -220,6 +220,38 @@ function fetchTranslation() {
             } catch(e) { /* ignore corrupt data */ }
 
             this.updateProgress();
+        },
+        async resolveSource(params) {
+            const existingSource = params.get("source");
+            if (existingSource) {
+                return existingSource;
+            }
+
+            const path = params.get("path");
+            if (!path) {
+                throw new Error("Translation URL is missing both source and path");
+            }
+
+            const response = await requestWithTokenRetry(`projects/${path}/source/`);
+            if (!response.ok) {
+                throw new Error(`Unable to resolve source for project path: ${path}`);
+            }
+
+            const { muid: source } = await response.json();
+            if (!source) {
+                throw new Error(`Source response is missing muid for project path: ${path}`);
+            }
+
+            if (params.get("muid") === source) {
+                params.set("muid", "");
+            }
+            params.set("source", source);
+            params.delete("path");
+
+            const canonicalUrl = new URL(window.location.href);
+            canonicalUrl.search = params.toString();
+            window.history.replaceState(window.history.state, "", canonicalUrl);
+            return source;
         },
         async loadHyphenatedPrefixRanges() {
             try {

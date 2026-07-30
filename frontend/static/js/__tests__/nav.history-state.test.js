@@ -82,6 +82,75 @@ function loadNavRuntime({
 }
 
 describe('navigation history state', () => {
+    test('renders files as real translation links for native browser navigation', () => {
+        const { treeFactory, Element } = loadNavRuntime();
+        const navigation = treeFactory();
+        const file = new Element(
+            'mn1_translation-en-tester.json',
+            'translation/en/tester/sutta/mn/mn1/',
+            false,
+            true,
+        );
+
+        const html = navigation.renderNode(file);
+
+        expect(html).toContain(
+            'href="/translation?prefix=mn1&amp;muid=translation-en-tester'
+            + '&amp;path=translation%2Fen%2Ftester%2Fsutta%2Fmn%2Fmn1%2Fmn1_translation-en-tester.json"',
+        );
+        expect(html).toContain("x-on:click=\"fileLinkClicked($event,");
+        expect(html).not.toContain('x-on:click.prevent');
+    });
+
+    test('keeps ordinary primary clicks on the existing redirect path', () => {
+        const { treeFactory, Element } = loadNavRuntime();
+        const navigation = treeFactory();
+        const file = new Element(
+            'mn1_translation-en-tester.json',
+            'translation/en/tester/',
+            false,
+            true,
+        );
+        navigation.data = [file];
+        navigation.redirectToFile = jest.fn();
+        const event = {
+            button: 0,
+            ctrlKey: false,
+            metaKey: false,
+            shiftKey: false,
+            altKey: false,
+            preventDefault: jest.fn(),
+        };
+
+        navigation.fileLinkClicked(event, file.fullName);
+
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(navigation.redirectToFile).toHaveBeenCalledWith(file);
+    });
+
+    test.each([
+        { button: 1, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false },
+        { button: 0, ctrlKey: true, metaKey: false, shiftKey: false, altKey: false },
+        { button: 0, ctrlKey: false, metaKey: true, shiftKey: false, altKey: false },
+    ])('leaves native new-tab navigation unblocked for %o', eventData => {
+        const { treeFactory, Element } = loadNavRuntime();
+        const navigation = treeFactory();
+        const file = new Element(
+            'mn1_translation-en-tester.json',
+            'translation/en/tester/',
+            false,
+            true,
+        );
+        navigation.data = [file];
+        navigation.redirectToFile = jest.fn();
+        const event = { ...eventData, preventDefault: jest.fn() };
+
+        navigation.fileLinkClicked(event, file.fullName);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(navigation.redirectToFile).not.toHaveBeenCalled();
+    });
+
     test('saves the current navigation view before opening a translation', async () => {
         const { treeFactory, Element, replaceState, sandbox } = loadNavRuntime();
         const navigation = treeFactory();
