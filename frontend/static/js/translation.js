@@ -7,6 +7,7 @@ function fetchTranslation() {
         remarkUsers: [],
         currentUserGithubId: null,
         currentUsername: null,
+        currentUserRole: null,
         htmlProjectName: '',
         htmlProject: null,
         tagProjectName: '',
@@ -101,6 +102,7 @@ function fetchTranslation() {
                     const userData = await userResp.json();
                     this.currentUserGithubId = userData.github_id || null;
                     this.currentUsername = userData.username || null;
+                    this.currentUserRole = userData.role || null;
                 }
             } catch (e) {
                 console.error('Failed to fetch current user info:', e);
@@ -139,9 +141,11 @@ function fetchTranslation() {
             this.tagProjectName = projects.find(project => project.startsWith('tag'));
             await this.loadAvailableTags();
 
+            const canViewHtmlProject = ['administrator', 'superuser'].includes(this.currentUserRole);
             this.relatedProjects = projects.filter(project =>
-                project !== muid && project !== source &&
-                project !== this.htmlProjectName
+                project !== muid &&
+                project !== source &&
+                (project !== this.htmlProjectName || canViewHtmlProject)
             );
 
             // Build remark projects per user
