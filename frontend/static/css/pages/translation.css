@@ -2,6 +2,87 @@
     --translation-radius: 6px;
     --translation-radius-lg: 10px;
     --translation-transition: all 0.2s ease;
+    --translation-scrollbar-track: color-mix(in srgb, var(--color-text-emphasized) 12%, var(--color-background));
+    --translation-scrollbar-thumb: color-mix(in srgb, var(--color-text-emphasized) 65%, var(--color-background));
+    --translation-scrollbar-thumb-hover: color-mix(in srgb, var(--color-text-emphasized) 82%, var(--color-background));
+}
+
+/* Keep every scrollable surface on this page visible across light and dark themes. */
+:where(
+    html,
+    .project-container__detail-panel__related-list,
+    .search__field-picker-list,
+    .search__results-container,
+    .translation-grid__body,
+    .translation-cell__hints,
+    .affected-files-dialog__list
+) {
+    scrollbar-width: auto;
+    scrollbar-color: var(--translation-scrollbar-thumb) var(--translation-scrollbar-track);
+}
+
+:where(
+    html,
+    .project-container__detail-panel__related-list,
+    .search__field-picker-list,
+    .search__results-container,
+    .translation-grid__body,
+    .translation-cell__hints,
+    .affected-files-dialog__list
+)::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+:where(
+    html,
+    .project-container__detail-panel__related-list,
+    .search__field-picker-list,
+    .search__results-container,
+    .translation-grid__body,
+    .translation-cell__hints,
+    .affected-files-dialog__list
+)::-webkit-scrollbar-track {
+    background-color: var(--translation-scrollbar-track);
+}
+
+:where(
+    html,
+    .project-container__detail-panel__related-list,
+    .search__field-picker-list,
+    .search__results-container,
+    .translation-grid__body,
+    .translation-cell__hints,
+    .affected-files-dialog__list
+)::-webkit-scrollbar-thumb {
+    min-height: var(--scrollbar-minlength, 1.5rem);
+    background-color: var(--translation-scrollbar-thumb);
+    border: 2px solid var(--translation-scrollbar-track);
+    border-radius: var(--radius-md, 4px);
+}
+
+:where(
+    html,
+    .project-container__detail-panel__related-list,
+    .search__field-picker-list,
+    .search__results-container,
+    .translation-grid__body,
+    .translation-cell__hints,
+    .affected-files-dialog__list
+)::-webkit-scrollbar-thumb:hover {
+    background-color: var(--translation-scrollbar-thumb-hover);
+}
+
+:where(
+    html,
+    .project-container__detail-panel__related-list,
+    .search__field-picker-list,
+    .search__results-container,
+    .translation-grid__body,
+    .translation-cell__hints,
+    .affected-files-dialog__list
+)::-webkit-scrollbar-thumb:active {
+    background-color: var(--color-primary);
 }
 
 .project-header {
