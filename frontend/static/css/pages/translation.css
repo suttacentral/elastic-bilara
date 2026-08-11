@@ -1086,6 +1086,45 @@ sl-dialog::part(title) {
     white-space: nowrap;
 }
 
+.translation-grid__html-preview-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    margin-left: var(--space-xs);
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text-on-strong) 60%, transparent);
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--color-text-on-strong);
+    cursor: pointer;
+}
+
+.translation-grid__html-preview-toggle:hover {
+    background-color: color-mix(in srgb, var(--color-text-on-strong) 15%, transparent);
+}
+
+.translation-grid__html-preview-toggle--active {
+    background-color: var(--color-text-on-strong);
+    color: var(--color-primary);
+}
+
+.translation-grid__html-preview-toggle--active:hover {
+    background-color: var(--color-text-on-strong);
+}
+
+.translation-grid__html-preview-toggle:focus-visible {
+    outline: 2px solid var(--color-text-on-strong);
+    outline-offset: 2px;
+}
+
+.translation-grid__html-preview-toggle i {
+    font-size: var(--text-xs);
+    line-height: 1;
+}
+
 .translation-grid__header-owner {
     display: inline-flex;
     align-items: center;
@@ -1447,6 +1486,34 @@ sl-dialog::part(title) {
     word-wrap: break-word;
     overflow-wrap: break-word;
     word-break: break-word;
+}
+
+.translation-cell__html-preview {
+    width: 100%;
+    margin: 0 0 0 -8px;
+    padding: 0 8px;
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base-size);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.translation-cell__html-preview a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.translation-cell__html-preview a:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-xxs);
+}
+
+.translation-cell__html-preview cite {
+    font-style: italic;
 }
 
 .translation-cell--root .translation-cell__textarea {

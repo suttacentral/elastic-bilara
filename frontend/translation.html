@@ -16,6 +16,7 @@
 
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.12/dist/purify.min.js"></script>
     <script src="./static/js/translation.js"></script>
     <script src="./static/js/search.js"></script>
     <script src="./static/js/pullRequest.js"></script>
@@ -134,6 +135,7 @@
                 structureEditingPreferenceKey: 'bilara:translation:structure-editing-enabled',
                 searchPanelVisible: false,
                 structureEditingEnabled: false,
+                htmlPreviewEnabled: false,
                 searchPanelWidth: 280,
                 isPanelDragging: false,
                 panelStartX: 0,
@@ -143,6 +145,7 @@
                 init() {
                     this.searchPanelVisible = this.getStoredSearchPanelVisible();
                     this.structureEditingEnabled = this.getStoredStructureEditingEnabled();
+                    this.htmlPreviewEnabled = getStoredHtmlPreviewEnabled();
                 },
                 getStoredSearchPanelVisible() {
                     const stored = localStorage.getItem(this.searchPanelPreferenceKey);
@@ -158,6 +161,10 @@
                 setStructureEditingEnabled(enabled) {
                     this.structureEditingEnabled = !!enabled;
                     localStorage.setItem(this.structureEditingPreferenceKey, String(this.structureEditingEnabled));
+                },
+                setHtmlPreviewEnabled(enabled) {
+                    this.htmlPreviewEnabled = !!enabled;
+                    setStoredHtmlPreviewEnabled(this.htmlPreviewEnabled);
                 },
                 showSearchPanelTemporarily() {
                     this.searchPanelVisible = true;
@@ -461,6 +468,25 @@
                                 <span class="translation-grid__header-title" x-text="isRemarkProject(translation.muid) ? getRemarkLabel(translation.muid) : translation.muid"
                                     :class="'translation-grid__header-badge--' + (isRemarkProject(translation.muid) ? 'remarks' : (translation.muid || '').split('-')[0])">
                                 </span>
+                                <button
+                                    type="button"
+                                    class="translation-grid__html-preview-toggle"
+                                    x-show="translation.muid && translation.muid.startsWith('root-')"
+                                    x-cloak
+                                    draggable="false"
+                                    :class="{ 'translation-grid__html-preview-toggle--active': htmlPreviewEnabled }"
+                                    :aria-pressed="htmlPreviewEnabled"
+                                    :aria-label="htmlPreviewEnabled ? 'Show HTML source' : 'Preview HTML'"
+                                    :title="htmlPreviewEnabled ? 'Show HTML source' : 'Preview HTML'"
+                                    @click.stop="setHtmlPreviewEnabled(!htmlPreviewEnabled)"
+                                    @pointerdown.stop="$el.closest('.translation-grid__header-cell').draggable = false"
+                                    @pointerup.window="$el.closest('.translation-grid__header-cell').draggable = true"
+                                    @pointercancel.window="$el.closest('.translation-grid__header-cell').draggable = true"
+                                    @mousedown.stop
+                                    @dragstart.prevent.stop
+                                    @keydown.stop>
+                                    <i class="bi" :class="htmlPreviewEnabled ? 'bi-code-slash' : 'bi-eye'" aria-hidden="true"></i>
+                                </button>
                                 <span class="translation-grid__header-owner"
                                     x-show="isCurrentUserMuid(translation.muid)"
                                     x-cloak
@@ -658,8 +684,14 @@
                                                     <span class="translation-cell__split-preview-part" :class="'translation-cell__split-preview-part--' + part.role" x-text="part.text"></span>
                                                 </div>
                                             </template>
+                                            <div
+                                                class="translation-cell__html-preview"
+                                                x-show="shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)"
+                                                x-html="sanitizeBilaraHtml(getValue(translation, uid))">
+                                            </div>
                                             <textarea
                                                 class="translation-cell__textarea"
+                                                x-show="!shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)"
                                                 :class="{ 'translation-cell__textarea--readonly': !translation.canEdit }"
                                                 x-bind:id="isSource ? `root-textarea-${muid}-${uid}` : `translation-textarea-${muid}-${uid}`"
                                                 x-bind:value="getValue(translation, uid)"

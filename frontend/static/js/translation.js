@@ -1,3 +1,35 @@
+const HTML_PREVIEW_PREFERENCE_KEY = 'bilara:translation:html-preview-enabled';
+
+function getStoredHtmlPreviewEnabled() {
+    return localStorage.getItem(HTML_PREVIEW_PREFERENCE_KEY) === 'true';
+}
+
+function setStoredHtmlPreviewEnabled(enabled) {
+    localStorage.setItem(HTML_PREVIEW_PREFERENCE_KEY, String(!!enabled));
+}
+
+function shouldRenderHtmlPreview(muid, enabled) {
+    return !!enabled && typeof muid === 'string' && muid.startsWith('root-');
+}
+
+function sanitizeBilaraHtml(value) {
+    if (!window.DOMPurify || typeof window.DOMPurify.sanitize !== 'function') {
+        throw new Error('DOMPurify is required for HTML preview');
+    }
+
+    return window.DOMPurify.sanitize(String(value ?? ''), {
+        ALLOWED_TAGS: [
+            'a', 'abbr', 'b', 'br', 'cite', 'code', 'del', 'em', 'i', 'ins',
+            'kbd', 'mark', 'q', 's', 'samp', 'small', 'span', 'strong', 'sub',
+            'sup', 'time', 'u', 'var',
+        ],
+        ALLOWED_ATTR: ['datetime', 'dir', 'href', 'lang', 'title'],
+        ALLOWED_URI_REGEXP: /^(?:https?:|#)/i,
+        ALLOW_ARIA_ATTR: false,
+        ALLOW_DATA_ATTR: false,
+    });
+}
+
 function fetchTranslation() {
     const REMARKS_PREFIX = "remarks:";
     return {
