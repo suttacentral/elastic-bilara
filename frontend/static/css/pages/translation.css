@@ -1206,6 +1206,61 @@ sl-dialog::part(title) {
     line-height: 1;
 }
 
+.translation-grid__html-validation-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    margin-left: var(--space-xs);
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text-on-strong) 60%, transparent);
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--color-text-on-strong);
+    cursor: pointer;
+}
+
+.translation-grid__html-validation-button:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-text-on-strong) 15%, transparent);
+}
+
+.translation-grid__html-validation-button:focus-visible {
+    outline: 2px solid var(--color-text-on-strong);
+    outline-offset: 2px;
+}
+
+.translation-grid__html-validation-button:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+.translation-grid__html-validation-button--valid {
+    background-color: var(--color-text-on-strong);
+    color: var(--color-success);
+}
+
+.translation-grid__html-validation-button--invalid,
+.translation-grid__html-validation-button--error {
+    background-color: var(--color-text-on-strong);
+    color: var(--color-error);
+}
+
+.translation-grid__html-validation-button--checking i {
+    animation: html-validation-spin 0.8s linear infinite;
+}
+
+@keyframes html-validation-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .translation-grid__html-validation-button--checking i {
+        animation: none;
+    }
+}
+
 .translation-grid__header-owner {
     display: inline-flex;
     align-items: center;
@@ -2375,4 +2430,65 @@ sl-dialog::part(title) {
     justify-content: flex-end;
     gap: 8px;
     margin-top: 16px;
+}
+
+/* ===== HTML Validation Dialog ===== */
+.dialog-html-validation::part(panel) {
+    width: min(680px, 90vw);
+}
+
+.html-validation-dialog__summary {
+    margin: 0 0 var(--space-md);
+    color: var(--color-text-emphasized);
+    font-weight: var(--font-weight-medium);
+}
+
+.html-validation-dialog__issues {
+    max-height: 55vh;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    list-style: none;
+}
+
+.html-validation-dialog__issue + .html-validation-dialog__issue {
+    border-top: 1px solid var(--color-border);
+}
+
+.html-validation-dialog__issue--error {
+    box-shadow: inset 3px 0 0 var(--color-error);
+}
+
+.html-validation-dialog__issue--warning {
+    box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+.html-validation-dialog__issue-button {
+    display: grid;
+    grid-template-columns: minmax(100px, auto) 1fr;
+    gap: var(--space-md);
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 0;
+    background: var(--color-background);
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.html-validation-dialog__issue-button:hover,
+.html-validation-dialog__issue-button:focus-visible {
+    background: var(--color-background-secondary);
+}
+
+.html-validation-dialog__issue-uid {
+    font-family: monospace;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-primary);
+}
+
+.html-validation-dialog__issue-message {
+    overflow-wrap: anywhere;
 }

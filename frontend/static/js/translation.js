@@ -42,6 +42,13 @@ function fetchTranslation() {
         currentUserRole: null,
         htmlProjectName: '',
         htmlProject: null,
+        htmlDraftOverrides: {},
+        htmlValidation: {
+            status: 'idle',
+            errors: [],
+            warnings: [],
+            checkedSegments: 0,
+        },
         tagProjectName: '',
         tagProject: null,
         availableTags: [],
@@ -109,6 +116,75 @@ function fetchTranslation() {
         },
         isCurrentUserTranslation(key) {
             return !!key && key.startsWith('translation-') && this.isCurrentUserMuid(key);
+        },
+        invalidateHtmlValidation() {
+            if (this.htmlValidation.status !== 'checking') {
+                this.htmlValidation.status = 'idle';
+            }
+        },
+        async validateHtmlProject() {
+            if (!this.htmlProjectName || this.htmlValidation.status === 'checking') return;
+
+            this.htmlValidation.status = 'checking';
+            try {
+                const response = await requestWithTokenRetry(
+                    `projects/${this.htmlProjectName}/${this.prefix}/html-validation/`,
+                    {
+                        credentials: 'include',
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ overrides: this.htmlDraftOverrides }),
+                    },
+                );
+                if (!response.ok) {
+                    const body = await response.json().catch(() => null);
+                    throw new Error(body?.detail ?? `Server error (${response.status})`);
+                }
+
+                const result = await response.json();
+                this.htmlValidation = {
+                    status: result.valid ? 'valid' : 'invalid',
+                    errors: result.errors || [],
+                    warnings: result.warnings || [],
+                    checkedSegments: result.checked_segments || 0,
+                };
+
+                const dialog = document.querySelector('.dialog-html-validation');
+                if (!result.valid || this.htmlValidation.warnings.length > 0) {
+                    dialog?.show?.();
+                } else {
+                    document.querySelector('sc-bilara-toast')?.show(
+                        `HTML is valid (${this.htmlValidation.checkedSegments} segments checked).`,
+                        'success',
+                    );
+                }
+            } catch (error) {
+                this.htmlValidation = {
+                    status: 'error',
+                    errors: [],
+                    warnings: [],
+                    checkedSegments: 0,
+                };
+                document.querySelector('sc-bilara-toast')?.show(
+                    `HTML validation failed: ${error.message}`,
+                    'danger',
+                    5000,
+                );
+            }
+        },
+        focusHtmlValidationIssue(issue) {
+            document.querySelector('.dialog-html-validation')?.hide?.();
+            window.dispatchEvent(new CustomEvent('show-html-source'));
+            requestAnimationFrame(() => {
+                const textarea = document.getElementById(
+                    `translation-textarea-${this.htmlProjectName}-${issue.uid}`,
+                );
+                if (!textarea) return;
+                textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                textarea.focus();
+                const offset = Math.max(0, Math.min(Number(issue.offset) || 0, textarea.value.length));
+                textarea.setSelectionRange(offset, offset);
+            });
         },
         async init() {
             this.loading = true;
@@ -367,6 +443,10 @@ function fetchTranslation() {
             }
             const previousValue = translation.data[uid] || "";
             translation.data[uid] = value;
+            if (translation.muid && translation.muid.startsWith('html-')) {
+                this.htmlDraftOverrides[uid] = value;
+                this.invalidateHtmlValidation();
+            }
             this.updateProgressForValueChange(translation, uid, previousValue, value);
         },
         hasTranslatedText(value) {
@@ -514,6 +594,7 @@ function fetchTranslation() {
             }
 
             this._ensureHtmlProjectInTranslations(translations);
+            this.invalidateHtmlValidation();
             this._backupTranslations();
 
             const [sectionUid, sectionNumber] = uid.split(':');
@@ -633,6 +714,7 @@ function fetchTranslation() {
             let newObj = {};
             this.merger_uid = uid;
             this._ensureHtmlProjectInTranslations(translations);
+            this.invalidateHtmlValidation();
             this._backupTranslations();
 
             if (localStorage.getItem('enableMergeHintDialog') === null) {
@@ -1148,6 +1230,9 @@ function fetchTranslation() {
                 if (!response.ok) {
                     const body = await response.json().catch(() => null);
                     throw new Error(body?.detail ?? `Server error (${response.status})`);
+                }
+                if (muid && muid.startsWith('html-')) {
+                    Object.keys(data).forEach(uid => delete this.htmlDraftOverrides[uid]);
                 }
                 const { task_id: taskID } = await response.json();
                 // if (!taskID) {

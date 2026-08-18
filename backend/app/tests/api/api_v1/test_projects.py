@@ -196,6 +196,87 @@ class TestProjects:
         }
 
     @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.get_json_data")
+    @patch("app.api.api_v1.endpoints.projects._get_project_file_paths")
+    async def test_validate_html_project_uses_the_complete_file_with_draft_overrides(
+        self,
+        mock_get_project_file_paths,
+        mock_get_json_data,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
+    ) -> None:
+        mock_get_project_file_paths.return_value = {"html/pli/ms/sutta/mn/mn1_html-pli-ms.json"}
+        mock_get_json_data.return_value = {
+            "mn1:1.1": "<section><p>{}",
+            "mn1:1.2": "</p><span>{}</span></section>",
+        }
+
+        response = await async_client.post(
+            "/projects/html-pli-ms/mn1/html-validation/",
+            json={"overrides": {"mn1:1.2": "</section><p>{}</p>"}},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["valid"] is False
+        assert body["checked_segments"] == 2
+        assert body["errors"][0]["uid"] == "mn1:1.2"
+        assert body["errors"][0]["related_uid"] == "mn1:1.1"
+
+    @pytest.mark.asyncio
+    async def test_validate_html_project_rejects_non_html_projects(
+        self,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
+    ) -> None:
+        response = await async_client.post(
+            "/projects/translation-en-test/mn1/html-validation/",
+            json={"overrides": {}},
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {
+            "detail": "HTML validation is only available for html projects"
+        }
+
+    @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.get_json_data")
+    @patch("app.api.api_v1.endpoints.projects._get_project_file_paths")
+    async def test_validate_html_project_rejects_unknown_draft_uids(
+        self,
+        mock_get_project_file_paths,
+        mock_get_json_data,
+        async_client,
+        mock_get_current_user_admin,
+        mock_is_admin_or_superuser_is_active,
+    ) -> None:
+        mock_get_project_file_paths.return_value = {"html/pli/ms/sutta/mn/mn1_html-pli-ms.json"}
+        mock_get_json_data.return_value = {"mn1:1.1": "<p>{}</p>"}
+
+        response = await async_client.post(
+            "/projects/html-pli-ms/mn1/html-validation/",
+            json={"overrides": {"mn1:9.9": "<p>{}</p>"}},
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Unknown HTML segment: mn1:9.9"}
+
+    @pytest.mark.asyncio
+    async def test_validate_html_project_requires_admin_or_superuser(
+        self,
+        async_client,
+        mock_get_current_user,
+    ) -> None:
+        response = await async_client.post(
+            "/projects/html-pli-ms/mn1/html-validation/",
+            json={"overrides": {}},
+        )
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
     async def test_update_json_data_for_prefix_in_project_unauthenticated(self, async_client) -> None:
         response = await async_client.patch("/projects/translation-en-test/an1.1-10/")
         assert response.status_code == 401

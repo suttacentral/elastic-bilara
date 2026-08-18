@@ -127,6 +127,32 @@
             </div>
         </sl-dialog>
 
+        <sl-dialog label="HTML validation" class="dialog-html-validation">
+            <div class="html-validation-dialog" aria-live="polite">
+                <p class="html-validation-dialog__summary"
+                    x-text="htmlValidation.status === 'invalid'
+                        ? htmlValidation.errors.length + ' HTML errors found.'
+                        : htmlValidation.warnings.length + ' HTML warnings found.'">
+                </p>
+                <ul class="html-validation-dialog__issues">
+                    <template x-for="(issue, index) in [...htmlValidation.errors, ...htmlValidation.warnings]"
+                        :key="issue.code + '-' + issue.uid + '-' + index">
+                        <li class="html-validation-dialog__issue"
+                            :class="'html-validation-dialog__issue--' + issue.severity">
+                            <button type="button"
+                                class="html-validation-dialog__issue-button"
+                                @click="focusHtmlValidationIssue(issue)">
+                                <span class="html-validation-dialog__issue-uid" x-text="issue.uid"></span>
+                                <span class="html-validation-dialog__issue-message" x-text="issue.message"></span>
+                            </button>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+            <sl-button slot="footer" variant="primary"
+                @click="document.querySelector('.dialog-html-validation').hide()">Close</sl-button>
+        </sl-dialog>
+
         <sc-bilara-translation-project-header></sc-bilara-translation-project-header>
 
         <div class="project-container"
@@ -193,6 +219,7 @@
             @mousemove.window="onPanelResize($event)"
             @mouseup.window="stopPanelResize()"
             @toggle-search-panel.window="toggleSearchPanel()"
+            @show-html-source.window="setHtmlPreviewEnabled(false)"
             @settings-saved.window="if ($event.detail && 'structure_editing_enabled' in $event.detail) setStructureEditingEnabled($event.detail.structure_editing_enabled)"
             @show-search-panel.window="showSearchPanelTemporarily()"
             @resize.window="if(localStorage.getItem(searchPanelPreferenceKey) === null && window.innerWidth >= 1280) searchPanelVisible = true">
@@ -486,6 +513,30 @@
                                     @dragstart.prevent.stop
                                     @keydown.stop>
                                     <i class="bi" :class="htmlPreviewEnabled ? 'bi-code-slash' : 'bi-eye'" aria-hidden="true"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="translation-grid__html-validation-button"
+                                    x-show="translation.muid === htmlProjectName && translation.canEdit"
+                                    x-cloak
+                                    draggable="false"
+                                    :disabled="htmlValidation.status === 'checking'"
+                                    :class="'translation-grid__html-validation-button--' + htmlValidation.status"
+                                    aria-label="Validate whole HTML file"
+                                    :title="htmlValidation.status === 'valid' ? 'HTML valid — validate again' : 'Validate whole HTML file'"
+                                    @click.stop="validateHtmlProject()"
+                                    @pointerdown.stop="$el.closest('.translation-grid__header-cell').draggable = false"
+                                    @pointerup.window="$el.closest('.translation-grid__header-cell').draggable = true"
+                                    @pointercancel.window="$el.closest('.translation-grid__header-cell').draggable = true"
+                                    @mousedown.stop
+                                    @dragstart.prevent.stop
+                                    @keydown.stop>
+                                    <i class="bi" :class="{
+                                        'bi-shield-check': htmlValidation.status === 'idle',
+                                        'bi-arrow-repeat': htmlValidation.status === 'checking',
+                                        'bi-check-circle-fill': htmlValidation.status === 'valid',
+                                        'bi-exclamation-triangle-fill': htmlValidation.status === 'invalid' || htmlValidation.status === 'error'
+                                    }" aria-hidden="true"></i>
                                 </button>
                                 <span class="translation-grid__header-owner"
                                     x-show="isCurrentUserMuid(translation.muid)"

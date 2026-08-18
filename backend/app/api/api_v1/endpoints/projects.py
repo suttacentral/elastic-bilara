@@ -24,7 +24,10 @@ from app.services.projects.models import (
     CalleeMerge,
     Affected,
     CalleeSplit,
+    HtmlValidationIn,
+    HtmlValidationOut,
 )
+from app.services.projects.html_validator import validate_bilara_html
 from app.services.projects.uid_expander import UIDExpander
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
@@ -386,6 +389,48 @@ async def get_json_data_for_prefix_in_project(
     can_edit: bool = can_edit_translation(int(user.github_id), muid)
     data: dict[str, str] = get_json_data(Path(file.pop()))
     return JSONDataOut(can_edit=can_edit, data=data)
+
+
+@router.post(
+    "/{muid}/{prefix}/html-validation/",
+    response_model=HtmlValidationOut,
+    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
+)
+async def validate_html_project(
+    user: Annotated[UserBase, Depends(utils.get_current_user)],
+    muid: str,
+    prefix: str,
+    payload: HtmlValidationIn,
+) -> HtmlValidationOut:
+    if not muid.startswith("html-"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="HTML validation is only available for html projects",
+        )
+
+    files = _get_project_file_paths(muid, prefix)
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Data for project '{muid}' and prefix '{prefix}' not found",
+        )
+
+    segments: dict[str, str] = get_json_data(Path(files.pop()))
+    unknown_uids = set(payload.overrides) - set(segments)
+    if unknown_uids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown HTML segment: {sorted(unknown_uids)[0]}",
+        )
+
+    segments.update(payload.overrides)
+    result = validate_bilara_html(segments)
+    return HtmlValidationOut(
+        valid=result.valid,
+        checked_segments=result.checked_segments,
+        errors=[issue.__dict__ for issue in result.errors],
+        warnings=[issue.__dict__ for issue in result.warnings],
+    )
 
 
 @router.patch("/{muid}/{prefix}/", response_model=JSONDataOut)

@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -22,6 +22,26 @@ class JSONDataOut(BaseModel):
     can_edit: bool
     data: dict[str, str]
     task_id: str | None = None
+
+
+class HtmlValidationIn(BaseModel):
+    overrides: dict[str, str] = Field(default_factory=dict)
+
+
+class HtmlValidationIssueOut(BaseModel):
+    severity: Literal["error", "warning"]
+    code: str
+    uid: str
+    offset: int
+    message: str
+    related_uid: str | None = None
+
+
+class HtmlValidationOut(BaseModel):
+    valid: bool
+    checked_segments: int
+    errors: list[HtmlValidationIssueOut] = Field(default_factory=list)
+    warnings: list[HtmlValidationIssueOut] = Field(default_factory=list)
 
 
 def validate_exists(v: str, field: Any) -> str:
