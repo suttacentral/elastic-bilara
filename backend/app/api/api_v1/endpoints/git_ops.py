@@ -27,7 +27,7 @@ from pygit2 import (
     GIT_STATUS_WT_NEW,
     GIT_STATUS_WT_DELETED,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from app.services.git.utils import (
     ensure_safe_directory,
     FileStatus,
@@ -501,6 +501,7 @@ async def discard_file_changes(
 async def github_webhook(
     request: Request,
     x_hub_signature_256: str = Header(None),
+    x_github_event: str | None = Header(None),
 ) -> dict:
     payload_bytes = await request.body()
     secret = settings.GITHUB_WEBHOOK_SECRET.encode()
@@ -517,20 +518,45 @@ async def github_webhook(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
 
     payload = parse_payload(payload_bytes.decode())
-    branch_name = (
-        payload.get("pull_request").get("base").get("ref").removeprefix("refs/heads/")
-        if payload.get("pull_request").get("base").get("ref")
-        else None
-    )
+
+    if x_github_event and x_github_event != "pull_request":
+        return {"detail": "Webhook event ignored"}
+
+    try:
+        webhook_payload = GitHubPullRequestPayload.model_validate(payload)
+    except ValidationError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid pull request payload",
+        )
+
+    branch_name = webhook_payload.pull_request.base.ref.removeprefix("refs/heads/")
 
     if not GitManager.is_branch_protected(branch_name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid branch name. Use 'published' or 'unpublished'"
         )
-    user = get_user(int(payload["sender"]["id"]))
+    user = get_user(webhook_payload.sender.id)
     result = pull.delay(user.model_dump(), branch_name, True, "origin")
     result_2 = push.delay(user.model_dump(), branch_name, "origin")
     return {"detail": "Sync action has been triggered", "task_id": [result.id, result_2.id]}
+
+
+class GitHubPullRequestBase(BaseModel):
+    ref: str
+
+
+class GitHubPullRequest(BaseModel):
+    base: GitHubPullRequestBase
+
+
+class GitHubSender(BaseModel):
+    id: int
+
+
+class GitHubPullRequestPayload(BaseModel):
+    pull_request: GitHubPullRequest
+    sender: GitHubSender
 
 
 @router.get(

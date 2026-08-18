@@ -73,17 +73,64 @@ async def test_github_webhook_invalid_signature_format(async_client):
 @pytest.mark.asyncio
 async def test_github_webhook_invalid_branch(async_client):
     secret = settings.GITHUB_WEBHOOK_SECRET.encode()
-    payload = {"pull_request": {"base": {"ref": "refs/heads/invalid"}}}
+    payload = {
+        "pull_request": {"base": {"ref": "refs/heads/invalid"}},
+        "sender": {"id": 123456},
+    }
     payload_bytes = json.dumps(payload).encode("utf-8")
     with patch("app.api.api_v1.endpoints.git_ops.parse_payload", return_value=payload):
         signature = hmac.new(secret, payload_bytes, hashlib.sha256).hexdigest()
         response = await async_client.post(
             "/git/sync",
             headers={"x-hub-signature-256": f"sha256={signature}", "Content-Type": "application/x-www-form-urlencoded"},
-            json={"pull_request": {"base": {"ref": "refs/heads/invalid"}}},
+            json=payload,
         )
         assert response.status_code == 400
         assert response.json() == {"detail": "Invalid branch name. Use 'published' or 'unpublished'"}
+
+
+@pytest.mark.asyncio
+async def test_github_webhook_ignores_non_pull_request_event(async_client):
+    payload = {"zen": "Keep it logically awesome.", "sender": {"id": 123456}}
+
+    with patch("app.api.api_v1.endpoints.git_ops.hmac.compare_digest", return_value=True):
+        with patch("app.api.api_v1.endpoints.git_ops.parse_payload", return_value=payload):
+            with patch("app.api.api_v1.endpoints.git_ops.pull.delay") as mock_pull:
+                with patch("app.api.api_v1.endpoints.git_ops.push.delay") as mock_push:
+                    response = await async_client.post(
+                        "/git/sync",
+                        headers={
+                            "x-github-event": "ping",
+                            "x-hub-signature-256": "sha256=valid",
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        json=payload,
+                    )
+
+    assert response.status_code == 201
+    assert response.json() == {"detail": "Webhook event ignored"}
+    mock_pull.assert_not_called()
+    mock_push.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_github_webhook_rejects_pull_request_event_without_pull_request(async_client):
+    payload = {"pull_request": None, "sender": {"id": 123456}}
+
+    with patch("app.api.api_v1.endpoints.git_ops.hmac.compare_digest", return_value=True):
+        with patch("app.api.api_v1.endpoints.git_ops.parse_payload", return_value=payload):
+            response = await async_client.post(
+                "/git/sync",
+                headers={
+                    "x-github-event": "pull_request",
+                    "x-hub-signature-256": "sha256=valid",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                json=payload,
+            )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid pull request payload"}
 
 
 @pytest.mark.asyncio
