@@ -6,6 +6,16 @@ const translationHtmlContent = fs.readFileSync(path.resolve(__dirname, '../../..
 eval(translationJsContent);
 
 describe('Translation initial loading state', () => {
+    test('shows the current UID in the browser title', () => {
+        setTranslationDocumentTitle('mn1');
+        expect(document.title).toBe('Bilara - mn1');
+    });
+
+    test('keeps the default title when no UID is available', () => {
+        setTranslationDocumentTitle(null);
+        expect(document.title).toBe('Bilara');
+    });
+
     test('starts in the loading state', () => {
         expect(fetchTranslation().loading).toBe(true);
     });

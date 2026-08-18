@@ -1,5 +1,9 @@
 const HTML_PREVIEW_PREFERENCE_KEY = 'bilara:translation:html-preview-enabled';
 
+function setTranslationDocumentTitle(uid) {
+    document.title = uid ? `Bilara - ${uid}` : 'Bilara';
+}
+
 function getStoredHtmlPreviewEnabled() {
     return localStorage.getItem(HTML_PREVIEW_PREFERENCE_KEY) === 'true';
 }
@@ -197,6 +201,7 @@ function fetchTranslation() {
         async initialize() {
             const params = new URLSearchParams(window.location.search);
             this.prefix = params.get("prefix");
+            setTranslationDocumentTitle(this.prefix);
             const source = await this.resolveSource(params);
             const muid = params.get("muid");
 
@@ -226,6 +231,7 @@ function fetchTranslation() {
                 if (fallbackPrefix) {
                     console.info(`Prefix "${this.prefix}" not found, falling back to range prefix "${fallbackPrefix}"`);
                     this.prefix = fallbackPrefix;
+                    setTranslationDocumentTitle(this.prefix);
                     await this.findOrCreateObject(source, this.prefix, true);
                     // Update URL to reflect the resolved prefix
                     const url = new URL(window.location);
