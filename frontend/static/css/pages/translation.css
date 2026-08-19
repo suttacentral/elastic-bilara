@@ -711,6 +711,12 @@
     filter: brightness(0.9);
 }
 
+.search__navigation .btn--search:active {
+    border: none;
+    transform: none;
+    transition: none;
+}
+
 .search__navigation .btn--previous,
 .search__navigation .btn--next {
     background-color: var(--color-background-secondary);
