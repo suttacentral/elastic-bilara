@@ -271,9 +271,9 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
                                @toggle-search-panel.window="togglePanelVisible()"
                                @show-search-panel.window="panelVisible = true"
                                @resize.window="if(localStorage.getItem(searchPanelPreferenceKey) === null && window.innerWidth >= 1280) panelVisible = true"
-                               :title="panelVisible ? 'Hide search panel' : 'Show search panel'">
+                               :title="panelVisible ? 'Hide search' : 'Show search'">
                            <i class="bi" :class="panelVisible ? 'bi-layout-sidebar-reverse' : 'bi-layout-sidebar'" style="margin-right: 6px;"></i>
-                          <span x-text="panelVisible ? 'Hide Search Panel' : 'Show Search Panel'"></span>
+                          <span x-text="panelVisible ? 'Hide Search' : 'Show Search'"></span>
                       </sl-button>
                   </li>
               </ul>
