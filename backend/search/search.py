@@ -632,7 +632,10 @@ class Search:
         except RequestError as e:
             return False, e
 
-    def get_phrase_similar_segments(self, phrase_value: str, source_muid: str, size: int = 250) -> list[dict[str, str]]:
+    def get_phrase_similar_segments(self, phrase_value: str, source_muid: str, size: int = 20) -> list[dict[str, str]]:
+        if not phrase_value or not phrase_value.strip():
+            return []
+
         query = {
             "query": {
                 "bool": {
@@ -643,8 +646,8 @@ class Search:
                                 "fields": ["segment"],
                                 "type": "best_fields",
                                 "fuzziness": "AUTO",
-                                "prefix_length": 0,
-                                "max_expansions": 100,
+                                "prefix_length": 2,
+                                "max_expansions": 15,
                                 "operator": "or",
                             }
                         },
