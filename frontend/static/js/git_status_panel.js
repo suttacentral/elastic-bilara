@@ -45,11 +45,6 @@ function gitStatusPanel() {
         diffContent: '',
         diffError: null,
 
-        // Discard related state
-        showConfirmModal: false,
-        fileToDiscard: null,
-        discarding: false,
-        skipDiscardConfirm: false,
         // Edit related state
         showEditModal: false,
         fileToEdit: null,
@@ -356,70 +351,6 @@ function gitStatusPanel() {
 
                 return { text: line, type };
             });
-        },
-
-        showDiscardConfirm(file) {
-            this.fileToDiscard = file;
-            if (localStorage.getItem('skipDiscardConfirm') === 'true') {
-                this.confirmDiscard();
-                return;
-            }
-            this.showConfirmModal = true;
-        },
-
-        closeConfirmModal() {
-            this.showConfirmModal = false;
-            this.fileToDiscard = null;
-            this.skipDiscardConfirm = false;
-        },
-
-        async confirmDiscard() {
-            if (!this.fileToDiscard || this.discarding) return;
-
-            if (this.skipDiscardConfirm) {
-                localStorage.setItem('skipDiscardConfirm', 'true');
-            }
-
-            this.discarding = true;
-            try {
-                const response = await fetch('/api/v1/git/discard', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ file_path: this.fileToDiscard.path })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                this.showToast(data.message, 'success');
-
-                // Clear cache for the discarded file
-                this.diffCache.delete(this.fileToDiscard.path);
-
-                // Clear selection if discarded file was selected
-                if (this.selectedFile === this.fileToDiscard.path) {
-                    this.selectedFile = null;
-                    this.diffContent = '';
-                    this.parsedDiffLines = [];
-                    this.diffError = null;
-                }
-
-                // Refresh file list
-                await this.fetchStatus();
-            } catch (error) {
-                console.error('Error discarding changes:', error);
-                this.showToast(error.message, 'error');
-            } finally {
-                this.discarding = false;
-                this.closeConfirmModal();
-            }
         },
 
         showToast(message, type = 'success') {

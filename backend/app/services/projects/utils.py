@@ -120,10 +120,14 @@ def update_file(
         return False, elastic_error, task_id
 
     written, file_error = write_json_data(path, file_data)
-    # cleaned_path_string = str(utils.clean_path(str(path)))
-    # if written:
-    #     result = commit.delay(user.model_dump(), str(path), f"Translations by {user.username} to {cleaned_path_string}")
-    #     task_id = result.id
+    if written:
+        cleaned_path_string = str(utils.clean_path(str(path)))
+        result = commit.delay(
+            user.model_dump(),
+            [cleaned_path_string],
+            f"Translations by {user.username} to {cleaned_path_string}",
+        )
+        task_id = result.id
 
     if file_error:
         updated = False

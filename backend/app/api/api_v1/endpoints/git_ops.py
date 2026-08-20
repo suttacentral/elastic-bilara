@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import subprocess
 import urllib.parse
 from pathlib import Path
@@ -33,10 +34,10 @@ from app.services.git.utils import (
     FileStatus,
     GitStatusResponse,
     FileDiffResponse,
-    DiscardRequest,
-    DiscardResponse,
     get_status_name
 )
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/git")
@@ -130,10 +131,23 @@ def _is_meaningful_untracked_file(repo_path: Path, file_path: str) -> bool:
     return _has_meaningful_json_value(data)
 
 
+def _get_base_published_ref(repo_path: Path, repo: Repository | None = None) -> str:
+    """Return the base published reference to compare against ('origin/published', 'published', or 'HEAD')."""
+    if repo is not None:
+        try:
+            if "refs/remotes/origin/published" in repo.references:
+                return "origin/published"
+            if "refs/heads/published" in repo.references:
+                return "published"
+        except Exception:
+            pass
+    return "origin/published" if (repo_path / ".git" / "refs" / "remotes" / "origin" / "published").exists() else "HEAD"
+
+
 @router.get(
     "/status",
     response_model=GitStatusResponse,
-    description="Get the git status of the unpublished repository",
+    description="Get the git status of the unpublished repository (Publication Queue)",
     dependencies=[Depends(permissions.is_user_active)],
 )
 async def get_git_status(
@@ -158,12 +172,62 @@ async def get_git_status(
 
     try:
         repo = Repository(str(repo_path))
+        file_status_map: dict[str, tuple[str, int]] = {}
+        base_ref = _get_base_published_ref(repo_path, repo)
+
+        # 1. Check branch differences against base published ref
+        if base_ref != "HEAD":
+            try:
+                diff_res = subprocess.run(
+                    ["git", "diff", "--name-status", base_ref],
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired:
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail="Git branch diff timed out",
+                )
+            if diff_res.returncode != 0:
+                logger.error(
+                    "git diff --name-status %s failed in %s: %s",
+                    base_ref,
+                    repo_path,
+                    diff_res.stderr[:500],
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to compare against published branch: {diff_res.stderr[:200]}",
+                )
+            if diff_res.returncode == 0:
+                status_code_map = {
+                    "M": ("modified", GIT_STATUS_WT_MODIFIED),
+                    "A": ("staged_new", GIT_STATUS_INDEX_NEW),
+                    "D": ("deleted", GIT_STATUS_WT_DELETED),
+                }
+                for line in diff_res.stdout.strip().splitlines():
+                    if not line:
+                        continue
+                    parts = line.split(maxsplit=1)
+                    code = parts[0][0]
+                    filepath = parts[1].split("\t")[-1].strip()
+                    status_name, status_code = status_code_map.get(code, ("modified", GIT_STATUS_WT_MODIFIED))
+                    file_status_map[filepath] = (status_name, status_code)
+
+        # 2. Check local working tree status (for uncommitted or newly created files)
+        status_dict = repo.status(untracked_files="all")
+        for filepath, status_code in status_dict.items():
+            if status_code == 0:
+                continue
+            status_name = get_status_name(status_code)
+            file_status_map[filepath] = (status_name, status_code)
 
         files = []
-        status_dict = repo.status(untracked_files="all")
-
-        for filepath, status_code in status_dict.items():
-            if status_code == 0 or not fileFilter(Path(filepath)):
+        for filepath, (status_name, status_code) in file_status_map.items():
+            if not fileFilter(Path(filepath)):
                 continue
             if not show_other_users:
                 can_access = (
@@ -174,14 +238,14 @@ async def get_git_status(
                 if not can_access:
                     continue
             if (
-                status_code & GIT_STATUS_WT_NEW
+                (status_code & GIT_STATUS_WT_NEW)
                 and not (status_code & GIT_STATUS_INDEX_NEW)
                 and not _is_meaningful_untracked_file(repo_path, filepath)
             ):
                 continue
             files.append(FileStatus(
                 path=filepath,
-                status=get_status_name(status_code),
+                status=status_name,
                 status_code=status_code
             ))
 
@@ -214,14 +278,14 @@ def fileFilter(filepath: Path) -> bool:
 @router.get(
     "/diff/{file_path:path}",
     response_model=FileDiffResponse,
-    description="Get the diff content of the specified file",
+    description="Get the diff content of the specified file relative to published",
     dependencies=[Depends(permissions.is_user_active)],
 )
 async def get_file_diff(
     file_path: str,
     token_data: Annotated[TokenData, Depends(utils.get_current_user)],
 ) -> FileDiffResponse:
-    """Get the diff of the specified file relative to HEAD.
+    """Get the diff of the specified file relative to the published base branch.
 
     Non-admin users can only view diffs of files in their own namespace.
 
@@ -241,6 +305,13 @@ async def get_file_diff(
         )
 
     try:
+        repo = None
+        try:
+            repo = Repository(str(repo_path))
+        except Exception:
+            pass
+        base_ref = _get_base_published_ref(repo_path, repo)
+        ref_to_use = base_ref if base_ref != "HEAD" else "HEAD"
 
         # Quick check file status using git command (faster than pygit2)
         try:
@@ -261,12 +332,6 @@ async def get_file_diff(
         # Keep leading spaces because porcelain status uses them as signal.
         status_output = result.stdout.rstrip()
 
-        if not status_output:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File has no changes: {file_path}"
-            )
-
         # Parse status code (first 2 characters)
         status_code = (
             status_output[:2] if len(status_output) >= 2 else "  "
@@ -284,6 +349,28 @@ async def get_file_diff(
             'AM': 'staged_modified',
         }
         status_name = status_map.get(status_code, 'modified')
+
+        # When working tree is clean, infer status from branch diff
+        if not status_output:
+            try:
+                branch_diff = subprocess.run(
+                    ["git", "diff", "--name-status", ref_to_use, "--", file_path],
+                    cwd=repo_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+                if branch_diff.returncode == 0 and branch_diff.stdout.strip():
+                    branch_code = branch_diff.stdout.strip().split()[0][0]
+                    branch_status_map = {
+                        'A': 'staged_new',
+                        'M': 'modified',
+                        'D': 'deleted',
+                    }
+                    status_name = branch_status_map.get(branch_code, 'modified')
+            except subprocess.TimeoutExpired:
+                pass
 
         # Get diff using git command (5-10x faster than pygit2 iteration)
         diff_text = ""
@@ -303,7 +390,7 @@ async def get_file_diff(
             elif 'D' in status_code:
                 # Deleted file: show what was removed
                 result = subprocess.run(
-                    ["git", "diff", "HEAD", "--", file_path],
+                    ["git", "diff", ref_to_use, "--", file_path],
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
@@ -312,9 +399,9 @@ async def get_file_diff(
                 )
                 diff_text = result.stdout
             else:
-                # Modified file: show changes
+                # Modified or committed file: show changes relative to base_ref / HEAD
                 result = subprocess.run(
-                    ["git", "diff", "HEAD", "--", file_path],
+                    ["git", "diff", ref_to_use, "--", file_path],
                     cwd=repo_path,
                     capture_output=True,
                     text=True,
@@ -322,6 +409,12 @@ async def get_file_diff(
                     check=False
                 )
                 diff_text = result.stdout
+
+                if not status_output and not diff_text:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"File has no changes: {file_path}"
+                    )
 
         except subprocess.TimeoutExpired:
             raise HTTPException(
@@ -351,149 +444,6 @@ async def get_file_diff(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating diff: {str(e)}"
-        )
-
-
-@router.post(
-    "/discard",
-    response_model=DiscardResponse,
-    description="Discard changes of the specified file",
-    dependencies=[Depends(permissions.is_user_active)],
-)
-async def discard_file_changes(
-    request: DiscardRequest,
-    token_data: Annotated[TokenData, Depends(utils.get_current_user)],
-) -> DiscardResponse:
-    """Discard changes of the specified file, restoring it to the HEAD state.
-    Non-admin users can only discard files in their own namespace.
-    """
-    current_user: UserBase = get_user(int(token_data.github_id))
-    is_admin = current_user.role in [Role.ADMIN.value, Role.SUPERUSER.value]
-
-    repo_path = settings.WORK_DIR
-    file_path = _validate_file_path(request.file_path, repo_path)
-
-    if not is_admin and not _can_user_access_file(file_path, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to discard changes to this file",
-        )
-
-    try:
-        repo = Repository(str(repo_path))
-
-        # Check file status
-        try:
-            status_code = repo.status_file(file_path)
-        except KeyError:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"File not found in repository: {file_path}"
-            )
-
-        if status_code == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File has no changes to discard: {file_path}"
-            )
-
-        full_path = repo_path / file_path
-
-        # Handle different types of changes
-        if status_code & GIT_STATUS_WT_NEW:
-            # New file (untracked), delete directly
-            if full_path.exists():
-                try:
-                    full_path.unlink()
-                except FileNotFoundError:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Untracked file not found for deletion: {file_path}"
-                    )
-                except OSError as e:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail=f"Failed to delete untracked file '{file_path}': {str(e)}"
-                    )
-                # If parent directories are empty, delete them as well
-                parent = full_path.parent
-                while parent != repo_path and parent.exists():
-                    try:
-                        parent.rmdir()  # Only delete if directory is empty
-                        parent = parent.parent
-                    except OSError:
-                        break
-            return DiscardResponse(
-                success=True,
-                message=f"Deleted untracked file: {file_path}",
-                file_path=file_path
-            )
-        elif status_code & GIT_STATUS_WT_DELETED:
-            # File deleted, restore from HEAD
-            head_commit = repo.head.peel()
-            try:
-                blob = head_commit.tree[file_path]
-                full_path.parent.mkdir(parents=True, exist_ok=True)
-                full_path.write_bytes(blob.data)
-            except KeyError:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"File not found in HEAD: {file_path}"
-                )
-            return DiscardResponse(
-                success=True,
-                message=f"Restored deleted file: {file_path}",
-                file_path=file_path
-            )
-        elif status_code & GIT_STATUS_WT_MODIFIED:
-            # File modified, restore from HEAD
-            head_commit = repo.head.peel()
-            try:
-                blob = head_commit.tree[file_path]
-                full_path.write_bytes(blob.data)
-            except KeyError:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"File not found in HEAD: {file_path}"
-                )
-            return DiscardResponse(
-                success=True,
-                message=f"Discarded changes in: {file_path}",
-                file_path=file_path
-            )
-        elif status_code & (GIT_STATUS_INDEX_NEW | GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_INDEX_DELETED):
-            # Staged changes, need to remove from index first, then restore working directory
-            repo.index.remove(file_path)
-            repo.index.write()
-
-            if not (status_code & GIT_STATUS_INDEX_NEW):
-                # If not a newly added file, restore from HEAD
-                head_commit = repo.head.peel()
-                try:
-                    blob = head_commit.tree[file_path]
-                    full_path.parent.mkdir(parents=True, exist_ok=True)
-                    full_path.write_bytes(blob.data)
-                except KeyError:
-                    pass
-            elif full_path.exists():
-                # Newly added file, delete it
-                full_path.unlink()
-
-            return DiscardResponse(
-                success=True,
-                message=f"Discarded staged changes in: {file_path}",
-                file_path=file_path
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unknown file status: {status_code}"
-            )
-
-    except GitError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Git error: {str(e)}"
         )
 
 

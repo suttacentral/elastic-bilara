@@ -238,7 +238,7 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
                   x-show="percentage >= 90 && canSeeGoBtn"
                   @click="goToUnpublished()"
                   class="project-header__progress-go-btn"
-                  title="Go to Unpublished Changes">
+                  title="Go to Publication Queue">
                   Go
               </button>
           </div>

@@ -84,10 +84,6 @@ function createMockPanel(overrides = {}) {
             deleted: 0,
             staged: 0
         },
-        showConfirmModal: false,
-        fileToDiscard: null,
-        discarding: false,
-        skipDiscardConfirm: false,
         showEditModal: false,
         fileToEdit: null,
         skipEditConfirm: false,
@@ -333,9 +329,6 @@ describe('Git Status Panel State Initialization', () => {
     test('should have correct default modal states', () => {
         const panel = createMockPanel();
         
-        expect(panel.showConfirmModal).toBe(false);
-        expect(panel.fileToDiscard).toBeNull();
-        expect(panel.discarding).toBe(false);
         expect(panel.showEditModal).toBe(false);
         expect(panel.fileToEdit).toBeNull();
         expect(panel.showPublishModal).toBe(false);

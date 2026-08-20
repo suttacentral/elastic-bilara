@@ -148,16 +148,6 @@ class FileDiffResponse(BaseModel):
     status: str
 
 
-class DiscardRequest(BaseModel):
-    file_path: str
-
-
-class DiscardResponse(BaseModel):
-    success: bool
-    message: str
-    file_path: str
-
-
 def get_status_name(status_code: int) -> str:
     """Convert pygit2 status codes into readable status names."""
     status_map = {

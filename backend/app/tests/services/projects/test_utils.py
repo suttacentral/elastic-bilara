@@ -176,7 +176,10 @@ class TestProjectsUtils:
             "builtins.open", side_effect=open_side_effect
         ), patch(
             "app.services.projects.utils.get_user"
-        ) as mock_get_user:
+        ) as mock_get_user, patch(
+            "app.services.projects.utils.commit.delay",
+            return_value=MagicMock(id="test_task_id"),
+        ):
             mock_get_user.return_value = user
             mock_search.update_segments.return_value = update_segments_return
             result, error, task_id = update_file(path, data, root_path, user)

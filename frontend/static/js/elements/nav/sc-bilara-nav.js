@@ -62,7 +62,7 @@ export class SCBilaraNav extends LitElement {
                     <sl-divider></sl-divider>
                     <sl-menu-item x-show="isActive">
                       <a href="/git_status_panel" target="_blank" rel="noopener noreferrer"  class="menu-item-link">
-                        Unpublished Changes
+                        Publication Queue
                       </a>
                     </sl-menu-item>
                     <sl-menu-item x-show="isAdmin && isActive">

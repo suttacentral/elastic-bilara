@@ -192,17 +192,6 @@ body {
     cursor: not-allowed;
 }
 
-.diff-action-btn.discard-btn {
-    background-color: transparent;
-    color: var(--color-error);
-    border-color: var(--color-error);
-}
-
-.diff-action-btn.discard-btn:hover {
-    background-color: var(--color-error);
-    color: var(--color-white);
-}
-
 .spin {
     animation: spin 1s linear infinite;
 }
@@ -524,22 +513,6 @@ body {
 
 .publish-btn.loading i {
     animation: spin 1s linear infinite;
-}
-
-.discard-btn {
-    color: var(--color-error);
-    border: 2px solid var(--color-error);
-    width: 100px;
-}
-.discard-btn:hover {
-    background-color: var(--color-error);
-    border: 2px solid var(--color-error);
-    color: var(--color-text-on-strong);
-}
-
-.discard-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 .edit-btn {
