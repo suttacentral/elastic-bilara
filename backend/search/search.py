@@ -1,3 +1,4 @@
+from dotenv.main import logger
 import string
 from pathlib import Path
 from typing import Any, Generator, List
@@ -177,16 +178,24 @@ class Search:
             query["query"] = {"prefix": {field: prefix}}
         return query
 
-    def _scroll_search(self, query) -> Generator:
+    def _scroll_search(self, query, index: str = settings.ES_INDEX) -> Generator:
         scroll = "1m"
         size = 1000
-        response = self._search.search(index=settings.ES_INDEX, body=query, scroll=scroll, size=size)
-        old_scroll_id = response["_scroll_id"]
-        yield from response["hits"]["hits"]
-        while len(response["hits"]["hits"]):
-            response = self._search.scroll(scroll_id=old_scroll_id, scroll=scroll)
-            old_scroll_id = response["_scroll_id"]
-            yield from response["hits"]["hits"]
+        response = self._search.search(index=index, body=query, scroll=scroll, size=size)
+        scroll_id = response.get("_scroll_id")
+        try:
+            hits = response.get("hits", {}).get("hits", [])
+            while hits:
+                yield from hits
+                response = self._search.scroll(scroll_id=scroll_id, scroll=scroll)
+                scroll_id = response.get("_scroll_id", scroll_id)
+                hits = response.get("hits", {}).get("hits", [])
+        finally:
+            if scroll_id:
+                try:
+                    self._search.clear_scroll(scroll_id=scroll_id)
+                except Exception:
+                    logger.debug("Failed to clear scroll context", exc_info=True)
 
     def find_unique_data(self, field: str = None, prefix: str = None) -> list[str]:
         results = self._search.search(index=settings.ES_INDEX, body=self._build_unique_query(field, prefix))[
