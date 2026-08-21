@@ -1,4 +1,4 @@
-from dotenv.main import logger
+import logging
 import string
 from pathlib import Path
 from typing import Any, Generator, List
@@ -7,6 +7,8 @@ from app.core.config import settings
 from elasticsearch import Elasticsearch, NotFoundError, RequestError, helpers
 
 from . import utils
+
+logger = logging.getLogger(__name__)
 
 
 class Search:
@@ -159,14 +161,14 @@ class Search:
     def _is_index_empty(self, index: str) -> bool:
         return self._search.count(index=index)["count"] == 0
 
-    def _build_unique_query(self, field: str = None, prefix: str = None) -> dict[str, Any]:
+    def _build_unique_query(self, field: str = None, prefix: str = None, size: int = 10000) -> dict[str, Any]:
         query = {
             "size": 0,
             "aggs": {
                 "unique_data": {
                     "terms": {
                         "field": field,
-                        "size": self._search.count(index=settings.ES_INDEX)["count"],
+                        "size": size,
                         "order": {
                             "_key": "asc",
                         },
@@ -197,8 +199,8 @@ class Search:
                 except Exception:
                     logger.debug("Failed to clear scroll context", exc_info=True)
 
-    def find_unique_data(self, field: str = None, prefix: str = None) -> list[str]:
-        results = self._search.search(index=settings.ES_INDEX, body=self._build_unique_query(field, prefix))[
+    def find_unique_data(self, field: str = None, prefix: str = None, size: int = 10000) -> list[str]:
+        results = self._search.search(index=settings.ES_INDEX, body=self._build_unique_query(field, prefix, size=size))[
             "aggregations"
         ]["unique_data"]["buckets"]
         return [result["key"] for result in results]
@@ -518,8 +520,8 @@ class Search:
                     raise_on_error=True,
                 )
 
-    def get_distinct_data(self, field: str, prefix: str = None) -> list[str]:
-        query: dict[str, Any] = self._build_unique_query(field=field)
+    def get_distinct_data(self, field: str, prefix: str = None, size: int = 10000) -> list[str]:
+        query: dict[str, Any] = self._build_unique_query(field=field, size=size)
         query["query"] = {"term": {"prefix": {"value": prefix}}}
         result: list[dict[str, Any]] = (
             self._search.search(index=settings.ES_INDEX, body=query)
