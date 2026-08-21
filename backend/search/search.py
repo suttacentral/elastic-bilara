@@ -538,11 +538,14 @@ class Search:
             data = [item.get("_source") for item in result]
         return bool(data)
 
-    def add_to_index(self, path: Path) -> tuple[bool, Exception | None]:
+    def add_to_index(self, path: Path, refresh: bool = False) -> tuple[bool, Exception | None]:
         data = self._process_file(path)
         source: dict[str, Any] = data["_source"]
         try:
-            self._search.index(index=settings.ES_INDEX, id=data["_id"], body=data["_source"], refresh=True)
+            kwargs: dict[str, Any] = {"index": settings.ES_INDEX, "id": data["_id"], "body": data["_source"]}
+            if refresh:
+                kwargs["refresh"] = True
+            self._search.index(**kwargs)
         except RequestError as e:
             return False, e
         segment_actions: list[dict[str, Any]] = []
