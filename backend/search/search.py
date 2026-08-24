@@ -369,7 +369,7 @@ class Search:
                         "bool": {
                             "must": [
                                 {"term": {"muid": {"value": muid}}},
-                                {"match_phrase": {"segment": lookup}},
+                                {"match_phrase_prefix": {"segment": lookup}},
                             ]
                         }
                     }
