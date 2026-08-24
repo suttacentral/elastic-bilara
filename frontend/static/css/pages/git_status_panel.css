@@ -62,6 +62,19 @@ body {
     background-color: var(--color-background-secondary);
 }
 
+.header-btn-link {
+    text-decoration: none;
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.header-btn-link .external-icon {
+    font-size: 0.75em;
+    opacity: 0.75;
+}
+
 .header-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -634,6 +647,17 @@ body {
     margin-bottom: var(--space-md);
 }
 
+.modal-body .modal-link {
+    color: var(--color-primary, #007acc);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: var(--font-weight-medium, 500);
+}
+
+.modal-body .modal-link:hover {
+    opacity: 0.8;
+}
+
 .modal-body .file-name {
     font-family: var(--font-serif);
     font-size: var(--text-sm);
@@ -754,6 +778,20 @@ body {
 
 .toast.error {
     background-color: var(--color-error);
+}
+
+.toast a,
+.toast .toast-link {
+    color: #ffffff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: var(--font-weight-bold, 600);
+    margin-left: var(--space-xs, 4px);
+}
+
+.toast a:hover,
+.toast .toast-link:hover {
+    opacity: 0.85;
 }
 
 @keyframes toastIn {

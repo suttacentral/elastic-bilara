@@ -353,11 +353,11 @@ function gitStatusPanel() {
             });
         },
 
-        showToast(message, type = 'success') {
+        showToast(message, type = 'success', duration = 3000) {
             this.toast = { show: true, message, type };
             setTimeout(() => {
                 this.toast.show = false;
-            }, 3000);
+            }, duration);
         },
 
         showEditConfirm(file) {
@@ -480,7 +480,11 @@ function gitStatusPanel() {
                 if (!taskID) {
                     throw new Error('Failed to schedule pull request');
                 }
-                this.showToast(`Pull Request scheduled for: ${file.path}`, 'success');
+                this.showToast(
+                    `Pull Request scheduled for: ${file.path}. <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="toast-link">View Pull Requests ↗</a>`,
+                    'success',
+                    5000
+                );
 
                 // Clear selection if published file was currently selected
                 if (this.selectedFile === file.path) {
@@ -608,8 +612,9 @@ function gitStatusPanel() {
 
                 if (errorMessages.length === 0) {
                     this.showToast(
-                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${this.selectedFiles.length} file(s) across ${totalGroups} project${totalGroups > 1 ? 's' : ''}.`,
-                        'success'
+                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${this.selectedFiles.length} file(s) across ${totalGroups} project${totalGroups > 1 ? 's' : ''}. <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="toast-link">View Pull Requests ↗</a>`,
+                        'success',
+                        5000
                     );
 
                     // Clear selection if the single selected file was among the batch published files

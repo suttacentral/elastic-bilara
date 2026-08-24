@@ -41,6 +41,15 @@
                         <i class="bi-arrow-clockwise"></i>
                         Refresh
                     </button>
+                    <a href="https://github.com/suttacentral/bilara-data/pulls"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="btn header-btn header-btn-link"
+                       title="View Pull Requests on GitHub">
+                        <i class="bi-github"></i>
+                        Pull Requests
+                        <i class="bi-box-arrow-up-right external-icon"></i>
+                    </a>
                 </div>
             </header>
 
@@ -348,7 +357,7 @@
                     <h3>Publish File</h3>
                 </div>
                 <div class="modal-body">
-                    <p>Publish this text. If you change your mind, you can unpublish later.</p>
+                    <p>Publish this text. A pull request will be created to merge your changes into the published branch. You can track all requests on <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="modal-link">GitHub Pull Requests ↗</a>.</p>
                     <div class="file-name" x-text="fileToPublish?.path"></div>
                     <label class="dont-show-again">
                         <input type="checkbox" x-model="skipPublishConfirm">
@@ -378,7 +387,7 @@
             :class="toast.type"
             x-transition>
             <i :class="toast.type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
-            <span x-text="toast.message"></span>
+            <span x-html="toast.message"></span>
         </div>
 
         </div>

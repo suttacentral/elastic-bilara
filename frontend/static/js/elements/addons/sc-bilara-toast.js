@@ -1,4 +1,5 @@
 import { LitElement, html, css, nothing } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
+import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/directives/unsafe-html.js/+esm';
 
 /**
  * Toast notification component
@@ -63,6 +64,18 @@ export class ScBilaraToast extends LitElement {
 
         .toast.hidden {
             display: none;
+        }
+
+        .toast a {
+            color: var(--color-white, #FBF6EF);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            font-weight: 600;
+            margin-left: var(--space-xs, 0.25rem);
+        }
+
+        .toast a:hover {
+            opacity: 0.85;
         }
 
         .toast i {
@@ -147,7 +160,7 @@ export class ScBilaraToast extends LitElement {
                 role="${this.visible ? 'status' : nothing}"
             >
                 <i class="${iconClass}"></i>
-                <span>${this.message}</span>
+                <span>${typeof this.message === 'string' && this.message.includes('<') ? unsafeHTML(this.message) : this.message}</span>
             </div>
         `;
     }

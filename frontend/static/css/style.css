@@ -290,6 +290,17 @@ sl-divider {
     margin-bottom: 16px;
 }
 
+.modal-body .modal-link {
+    color: var(--color-primary, #007acc);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 500;
+}
+
+.modal-body .modal-link:hover {
+    opacity: 0.8;
+}
+
 .modal-body .file-name {
     font-family: monospace;
     font-size: 0.875rem;

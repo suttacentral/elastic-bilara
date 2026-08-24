@@ -510,8 +510,9 @@ function tree() {
 
                 if (errorMessages.length === 0) {
                     this.showToast(
-                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${pathsToPublish.length} file(s)`,
-                        'success'
+                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${pathsToPublish.length} file(s). <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="toast-link">View Pull Requests ↗</a>`,
+                        'success',
+                        5000
                     );
                 } else {
                     const succeeded = successCount > 0 ? `${successCount}/${totalGroups} succeeded. ` : '';
@@ -526,10 +527,10 @@ function tree() {
             }
         },
 
-        showToast(message, type = 'success') {
+        showToast(message, type = 'success', duration = 3000) {
             const toast = document.querySelector('sc-bilara-toast');
             if (toast) {
-                toast.show(message, type);
+                toast.show(message, type, duration);
             }
         },
 
