@@ -1996,32 +1996,57 @@ sl-dialog::part(title) {
 }
 
 /* ===== Search Panel Toggle Transition ===== */
-.search-panel-transition-enter {
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.search-panel-transition-enter-start {
-    opacity: 0;
-    transform: translateX(20px);
-}
-
-.search-panel-transition-enter-end {
-    opacity: 1;
-    transform: translateX(0);
-}
-
+.search-panel-transition-enter,
 .search-panel-transition-leave {
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: width 0.25s cubic-bezier(0.2, 0, 0, 1),
+                opacity 0.2s ease,
+                transform 0.25s cubic-bezier(0.2, 0, 0, 1);
+    overflow: hidden !important;
 }
 
+.search-panel-transition-enter .project-container__detail-panel__search,
+.search-panel-transition-leave .project-container__detail-panel__search {
+    width: var(--panel-width, 280px);
+    min-width: var(--panel-width, 280px);
+}
+
+.search-panel-transition-enter-start,
+.search-panel-transition-leave-end {
+    width: 0 !important;
+    opacity: 0;
+    transform: translateX(16px);
+}
+
+.search-panel-transition-enter-end,
 .search-panel-transition-leave-start {
+    width: var(--panel-width, 280px) !important;
     opacity: 1;
     transform: translateX(0);
 }
 
-.search-panel-transition-leave-end {
+/* ===== Search Resizer Toggle Transition ===== */
+.search-resizer-transition-enter,
+.search-resizer-transition-leave {
+    transition: width 0.25s cubic-bezier(0.2, 0, 0, 1),
+                opacity 0.2s ease;
+    overflow: hidden !important;
+}
+
+.search-resizer-transition-enter-start,
+.search-resizer-transition-leave-end {
+    width: 0 !important;
     opacity: 0;
-    transform: translateX(20px);
+}
+
+.search-resizer-transition-enter-end,
+.search-resizer-transition-leave-start {
+    width: 6px !important;
+    opacity: 1;
+}
+
+.project-container--resizing .project-container__detail-panel,
+.project-container--resizing .project-container__resizer {
+    transition: none !important;
 }
 
 .translation-cell__resizer {

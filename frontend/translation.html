@@ -1025,7 +1025,12 @@
             <!-- Panel Resizer -->
             <div class="project-container__resizer"
                 x-show="searchPanelVisible"
-                x-transition
+                x-transition:enter="search-resizer-transition-enter"
+                x-transition:enter-start="search-resizer-transition-enter-start"
+                x-transition:enter-end="search-resizer-transition-enter-end"
+                x-transition:leave="search-resizer-transition-leave"
+                x-transition:leave-start="search-resizer-transition-leave-start"
+                x-transition:leave-end="search-resizer-transition-leave-end"
                 :class="{ 'project-container__resizer--dragging': isPanelDragging }"
                 @mousedown.prevent="startPanelResize($event)">
             </div>
@@ -1038,7 +1043,7 @@
                 x-transition:leave="search-panel-transition-leave"
                 x-transition:leave-start="search-panel-transition-leave-start"
                 x-transition:leave-end="search-panel-transition-leave-end"
-                :style="`width: ${searchPanelWidth}px;`">
+                :style="`--panel-width: ${searchPanelWidth}px; width: ${searchPanelWidth}px;`">
 
                 <div class="project-container__detail-panel__search search active"
                     x-data="{...search(), optionsExpanded: true}"
