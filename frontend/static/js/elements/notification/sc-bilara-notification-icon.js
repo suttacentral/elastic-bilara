@@ -48,15 +48,14 @@ class SCBilaraNotificationIcon extends LitElement {
     count: { type: Number },
   };
 
-  static POLL_INTERVAL = 30 * 60 * 1000;
   static SSE_RECONNECT_DELAY = 10000;
 
   constructor() {
     super();
     this.count = 0;
-    this._pollIntervalId = null;
     this._eventSource = null;
     this._sseReconnectTimer = null;
+    this._countRefreshPromise = null;
     this._handleNotificationsUpdated = this._handleNotificationsUpdated.bind(this);
     this._handleUnreadCountEvent = this._handleUnreadCountEvent.bind(this);
     this._handleStreamError = this._handleStreamError.bind(this);
@@ -77,26 +76,6 @@ class SCBilaraNotificationIcon extends LitElement {
         </div>
       </div>
     `;
-  }
-
-  async fetchNotification() {
-    try {
-      const response = await fetch('/api/v1/notifications/feed');
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.notifications) {
-        throw new Error('Invalid data format from the API');
-      }
-
-      return data.notifications;
-    } catch (error) {
-      throw new Error(error);
-    }
   }
 
   _handleUnreadCountEvent(event) {
@@ -151,44 +130,48 @@ class SCBilaraNotificationIcon extends LitElement {
 
   _handleStreamError() {
     this._stopRealtimeStream();
-    this._clearSseReconnectTimer();
+    void this._refreshNotificationCount();
 
     this._sseReconnectTimer = setTimeout(() => {
       this._startRealtimeStream();
     }, SCBilaraNotificationIcon.SSE_RECONNECT_DELAY);
   }
 
-  async _updateNotificationCount() {
-    try {
-      const data = await this.fetchNotification();
-      this.count = data.length;
-    } catch (error) {
-      console.error('Failed to update notification count:', error);
+  async _refreshNotificationCount() {
+    if (this._countRefreshPromise) {
+      return this._countRefreshPromise;
     }
+
+    this._countRefreshPromise = (async () => {
+      try {
+        const response = await fetch('/api/v1/notifications/count', {
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (typeof data.unread_count !== 'number') {
+          throw new Error('Invalid notification count response');
+        }
+        this.count = data.unread_count;
+      } catch (error) {
+        console.error('Failed to refresh notification count:', error);
+      } finally {
+        this._countRefreshPromise = null;
+      }
+    })();
+
+    return this._countRefreshPromise;
   }
 
-  _startPolling() {
-    this._stopPolling();
-    this._pollIntervalId = setInterval(
-      () => this._updateNotificationCount(),
-      SCBilaraNotificationIcon.POLL_INTERVAL
-    );
-  }
-
-  _stopPolling() {
-    if (this._pollIntervalId) {
-      clearInterval(this._pollIntervalId);
-      this._pollIntervalId = null;
-    }
-  }
-
-  _handleNotificationsUpdated() {
-    this._updateNotificationCount();
+  async _handleNotificationsUpdated() {
+    await this._refreshNotificationCount();
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this._startPolling();
     this._startRealtimeStream();
     window.addEventListener(
       'notifications-updated',
@@ -198,7 +181,6 @@ class SCBilaraNotificationIcon extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    this._stopPolling();
     this._stopRealtimeStream();
     window.removeEventListener(
       'notifications-updated',
@@ -206,9 +188,6 @@ class SCBilaraNotificationIcon extends LitElement {
     );
   }
 
-  firstUpdated() {
-    this._updateNotificationCount();
-  }
 }
 
 customElements.define('sc-bilara-notification-icon', SCBilaraNotificationIcon);

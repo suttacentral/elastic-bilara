@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.services.auth import utils as auth_utils
 from app.services.notifications.models import (
     GitCommitInfoOut,
+    NotificationCountOut,
     NotificationDonePayload,
     NotificationDoneOut,
     NotificationFeedOut,
@@ -107,6 +108,15 @@ def get_unread_notification_count(user: str) -> int:
     )
 
 
+@router.get("/count", response_model=NotificationCountOut)
+def get_notification_count(
+    user: str = Depends(auth_utils.get_current_user),
+) -> NotificationCountOut:
+    return NotificationCountOut(
+        unread_count=get_unread_notification_count(user)
+    )
+
+
 @router.get("/stream")
 async def stream_notification_count(
     request: Request,
@@ -124,7 +134,10 @@ async def stream_notification_count(
                 break
 
             try:
-                current_count = get_unread_notification_count(user)
+                current_count = await asyncio.to_thread(
+                    get_unread_notification_count,
+                    user,
+                )
                 if previous_count is None or current_count != previous_count:
                     payload = json.dumps({"unread_count": current_count})
                     yield f"event: unread_count\ndata: {payload}\n\n"

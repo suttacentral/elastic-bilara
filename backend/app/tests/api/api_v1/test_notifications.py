@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import AsyncMock, MagicMock, patch, Mock
 
 from app.api.api_v1.endpoints.notifications import (
     format_diff_as_html,
@@ -7,12 +7,15 @@ from app.api.api_v1.endpoints.notifications import (
     parse_git_show_details,
     get_change_detail,
     get_notification_authors_or_default,
+    get_notification_count,
     get_unread_git_updates,
     get_user_preferences,
     mark_notification_as_done_by_type,
+    stream_notification_count,
 )
 from app.services.notifications.models import (
     GitCommitInfoOut,
+    NotificationCountOut,
     NotificationDonePayload,
 )
 
@@ -113,6 +116,41 @@ def test_get_notification_authors_or_default_returns_default_for_none():
 
 def test_get_notification_authors_or_default_returns_default_for_empty_list():
     assert get_notification_authors_or_default([]) == ["sujato"]
+
+
+def test_get_notification_count_returns_only_unread_count():
+    user = Mock(github_id=123)
+
+    with patch(
+        "app.api.api_v1.endpoints.notifications.get_unread_notification_count",
+        return_value=7,
+    ) as get_unread_count:
+        result = get_notification_count(user=user)
+
+    assert result == NotificationCountOut(unread_count=7)
+    get_unread_count.assert_called_once_with(user)
+
+
+def test_notification_stream_runs_count_outside_event_loop():
+    user = Mock(github_id=123)
+    request = Mock()
+    request.is_disconnected = AsyncMock(return_value=False)
+
+    async def get_first_event():
+        with patch(
+            "app.api.api_v1.endpoints.notifications.asyncio.to_thread",
+            new=AsyncMock(return_value=4),
+        ) as to_thread:
+            response = await stream_notification_count(request=request, user=user)
+            event = await anext(response.body_iterator)
+            return event, to_thread
+
+    event, to_thread = asyncio.run(get_first_event())
+
+    assert event == 'event: unread_count\ndata: {"unread_count": 4}\n\n'
+    to_thread.assert_awaited_once()
+    assert to_thread.await_args.args[0].__name__ == "get_unread_notification_count"
+    assert to_thread.await_args.args[1] is user
 
 
 def test_get_user_preferences_returns_default_authors_when_missing():

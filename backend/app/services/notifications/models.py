@@ -9,6 +9,10 @@ class NotificationFeedOut(BaseModel):
     notifications: list[dict]
 
 
+class NotificationCountOut(BaseModel):
+    unread_count: int
+
+
 class NotificationDoneOut(BaseModel):
     success: bool
 
