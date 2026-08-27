@@ -658,6 +658,11 @@
                                                 this.showTagSuggestions = true;
                                                 this.selectedTagIndex = -1;
                                             },
+                                            closeTagSuggestions() {
+                                                this.showTagSuggestions = false;
+                                                this.tagSuggestions = [];
+                                                this.selectedTagIndex = -1;
+                                            },
                                             selectTag(index) {
                                                 const tag = this.tagSuggestions[index];
                                                 if (!tag) return;
@@ -668,8 +673,7 @@
                                                 parts[parts.length - 1] = tag.tag;
                                                 const newValue = parts.filter(t => t).join(', ');
                                                 setValue(translation, uid, newValue);
-                                                this.showTagSuggestions = false;
-                                                this.selectedTagIndex = -1;
+                                                this.closeTagSuggestions();
                                                 this.$nextTick(() => {
                                                     if (textarea) {
                                                         textarea.value = newValue;
@@ -735,11 +739,12 @@
                                                     <span class="translation-cell__split-preview-part" :class="'translation-cell__split-preview-part--' + part.role" x-text="part.text"></span>
                                                 </div>
                                             </template>
-                                            <div
-                                                class="translation-cell__html-preview"
-                                                x-show="shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)"
-                                                x-html="sanitizeBilaraHtml(getValue(translation, uid))">
-                                            </div>
+                                            <template x-if="shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)">
+                                                <div
+                                                    class="translation-cell__html-preview"
+                                                    x-html="sanitizeBilaraHtml(getValue(translation, uid))">
+                                                </div>
+                                            </template>
                                             <textarea
                                                 class="translation-cell__textarea"
                                                 x-show="!shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)"
@@ -803,7 +808,7 @@
                                                     }
                                                     if (!inHints) {
                                                         showHints = false;
-                                                        showTagSuggestions = false;
+                                                        closeTagSuggestions();
                                                         if (isTag) {
                                                             const curVal = getValue(translation, uid) || '';
                                                             const validNames = new Set(availableTags.map(t => t.tag));
@@ -849,10 +854,9 @@
                                         </div>
 
                                         <!-- Translation hints dropdown -->
-                                        <div class="translation-cell__hints"
-                                            tabindex="-1"
-                                            x-cloak
-                                            x-show="hints.length > 0 && showHints && !translation.isSource && hintStyle !== 'inline'">
+                                        <template x-if="hints.length > 0 && showHints && !translation.isSource && hintStyle !== 'inline'">
+                                            <div class="translation-cell__hints"
+                                                tabindex="-1">
                                             <ul class="translation-cell__hints-list">
                                                 <template x-for="(hint, hintIndex) in visibleHints" :key="hint.uid">
                                                     <li class="translation-cell__hints-item"
@@ -875,40 +879,41 @@
                                                     </li>
                                                 </template>
                                             </ul>
-                                        </div>
+                                            </div>
+                                        </template>
 
                                         <!-- Tag suggestions dropdown -->
-                                        <div class="translation-cell__hints translation-cell__tag-suggestions"
-                                            tabindex="-1"
-                                            x-cloak
-                                            x-show="isTag && showTagSuggestions && translation.canEdit && (tagSuggestions.length > 0 || (isAdmin && isActive))">
-                                            <ul class="translation-cell__hints-list">
-                                                <template x-for="(tagItem, tagIdx) in tagSuggestions.slice(0, tagSuggestionLimit)" :key="tagItem.tag">
-                                                    <li class="translation-cell__hints-item"
-                                                        :class="{ 'translation-cell__hints-item--selected': selectedTagIndex === tagIdx }"
-                                                        tabindex="-1"
-                                                        @mousedown.prevent="selectTag(tagIdx)"
-                                                        @mouseenter="selectedTagIndex = tagIdx">
-                                                        <span class="translation-cell__hints-uid" x-text="tagItem.tag"></span>
-                                                        <div class="translation-cell__hints-content">
-                                                            <div class="translation-cell__hints-source" x-text="tagItem.expansion || tagItem.tag"></div>
-                                                            <div class="translation-cell__hints-translation" x-show="tagItem.definition">
-                                                                <span class="translation-cell__hints-text" x-text="tagItem.definition"></span>
+                                        <template x-if="isTag && showTagSuggestions && translation.canEdit && (tagSuggestions.length > 0 || (isAdmin && isActive))">
+                                            <div class="translation-cell__hints translation-cell__tag-suggestions"
+                                                tabindex="-1">
+                                                <ul class="translation-cell__hints-list">
+                                                    <template x-for="(tagItem, tagIdx) in tagSuggestions.slice(0, tagSuggestionLimit)" :key="tagItem.tag">
+                                                        <li class="translation-cell__hints-item"
+                                                            :class="{ 'translation-cell__hints-item--selected': selectedTagIndex === tagIdx }"
+                                                            tabindex="-1"
+                                                            @mousedown.prevent="selectTag(tagIdx)"
+                                                            @mouseenter="selectedTagIndex = tagIdx">
+                                                            <span class="translation-cell__hints-uid" x-text="tagItem.tag"></span>
+                                                            <div class="translation-cell__hints-content">
+                                                                <div class="translation-cell__hints-source" x-text="tagItem.expansion || tagItem.tag"></div>
+                                                                <div class="translation-cell__hints-translation" x-show="tagItem.definition">
+                                                                    <span class="translation-cell__hints-text" x-text="tagItem.definition"></span>
+                                                                </div>
                                                             </div>
-                                                        </div>
+                                                        </li>
+                                                    </template>
+                                                    <li class="translation-cell__hints-item translation-cell__hints-item--manage"
+                                                        x-show="isAdmin && isActive"
+                                                        tabindex="-1"
+                                                        @mousedown.prevent="window.open('/tags', '_blank')">
+                                                        <a href="/tags" target="_blank" rel="noopener noreferrer" class="translation-cell__tag-manage-link">
+                                                            <i class="bi bi-tags"></i>
+                                                            <span>Manage tags</span>
+                                                        </a>
                                                     </li>
-                                                </template>
-                                                <li class="translation-cell__hints-item translation-cell__hints-item--manage"
-                                                    x-show="isAdmin && isActive"
-                                                    tabindex="-1"
-                                                    @mousedown.prevent="window.open('/tags', '_blank')">
-                                                    <a href="/tags" target="_blank" rel="noopener noreferrer" class="translation-cell__tag-manage-link">
-                                                        <i class="bi bi-tags"></i>
-                                                        <span>Manage tags</span>
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
+                                                </ul>
+                                            </div>
+                                        </template>
 
                                         <!-- Cell Resizer (Not displayed in the last column) -->
                                         <div x-show="colIndex < translations.length - 1"
@@ -923,8 +928,9 @@
                             </div>
 
                             <!-- Inline hints rendered at the row level -->
-                            <div class="translation-cell__hints--inline" x-show="rowHintsShow" x-cloak>
-                                <ul class="translation-cell__hints-list">
+                            <template x-if="rowHintsShow">
+                                <div class="translation-cell__hints--inline">
+                                    <ul class="translation-cell__hints-list">
                                     <template x-for="(hint, hintIndex) in rowHints" :key="hint.uid">
                                         <li class="translation-cell__hints-item"
                                             :class="{ 'translation-cell__hints-item--selected': rowHintsSelectedIdx === hintIndex }"
@@ -945,8 +951,9 @@
                                             </div>
                                         </li>
                                     </template>
-                                </ul>
-                            </div>
+                                    </ul>
+                                </div>
+                            </template>
                         </div>
                     </template>
                     </div>
