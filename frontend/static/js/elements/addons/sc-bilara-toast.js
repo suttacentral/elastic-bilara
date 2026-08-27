@@ -1,5 +1,4 @@
 import { LitElement, html, css, nothing } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
-import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/directives/unsafe-html.js/+esm';
 
 /**
  * Toast notification component
@@ -8,7 +7,7 @@ import { unsafeHTML } from 'https://cdn.jsdelivr.net/npm/lit@3.3.2/directives/un
  * <sc-toast-notification></sc-toast-notification>
  *
  * Methods:
- * - show(message, type = 'success', duration = 3000)
+ * - show(message, type = 'success', duration = 3000, actions = [])
  *
  * Example:
  * const toast = document.querySelector('sc-toast-notification');
@@ -19,12 +18,14 @@ export class ScBilaraToast extends LitElement {
     static properties = {
         visible: { type: Boolean, state: true },
         message: { type: String, state: true },
-        type: { type: String, state: true }
+        type: { type: String, state: true },
+        actions: { type: Array, state: true }
     };
 
     static styles = css`
         :host {
             --color-success: #859900;
+            --color-warning: #b58900;
             --color-error: #dc322f;
             --color-black: #2C2B2B;
             --color-white: #FBF6EF;
@@ -56,6 +57,10 @@ export class ScBilaraToast extends LitElement {
 
         .toast.success {
             background-color: var(--color-success);
+        }
+
+        .toast.warning {
+            background-color: var(--color-warning);
         }
 
         .toast.error {
@@ -109,6 +114,7 @@ export class ScBilaraToast extends LitElement {
         this.visible = false;
         this.message = '';
         this.type = 'success';
+        this.actions = [];
         this._timeoutId = null;
     }
 
@@ -117,14 +123,16 @@ export class ScBilaraToast extends LitElement {
      * @param {string} message - Message to display
      * @param {string} type - Type of toast: 'success' or 'error'
      * @param {number} duration - Duration in milliseconds (default: 3000)
+     * @param {Array<{label: string, href: string}>} actions - Safe link actions
      */
-    show(message, type = 'success', duration = 3000) {
+    show(message, type = 'success', duration = 3000, actions = []) {
         if (this._timeoutId) {
             clearTimeout(this._timeoutId);
         }
 
         this.message = message;
         this.type = type;
+        this.actions = actions;
         this.visible = true;
 
         this._timeoutId = setTimeout(() => {
@@ -148,9 +156,11 @@ export class ScBilaraToast extends LitElement {
     }
 
     render() {
-        const iconClass = this.type === 'success'
-            ? 'bi-check-circle-fill'
-            : 'bi-x-circle-fill';
+        const iconClass = {
+            success: 'bi-check-circle-fill',
+            warning: 'bi-exclamation-triangle-fill',
+            error: 'bi-x-circle-fill',
+        }[this.type] || 'bi-info-circle-fill';
 
         return html`
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
@@ -160,7 +170,14 @@ export class ScBilaraToast extends LitElement {
                 role="${this.visible ? 'status' : nothing}"
             >
                 <i class="${iconClass}"></i>
-                <span>${typeof this.message === 'string' && this.message.includes('<') ? unsafeHTML(this.message) : this.message}</span>
+                <span>
+                    ${this.message}
+                    ${this.actions.map(action => html`
+                        <a href="${action.href}" target="_blank" rel="noopener noreferrer">
+                            ${action.label}
+                        </a>
+                    `)}
+                </span>
             </div>
         `;
     }

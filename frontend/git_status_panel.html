@@ -386,8 +386,21 @@
             class="toast"
             :class="toast.type"
             x-transition>
-            <i :class="toast.type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
-            <span x-html="toast.message"></span>
+            <i :class="toast.type === 'success'
+                ? 'bi-check-circle-fill'
+                : toast.type === 'warning'
+                    ? 'bi-exclamation-triangle-fill'
+                    : 'bi-x-circle-fill'"></i>
+            <span x-text="toast.message"></span>
+            <div class="toast-actions" x-show="toast.actions.length > 0">
+                <template x-for="action in toast.actions" :key="action.href">
+                    <a :href="action.href"
+                        x-text="action.label"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="toast-link"></a>
+                </template>
+            </div>
         </div>
 
         </div>

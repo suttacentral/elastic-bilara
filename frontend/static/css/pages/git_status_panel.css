@@ -770,10 +770,15 @@ body {
     box-shadow: var(--shadow-lg);
     z-index: 1001;
     animation: toastIn 0.3s ease;
+    max-width: min(90vw, 640px);
 }
 
 .toast.success {
     background-color: var(--color-success);
+}
+
+.toast.warning {
+    background-color: var(--color-warning);
 }
 
 .toast.error {
@@ -792,6 +797,12 @@ body {
 .toast a:hover,
 .toast .toast-link:hover {
     opacity: 0.85;
+}
+
+.toast-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs, 4px) var(--space-sm, 8px);
 }
 
 @keyframes toastIn {

@@ -1,3 +1,143 @@
+const PULL_REQUEST_TASK_POLL_INTERVAL = 750;
+const PULL_REQUEST_TASK_MAX_POLL_INTERVAL = 10000;
+const PULL_REQUEST_TASK_MONITOR_TIMEOUT = 65 * 60 * 1000;
+const ACTIVE_PULL_REQUEST_TASK_STATES = new Set([
+    'PENDING',
+    'RECEIVED',
+    'STARTED',
+    'RETRY',
+    'PROGRESS',
+]);
+
+class PullRequestMonitoringTimeoutError extends Error {
+    constructor() {
+        super('Pull request monitoring timed out');
+        this.name = 'PullRequestMonitoringTimeoutError';
+    }
+}
+
+function parsePullRequestUrl(value) {
+    if (typeof value !== 'string') {
+        throw new Error('Pull request task returned an invalid URL');
+    }
+
+    let url;
+    try {
+        url = new URL(value);
+    } catch {
+        throw new Error('Pull request task returned an invalid URL');
+    }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+        throw new Error('Pull request task returned an invalid URL');
+    }
+    return url.href;
+}
+
+async function waitForPullRequestTask(task) {
+    const deadline = Date.now() + PULL_REQUEST_TASK_MONITOR_TIMEOUT;
+    let pollInterval = PULL_REQUEST_TASK_POLL_INTERVAL;
+    while (true) {
+        if (Date.now() >= deadline) {
+            throw new PullRequestMonitoringTimeoutError();
+        }
+        const response = await requestWithTokenRetry(`tasks/${task.taskId}/`);
+        if (!response.ok) {
+            throw new Error(`Failed to retrieve pull request task (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (typeof data.status !== 'string') {
+            throw new Error('Pull request task returned an invalid status');
+        }
+
+        const status = data.status.toUpperCase();
+        if (status === 'SUCCESS') {
+            return { ...task, url: parsePullRequestUrl(data.result) };
+        }
+        if (status === 'FAILURE' || status === 'REVOKED') {
+            throw new Error(data.error || 'Pull request creation failed');
+        }
+        if (!ACTIVE_PULL_REQUEST_TASK_STATES.has(status)) {
+            throw new Error(`Pull request task returned an unknown status: ${data.status}`);
+        }
+
+        const remainingTime = deadline - Date.now();
+        if (remainingTime <= 0) {
+            throw new PullRequestMonitoringTimeoutError();
+        }
+
+        await new Promise(resolve => setTimeout(
+            resolve,
+            Math.min(pollInterval, remainingTime),
+        ));
+        pollInterval = Math.min(
+            pollInterval * 2,
+            PULL_REQUEST_TASK_MAX_POLL_INTERVAL,
+        );
+    }
+}
+
+async function monitorPullRequestTasks(tasks) {
+    const results = await Promise.allSettled(tasks.map(waitForPullRequestTask));
+    return results.reduce(
+        (summary, result, index) => {
+            if (result.status === 'fulfilled') {
+                summary.succeeded.push(result.value);
+            } else {
+                summary.failed.push({
+                    ...tasks[index],
+                    error: result.reason instanceof Error
+                        ? result.reason.message
+                        : String(result.reason),
+                    timedOut: result.reason instanceof PullRequestMonitoringTimeoutError,
+                });
+            }
+            return summary;
+        },
+        { succeeded: [], failed: [] },
+    );
+}
+
+async function showPullRequestTaskResults(tasks, showToast, initialFailures = []) {
+    const summary = await monitorPullRequestTasks(tasks);
+    summary.failed.push(...initialFailures);
+    const pullRequestCount = summary.succeeded.length;
+    const timedOutCount = summary.failed.filter(task => task.timedOut).length;
+    const failedTasks = summary.failed.filter(task => !task.timedOut);
+    const failedCount = failedTasks.length;
+    const actions = summary.succeeded.map((pullRequest, index) => ({
+        label: pullRequestCount === 1
+            ? 'View Pull Request ↗'
+            : `View Pull Request ${index + 1} ↗`,
+        href: pullRequest.url,
+    }));
+
+    let message = pullRequestCount === 1
+        ? 'Pull Request created.'
+        : `${pullRequestCount} Pull Requests created.`;
+    let type = 'success';
+    if (failedCount > 0) {
+        type = 'error';
+        message = pullRequestCount > 0
+            ? `${message} ${failedCount} failed.`
+            : `Pull request creation failed: ${failedTasks.map(task => task.error).join('; ')}`;
+    }
+    if (timedOutCount > 0) {
+        if (failedCount === 0) {
+            type = 'warning';
+        }
+        if (pullRequestCount === 0 && failedCount === 0 && timedOutCount === 1) {
+            message = 'Stopped checking Pull Request status. The task may still be running in the background.';
+        } else {
+            message += ` Stopped checking ${timedOutCount} task${timedOutCount === 1 ? '' : 's'}; ` +
+                `${timedOutCount === 1 ? 'it may' : 'they may'} still be running in the background.`;
+        }
+    }
+
+    showToast(message, type, pullRequestCount > 1 || timedOutCount > 0 ? 12000 : 8000, actions);
+    return summary;
+}
+
 /**
  * Generic handler for publishing changes via pull request
  * @param {Array|Object} paths - File paths to publish
@@ -56,6 +196,17 @@ const publishChangesHandler = async (
 
         if (element) {
             displayMessage(element, "Pull Request has been scheduled.");
+        }
+
+        const toast = document.querySelector('sc-bilara-toast');
+        if (toast) {
+            void showPullRequestTaskResults(
+                [{
+                    taskId: taskID,
+                    label: data.length === 1 ? data[0] : `${data.length} files`,
+                }],
+                toast.show.bind(toast),
+            );
         }
 
         return detail;

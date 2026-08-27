@@ -487,6 +487,7 @@ function tree() {
             this.isPublishing = true;
             let successCount = 0;
             let errorMessages = [];
+            const scheduledTasks = [];
 
             try {
                 for (const groupPaths of fileGroups) {
@@ -501,6 +502,11 @@ function tree() {
                             const errorData = await response.json();
                             errorMessages.push(errorData.detail?.error || errorData.detail || `HTTP ${response.status}`);
                         } else {
+                            const { task_id: taskID } = await response.json();
+                            if (!taskID) {
+                                throw new Error('Failed to schedule pull request');
+                            }
+                            scheduledTasks.push({ taskId: taskID, label: groupPaths[0] });
                             successCount++;
                         }
                     } catch (err) {
@@ -510,13 +516,24 @@ function tree() {
 
                 if (errorMessages.length === 0) {
                     this.showToast(
-                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${pathsToPublish.length} file(s). <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="toast-link">View Pull Requests ↗</a>`,
+                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${pathsToPublish.length} file(s).`,
                         'success',
                         5000
+                    );
+                    void showPullRequestTaskResults(
+                        scheduledTasks,
+                        this.showToast.bind(this),
                     );
                 } else {
                     const succeeded = successCount > 0 ? `${successCount}/${totalGroups} succeeded. ` : '';
                     this.showToast(`${succeeded}Errors: ${errorMessages.join('; ')}`, 'error');
+                    if (scheduledTasks.length > 0) {
+                        void showPullRequestTaskResults(
+                            scheduledTasks,
+                            this.showToast.bind(this),
+                            errorMessages.map(error => ({ error })),
+                        );
+                    }
                 }
             } catch (error) {
                 console.error('Error publishing:', error);
@@ -527,10 +544,10 @@ function tree() {
             }
         },
 
-        showToast(message, type = 'success', duration = 3000) {
+        showToast(message, type = 'success', duration = 3000, actions = []) {
             const toast = document.querySelector('sc-bilara-toast');
             if (toast) {
-                toast.show(message, type, duration);
+                toast.show(message, type, duration, actions);
             }
         },
 

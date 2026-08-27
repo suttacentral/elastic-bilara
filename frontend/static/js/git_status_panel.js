@@ -57,8 +57,10 @@ function gitStatusPanel() {
         toast: {
             show: false,
             message: '',
-            type: 'success'
+            type: 'success',
+            actions: []
         },
+        toastTimeoutId: null,
         // Filter, Sort and Pagination state
         filterText: '',
         sortMode: 'default', // 'default' or 'date'
@@ -353,10 +355,14 @@ function gitStatusPanel() {
             });
         },
 
-        showToast(message, type = 'success', duration = 3000) {
-            this.toast = { show: true, message, type };
-            setTimeout(() => {
+        showToast(message, type = 'success', duration = 3000, actions = []) {
+            if (this.toastTimeoutId) {
+                clearTimeout(this.toastTimeoutId);
+            }
+            this.toast = { show: true, message, type, actions };
+            this.toastTimeoutId = setTimeout(() => {
                 this.toast.show = false;
+                this.toastTimeoutId = null;
             }, duration);
         },
 
@@ -481,9 +487,13 @@ function gitStatusPanel() {
                     throw new Error('Failed to schedule pull request');
                 }
                 this.showToast(
-                    `Pull Request scheduled for: ${file.path}. <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="toast-link">View Pull Requests ↗</a>`,
+                    `Pull Request scheduled for: ${file.path}.`,
                     'success',
                     5000
+                );
+                void showPullRequestTaskResults(
+                    [{ taskId: taskID, label: file.path }],
+                    this.showToast.bind(this),
                 );
 
                 // Clear selection if published file was currently selected
@@ -589,6 +599,7 @@ function gitStatusPanel() {
             this.batchPublishing = true;
             let successCount = 0;
             let errorMessages = [];
+            const scheduledTasks = [];
 
             try {
                 for (const groupPaths of fileGroups) {
@@ -603,6 +614,11 @@ function gitStatusPanel() {
                             const errorData = await response.json();
                             errorMessages.push(errorData.detail?.error || errorData.detail || `HTTP ${response.status}`);
                         } else {
+                            const { task_id: taskID } = await response.json();
+                            if (!taskID) {
+                                throw new Error('Failed to schedule pull request');
+                            }
+                            scheduledTasks.push({ taskId: taskID, label: groupPaths[0] });
                             successCount++;
                         }
                     } catch (err) {
@@ -612,9 +628,13 @@ function gitStatusPanel() {
 
                 if (errorMessages.length === 0) {
                     this.showToast(
-                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${this.selectedFiles.length} file(s) across ${totalGroups} project${totalGroups > 1 ? 's' : ''}. <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="toast-link">View Pull Requests ↗</a>`,
+                        `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${this.selectedFiles.length} file(s) across ${totalGroups} project${totalGroups > 1 ? 's' : ''}.`,
                         'success',
                         5000
+                    );
+                    void showPullRequestTaskResults(
+                        scheduledTasks,
+                        this.showToast.bind(this),
                     );
 
                     // Clear selection if the single selected file was among the batch published files
@@ -630,6 +650,13 @@ function gitStatusPanel() {
                 } else {
                     const succeeded = successCount > 0 ? `${successCount}/${totalGroups} succeeded. ` : '';
                     this.showToast(`${succeeded}Errors: ${errorMessages.join('; ')}`, 'error');
+                    if (scheduledTasks.length > 0) {
+                        void showPullRequestTaskResults(
+                            scheduledTasks,
+                            this.showToast.bind(this),
+                            errorMessages.map(error => ({ error })),
+                        );
+                    }
                 }
             } finally {
                 this.batchPublishing = false;
