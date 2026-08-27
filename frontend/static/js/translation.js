@@ -341,14 +341,11 @@ function fetchTranslation() {
         },
         async loadCurrentUserForTranslation() {
             try {
-                const userResp = await requestWithTokenRetry("users/me");
-                if (userResp.ok) {
-                    const userData = await userResp.json();
-                    this.currentUserGithubId = userData.github_id || null;
-                    this.currentUsername = userData.username || null;
-                    this.currentUserRole = userData.role || null;
-                    return userData;
-                }
+                const userData = await getCurrentUser();
+                this.currentUserGithubId = userData.github_id || null;
+                this.currentUsername = userData.username || null;
+                this.currentUserRole = userData.role || null;
+                return userData;
             } catch (e) {
                 console.error('Failed to fetch current user info:', e);
             }

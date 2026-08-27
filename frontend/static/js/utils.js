@@ -30,6 +30,25 @@ const pollUpdateStatus = async (taskID, element) => {
     }
 };
 
+let currentUserPromise = null;
+
+function getCurrentUser() {
+    if (!currentUserPromise) {
+        currentUserPromise = requestWithTokenRetry("users/me")
+            .then(async response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load current user: ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                currentUserPromise = null;
+                throw error;
+            });
+    }
+    return currentUserPromise;
+}
+
 function getUserInfo() {
     return {
         isAdmin: false,
@@ -40,8 +59,7 @@ function getUserInfo() {
         githubId: null,
         async getRole() {
             try {
-                const response = await requestWithTokenRetry("users/me");
-                const data = await response.json();
+                const data = await getCurrentUser();
                 if (data.role === ROLES.admin || data.role === ROLES.superuser) {
                     this.isAdmin = true;
                 }
