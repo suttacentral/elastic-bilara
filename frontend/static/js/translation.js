@@ -208,19 +208,7 @@ function fetchTranslation() {
             this.muid = muid;
             this.sourceMuid = source;
 
-            // Fetch current user info directly
-            try {
-                const userResp = await requestWithTokenRetry("users/me");
-                if (userResp.ok) {
-                    const userData = await userResp.json();
-                    this.currentUserGithubId = userData.github_id || null;
-                    this.currentUsername = userData.username || null;
-                    this.currentUserRole = userData.role || null;
-                }
-            } catch (e) {
-                console.error('Failed to fetch current user info:', e);
-            }
-
+            const currentUserPromise = this.loadCurrentUserForTranslation();
             await this.loadHyphenatedPrefixRanges();
 
             // Try loading source with original prefix; fall back to hyphenated range on failure
@@ -242,18 +230,22 @@ function fetchTranslation() {
                 }
             }
 
-            if (muid) {
-                await this.findOrCreateObject(muid, this.prefix);
+            const remarksMuid = this.sourceMuid || this.muid;
+            const [targetProject, projects, remarkUsers] = await Promise.all([
+                muid ? this.createObject(muid, this.prefix) : Promise.resolve(null),
+                this.fetchRelatedProjects(this.prefix),
+                this.fetchRemarkUsers(remarksMuid, this.prefix),
+                this.loadAvailableTags(),
+                currentUserPromise,
+            ]);
+
+            if (targetProject && !this.translations.some(item => item.muid === targetProject.muid)) {
+                this.translations.push(targetProject);
             }
-            const projects = await this.fetchRelatedProjects(this.prefix);
+            this.remarkUsers = remarkUsers;
 
             this.htmlProjectName = projects.find(project => project.includes('html'));
-            if (this.htmlProjectName) {
-                this.htmlProject = await this.createObject(this.htmlProjectName, this.prefix);
-            }
-
             this.tagProjectName = projects.find(project => project.startsWith('tag'));
-            await this.loadAvailableTags();
 
             const canViewHtmlProject = ['administrator', 'superuser'].includes(this.currentUserRole);
             this.relatedProjects = projects.filter(project =>
@@ -263,8 +255,6 @@ function fetchTranslation() {
             );
 
             // Build remark projects per user
-            const remarksMuid = this.sourceMuid || this.muid;
-            this.remarkUsers = await this.fetchRemarkUsers(remarksMuid, this.prefix);
             const myRemarkKey = this.currentUserGithubId ? this.makeRemarkKey(this.currentUserGithubId) : null;
 
             // Always include current user's remark in related projects
@@ -297,16 +287,26 @@ function fetchTranslation() {
             // 1. No persisted state exists (first time), default to showing
             // 2. Persisted state includes myRemarkKey, user chose to keep it
             const shouldAutoLoadRemarks = myRemarkKey && (!hasPersistedState || savedRelated.includes(myRemarkKey));
-            if (shouldAutoLoadRemarks) {
-                try {
-                    await this.findOrCreateObject(myRemarkKey, this.prefix);
-                    // On first visit, seed localStorage so toggle can track removals
-                    if (!hasPersistedState) {
-                        this.saveRelatedProjects([myRemarkKey]);
-                    }
-                } catch (error) {
+            const ownRemarkPromise = shouldAutoLoadRemarks
+                ? this.createObject(myRemarkKey, this.prefix).catch(error => {
                     console.error('Failed to auto-load own remarks:', error);
-                }
+                    return null;
+                })
+                : Promise.resolve(null);
+            const [htmlProject, ownRemark] = await Promise.all([
+                this.htmlProjectName
+                    ? this.createObject(this.htmlProjectName, this.prefix)
+                    : Promise.resolve(null),
+                ownRemarkPromise,
+            ]);
+
+            this.htmlProject = htmlProject;
+            if (ownRemark && !this.translations.some(item => item.muid === ownRemark.muid)) {
+                this.translations.push(ownRemark);
+            }
+            // On first visit, seed localStorage so toggle can track removals
+            if (ownRemark && !hasPersistedState) {
+                this.saveRelatedProjects([myRemarkKey]);
             }
 
             const validSaved = savedRelated.filter(p => this.relatedProjects.includes(p));
@@ -338,6 +338,21 @@ function fetchTranslation() {
             } catch(e) { /* ignore corrupt data */ }
 
             this.updateProgress();
+        },
+        async loadCurrentUserForTranslation() {
+            try {
+                const userResp = await requestWithTokenRetry("users/me");
+                if (userResp.ok) {
+                    const userData = await userResp.json();
+                    this.currentUserGithubId = userData.github_id || null;
+                    this.currentUsername = userData.username || null;
+                    this.currentUserRole = userData.role || null;
+                    return userData;
+                }
+            } catch (e) {
+                console.error('Failed to fetch current user info:', e);
+            }
+            return null;
         },
         async resolveSource(params) {
             const existingSource = params.get("source");
