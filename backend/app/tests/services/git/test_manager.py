@@ -4,11 +4,30 @@ from unittest.mock import Mock
 
 import pytest
 from app.services.projects.utils import write_json_data
-from pygit2 import Blob, Oid, Signature
+from pygit2 import Blob, GIT_MERGE_ANALYSIS_NORMAL, Oid, Signature
+from pygit2.enums import MergeFavor
 from search.utils import get_json_data
 
 
 class TestManager:
+    def test_pull_uses_merge_favor_enum_for_normal_merge(self, git_manager):
+        remote_hash_id = Oid(hex="1" * 40)
+        branch = Mock()
+        remote = Mock(name="origin")
+        remote.name = "origin"
+        branch.remotes = [remote]
+        branch.head.shorthand = "unpublished"
+        branch.head.target = Oid(hex="2" * 40)
+        branch.lookup_reference.return_value.target = remote_hash_id
+        branch.revparse_single.return_value.id = Oid(hex="3" * 40)
+        branch.merge_analysis.return_value = (GIT_MERGE_ANALYSIS_NORMAL, None)
+        branch.index.conflicts = None
+        git_manager.get_filenames_from_diff = Mock(return_value=[])
+
+        git_manager.pull(branch)
+
+        branch.merge.assert_called_once_with(remote_hash_id, favor=MergeFavor.OURS)
+
     @pytest.mark.parametrize("force", [True, False])
     def test_checkout_without_new_remote_branch(self, force, git_manager):
         branch = "test_branch"

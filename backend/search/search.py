@@ -131,6 +131,18 @@ class Search:
         if buffer:
             yield buffer
 
+    @staticmethod
+    def _is_indexable_path(path: Path) -> bool:
+        try:
+            relative_path = path.relative_to(settings.WORK_DIR)
+        except ValueError:
+            return False
+        return (
+            len(relative_path.parts) > 1
+            and path.suffix == ".json"
+            and all(not part.startswith(".") for part in relative_path.parts)
+        )
+
     def _process_file(self, file_path: Path) -> dict[str, Any]:
         doc_id: str = utils.create_doc_id(file_path)
         prefix: str = utils.get_prefix(file_path)
@@ -590,9 +602,10 @@ class Search:
         }
 
     def update_indexes(self, index, segments_index, paths: list[Path], delete: bool = False):
-        if not paths:
+        indexable_paths = [path for path in paths if self._is_indexable_path(path)]
+        if not indexable_paths:
             return
-        self._process_data(index, segments_index, paths, delete)
+        self._process_data(index, segments_index, indexable_paths, delete)
 
     def delete_from_indexes(self, index, segments_index, paths: list[Path]):
         if not paths:

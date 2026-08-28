@@ -27,6 +27,7 @@ from pygit2 import (
     Signature,
     UserPass,
 )
+from pygit2.enums import MergeFavor
 
 
 class GitManager:
@@ -83,7 +84,7 @@ class GitManager:
                     branch.state_cleanup()
                     return modified_files
                 elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
-                    branch.merge(remote_hash_id, favor="ours")
+                    branch.merge(remote_hash_id, favor=MergeFavor.OURS)
                     if branch.index.conflicts:
                         conflicts = [conflict for conflict in branch.index.conflicts]
                         branch.state_cleanup()
