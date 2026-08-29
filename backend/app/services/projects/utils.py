@@ -1,5 +1,8 @@
 import json
+import os
 import re
+import stat
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -7,6 +10,7 @@ from app.core.config import settings
 from app.core.text_types import TextType
 from app.db.schemas.user import User, UserBase
 from app.services.git import utils
+from app.services.projects.file_coordinator import project_file_lock
 from app.services.users.utils import get_user
 from app.tasks import commit
 from search.search import Search
@@ -100,26 +104,40 @@ def update_file(
     path: Path, data: dict[str, str], root_path: Path, user: UserBase
 ) -> tuple[bool, Exception | None, str | None]:
     user: UserBase = get_user(int(user.github_id))
-    root_data: dict[str, str] = get_json_data(root_path)
     task_id = None
 
-    for key in data:
-        if key not in root_data:
-            return False, KeyError(f"{key} not found in the root file"), task_id
+    with project_file_lock(path):
+        root_data: dict[str, str] = get_json_data(root_path)
 
-    file_data: dict[str, str] = get_json_data(path)
+        for key in data:
+            if key not in root_data:
+                return False, KeyError(f"{key} not found in the root file"), task_id
 
-    original_data: dict[str, str] = file_data.copy()
+        file_data: dict[str, str] = get_json_data(path)
 
-    for key, value in data.items():
-        file_data[key] = value
+        original_data: dict[str, str] = file_data.copy()
 
-    updated, elastic_error = search.update_segments(path, file_data)
+        for key, value in data.items():
+            file_data[key] = value
 
-    if elastic_error:
-        return False, elastic_error, task_id
+        updated, elastic_error = search.update_segments(path, file_data)
 
-    written, file_error = write_json_data(path, file_data)
+        if elastic_error:
+            return False, elastic_error, task_id
+
+        written, file_error = write_json_data(path, file_data)
+        if file_error:
+            restored, rollback_error = search.update_segments(path, original_data)
+            if not restored:
+                return (
+                    False,
+                    RuntimeError(
+                        f"{file_error}; search rollback failed: {rollback_error}"
+                    ),
+                    task_id,
+                )
+            return False, file_error, task_id
+
     if written:
         cleaned_path_string = str(utils.clean_path(str(path)))
         result = commit.delay(
@@ -129,21 +147,35 @@ def update_file(
         )
         task_id = result.id
 
-    if file_error:
-        updated = False
-        while not updated:
-            updated, _ = search.update_segments(path, original_data)
-        return False, file_error, task_id
-
     return True, None, task_id
 
 
 def write_json_data(path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
+    temporary_path = None
     try:
-        with open(path, "w") as f:
-            json.dump(sort_data(data, path), f, indent=2, ensure_ascii=False)
+        target_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            json.dump(
+                sort_data(data, path), temporary_file, indent=2, ensure_ascii=False
+            )
+            os.fchmod(temporary_file.fileno(), target_mode)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+            temporary_path = Path(temporary_file.name)
+
+        os.replace(temporary_path, path)
     except (OSError, TypeError) as e:
         return False, e
+    finally:
+        if temporary_path:
+            temporary_path.unlink(missing_ok=True)
     return True, None
 
 

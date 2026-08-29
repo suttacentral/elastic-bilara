@@ -1,7 +1,8 @@
 import builtins
 import json
+from contextlib import nullcontext
 from pathlib import Path
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from app.services.projects.utils import (
@@ -126,7 +127,7 @@ class TestProjectsUtils:
         assert sort_paths(paths) == []
 
     @pytest.mark.parametrize(
-        "update_segments_return, data, expected_result, expected_error_type, open_error, commit",
+        "update_segments_return, data, expected_result, expected_error_type, write_error, commit",
         [
             ((True, None), {"key1": "value1"}, True, None, None, True),
             ((True, None), {"key3": "value3"}, True, None, None, True),
@@ -142,7 +143,7 @@ class TestProjectsUtils:
         data,
         expected_result,
         expected_error_type,
-        open_error,
+        write_error,
         commit,
         tmp_path,
         user,
@@ -153,33 +154,29 @@ class TestProjectsUtils:
         with open(path, "w") as f:
             json.dump({"key1": "old_value1", "key2": "old_value2"}, f)
         with open(root_path, "w") as f:
-            json.dump({"key1": "root_value1", "key2": "root_value2"}, f)
+            json.dump(
+                {
+                    "key1": "root_value1",
+                    "key2": "root_value2",
+                    "key3": "root_value3",
+                },
+                f,
+            )
 
-        def open_side_effect(*args, **kwargs):
-            if "w" in args[1]:
-                if open_error:
-                    raise open_error
-            if str(args[0]) == str(root_path):
-                return mock_open(
-                    read_data=json.dumps(
-                        {
-                            "key1": "root_value1",
-                            "key2": "root_value2",
-                            "key3": "root_value3",
-                        }
-                    )
-                )(*args, **kwargs)
-            else:
-                return mock_open(read_data=json.dumps({"key1": "old_value1", "key2": "old_value2"}))(*args, **kwargs)
-
+        write_failure = (
+            patch("app.services.projects.utils.write_json_data", return_value=(False, write_error))
+            if write_error
+            else nullcontext()
+        )
         with patch("app.services.projects.utils.search") as mock_search, patch(
-            "builtins.open", side_effect=open_side_effect
-        ), patch(
             "app.services.projects.utils.get_user"
         ) as mock_get_user, patch(
             "app.services.projects.utils.commit.delay",
             return_value=MagicMock(id="test_task_id"),
-        ):
+        ), patch(
+            "app.services.projects.utils.sort_data",
+            side_effect=lambda current_data, _path: current_data,
+        ), write_failure:
             mock_get_user.return_value = user
             mock_search.update_segments.return_value = update_segments_return
             result, error, task_id = update_file(path, data, root_path, user)
