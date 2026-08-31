@@ -553,7 +553,11 @@ function tree() {
 
         async getModifiedFiles() {
             try {
-                const response = await requestWithTokenRetry('git/status');
+                const includeOtherUsers = [ROLES.admin, ROLES.superuser].includes(this.userRole);
+                const statusEndpoint = includeOtherUsers
+                    ? 'git/status?include_other_users=true'
+                    : 'git/status';
+                const response = await requestWithTokenRetry(statusEndpoint);
                 if (!response.ok) {
                     console.error('Failed to fetch git status');
                     return [];
