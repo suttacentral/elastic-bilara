@@ -756,66 +756,6 @@ body {
     cursor: not-allowed;
 }
 
-.toast {
-    position: fixed;
-    bottom: var(--space-lg);
-    right: var(--space-lg);
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-md) var(--space-lg);
-    background-color: var(--color-black);
-    color: var(--color-text-on-strong);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 1001;
-    animation: toastIn 0.3s ease;
-    max-width: min(90vw, 640px);
-}
-
-.toast.success {
-    background-color: var(--color-success);
-}
-
-.toast.warning {
-    background-color: var(--color-warning);
-}
-
-.toast.error {
-    background-color: var(--color-error);
-}
-
-.toast a,
-.toast .toast-link {
-    color: #ffffff;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    font-weight: var(--font-weight-bold, 600);
-    margin-left: var(--space-xs, 4px);
-}
-
-.toast a:hover,
-.toast .toast-link:hover {
-    opacity: 0.85;
-}
-
-.toast-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xs, 4px) var(--space-sm, 8px);
-}
-
-@keyframes toastIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 /* ========== Filter and Sort Controls ========== */
 .filter-controls {
     display: flex;
