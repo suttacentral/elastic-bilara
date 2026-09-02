@@ -1,21 +1,17 @@
+from __future__ import annotations
+
 import contextlib
 import subprocess
-
 from collections import Counter
 from pathlib import Path
 
+from pydantic import BaseModel
+from pygit2 import (GIT_STATUS_INDEX_DELETED, GIT_STATUS_INDEX_MODIFIED,
+                    GIT_STATUS_INDEX_NEW, GIT_STATUS_WT_DELETED,
+                    GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW)
+
 from app.core.config import settings
 from app.db.schemas.user import UserBase
-from app.services.git.manager import GitManager
-from pygit2 import (
-    GIT_STATUS_INDEX_NEW,
-    GIT_STATUS_INDEX_MODIFIED,
-    GIT_STATUS_INDEX_DELETED,
-    GIT_STATUS_WT_MODIFIED,
-    GIT_STATUS_WT_NEW,
-    GIT_STATUS_WT_DELETED,
-)
-from pydantic import BaseModel
 
 
 def get_project_title(branch: str) -> str:
@@ -23,28 +19,6 @@ def get_project_title(branch: str) -> str:
     if len(parts) > 5:
         return "/".join(parts[:-1]) + "_" + parts[-1]
     return "/".join(parts)
-
-
-def get_branch_name(manager: GitManager, file_paths: list[Path] = None) -> str:
-    paths = file_paths or []
-    if not paths:
-        raise ValueError("No file paths provided.")
-    project_head = get_project_head(paths[0])
-    project_pr = manager.get_pr(project_head)
-    file_heads = get_file_heads(paths)
-    file_heads_prs = [manager.get_pr(head) for head in file_heads.values() if manager.get_pr(head)]
-    changed_files_heads = [head for path, head in file_heads.items() if manager.has_changes(head, path)]
-
-    if len(paths) == 1:
-        if project_pr and GitManager.is_file_in_pr(project_pr, paths[0]):
-            return project_head
-        else:
-            return list(file_heads.values())[0]
-
-    if file_heads_prs:
-        if changed_files_heads and len(changed_files_heads) == 1:
-            return changed_files_heads[0]
-    return project_head
 
 
 def get_file_heads(paths: list[Path] = None) -> dict[Path, str]:

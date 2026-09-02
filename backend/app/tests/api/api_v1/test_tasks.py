@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -45,3 +46,26 @@ class TestTaskStatus:
         response = await async_client.get(f"/tasks/{task_id}/")
         assert response.status_code == 401
         assert response.json() == {"detail": "Could not validate credentials"}
+
+
+@patch("app.tasks.GitManager")
+def test_pull_request_task_delegates_all_paths_to_bounded_publication(mock_git_manager, user):
+    from app.tasks import pr
+
+    paths = [
+        "/app/checkouts/unpublished/translations/en/test/sutta/an/an1/an1.1.json",
+        "/app/checkouts/unpublished/translations/en/test/sutta/an/an1/an1.2.json",
+    ]
+    manager = mock_git_manager.return_value
+    mock_git_manager.add.return_value = False
+    manager.publish_files.return_value = "https://github.com/example/pull/1"
+
+    result = pr(user.model_dump(), paths)
+
+    assert result == "https://github.com/example/pull/1"
+    manager.publish_files.assert_called_once_with(
+        [
+            Path("translations/en/test/sutta/an/an1/an1.1.json"),
+            Path("translations/en/test/sutta/an/an1/an1.2.json"),
+        ]
+    )

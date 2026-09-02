@@ -1,53 +1,30 @@
+import logging
+
 import elasticsearch.exceptions
+from elasticsearch.exceptions import ConnectionError as ElasticConnectionError
+from elasticsearch.exceptions import \
+    ConnectionTimeout as ElasticConnectionTimeout
+from elasticsearch.exceptions import NotFoundError as ElasticNotFoundError
+from elasticsearch.exceptions import RequestError as ElasticRequestError
+
 from app.celery import celery_app as app
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.git import utils
 from app.services.git.manager import GitManager
-from celery import Task
-from elasticsearch.exceptions import ConnectionError as ElasticConnectionError
-from elasticsearch.exceptions import ConnectionTimeout as ElasticConnectionTimeout
-from elasticsearch.exceptions import NotFoundError as ElasticNotFoundError
-from elasticsearch.exceptions import RequestError as ElasticRequestError
-from github import GithubException
-from pygit2 import GitError
+from app.services.git.task import GitTask
 from search.search import Search
 
 es = Search()
-
-
-class GitTask(Task):
-    auto_retry_for = (OSError, ConnectionError, TimeoutError, GitError, GithubException)
-    max_retries = 15
-    initial_backoff = 0.1098
-    backoff_factor = 2
-
-    def __call__(self, *args, **kwargs):
-        try:
-            return super().__call__(*args, **kwargs)
-        except self.auto_retry_for as exc:
-            retry_count = self.request.retries
-            backoff = self.initial_backoff * (self.backoff_factor**retry_count)  # at most an hour
-            self.retry(exc=exc, countdown=backoff, max_retries=self.max_retries)
+logger = logging.getLogger(__name__)
 
 
 class PrTask(GitTask):
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
-        user, file_paths = args
-        paths = [utils.clean_path(path) for path in file_paths]
-        user_data = UserBase(**user)
-        manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
-        branch = utils.get_branch_name(manager, paths)
-        manager._cleanup(branch)
-        super().on_failure(exc, task_id, args, kwargs, einfo)
+    pass
 
 
 class SyncTask(GitTask):
-    auto_retry_for = (
-        OSError,
-        ConnectionError,
-        TimeoutError,
-        GithubException,
+    retryable_exceptions = GitTask.retryable_exceptions + (
         ElasticConnectionError,
         ElasticConnectionTimeout,
         ElasticRequestError,
@@ -107,13 +84,10 @@ def pr(user, file_paths) -> str:
             GitManager.push(manager.unpublished, "origin", "unpublished")
 
     # Step 2: create PR from unpublished → published
-    branch = utils.get_branch_name(manager, paths)
-    commit_message = utils.get_pr_commit_message(branch)
-    pr_title = utils.get_pr_title(branch)
-    pr_body = utils.get_pr_body(user_data)
-    return manager.process_files(
-        message=commit_message, branch=branch, pr_title=pr_title, pr_body=pr_body, file_paths=paths
-    )
+    logger.info("Publishing %d files for GitHub user %s", len(paths), user_data.github_id)
+    pull_request_url = manager.publish_files(paths)
+    logger.info("Published %d files to %s", len(paths), pull_request_url)
+    return pull_request_url
 
 
 @app.task(name="pull", base=GitTask, queue="sync_queue")
@@ -138,11 +112,13 @@ def push(user_data: dict, branch_name: str, remote_name: str = "origin") -> None
 
 @app.task(name="update_all_translation_progress", queue="commit_queue")
 def update_all_translation_progress() -> dict:
-    from pathlib import Path
     from datetime import datetime
+    from pathlib import Path
+
     from app.db.database import get_sess
     from app.db.models.translation_progress import TranslationProgress
-    from search.utils import find_root_path, get_json_data, get_muid, get_prefix
+    from search.utils import (find_root_path, get_json_data, get_muid,
+                              get_prefix)
 
     translation_dir = settings.WORK_DIR / "translation"
     if not translation_dir.exists():
@@ -207,11 +183,13 @@ def update_all_translation_progress() -> dict:
 
 @app.task(name="update_file_translation_progress", queue="commit_queue")
 def update_file_translation_progress(file_path: str) -> dict:
-    from pathlib import Path
     from datetime import datetime
+    from pathlib import Path
+
     from app.db.database import get_sess
     from app.db.models.translation_progress import TranslationProgress
-    from search.utils import find_root_path, get_json_data, get_muid, get_prefix
+    from search.utils import (find_root_path, get_json_data, get_muid,
+                              get_prefix)
 
     path = Path(file_path) if Path(file_path).is_absolute() else settings.WORK_DIR / file_path
 
@@ -278,7 +256,9 @@ def create_project(
 ) -> dict:
     """Async task: create translation project files, index in ES, and commit."""
     from pathlib import Path
-    from app.services.projects.utils import compute_target_path, create_project_file
+
+    from app.services.projects.utils import (compute_target_path,
+                                             create_project_file)
 
     root_path = Path(root_path_str)
 
@@ -356,4 +336,3 @@ def create_project(
     if index_error:
         result["index_error"] = index_error
     return result
-

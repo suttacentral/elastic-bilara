@@ -1,33 +1,22 @@
 from pathlib import Path
 from typing import Literal
 
+from github import Github
+from pygit2 import (GIT_CHECKOUT_FORCE, GIT_DELTA_DELETED,
+                    GIT_MERGE_ANALYSIS_FASTFORWARD, GIT_MERGE_ANALYSIS_NORMAL,
+                    GIT_MERGE_ANALYSIS_UP_TO_DATE, GIT_STATUS_INDEX_DELETED,
+                    GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_INDEX_NEW,
+                    GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED,
+                    GIT_STATUS_WT_NEW, Commit, GitError, Oid, RemoteCallbacks,
+                    Repository, Signature, UserPass)
+from pygit2.enums import MergeFavor
+
 import app.services.git.utils as utils
 from app.core.config import settings
 from app.db.schemas.user import UserBase
-from github import Github
-from github.PaginatedList import PaginatedList
-from github.PullRequest import PullRequest
-from pygit2 import (
-    GIT_CHECKOUT_FORCE,
-    GIT_DELTA_DELETED,
-    GIT_MERGE_ANALYSIS_FASTFORWARD,
-    GIT_MERGE_ANALYSIS_NORMAL,
-    GIT_MERGE_ANALYSIS_UP_TO_DATE,
-    GIT_STATUS_INDEX_DELETED,
-    GIT_STATUS_INDEX_MODIFIED,
-    GIT_STATUS_INDEX_NEW,
-    GIT_STATUS_WT_DELETED,
-    GIT_STATUS_WT_MODIFIED,
-    GIT_STATUS_WT_NEW,
-    Commit,
-    GitError,
-    Oid,
-    RemoteCallbacks,
-    Repository,
-    Signature,
-    UserPass,
-)
-from pygit2.enums import MergeFavor
+from app.services.git.github_pull_requests import GithubPullRequests
+from app.services.git.publication import (PublicationPlan,
+                                          build_publication_plan)
 
 
 class GitManager:
@@ -47,7 +36,8 @@ class GitManager:
         self.unpublished: Repository = Repository(unpublished)
         self.author: Signature = Signature(name=user.username, email=user.email)
         self.committer: Signature = Signature(name=settings.GITHUB_USERNAME, email=settings.GITHUB_EMAIL)
-        self.github: Github = Github(settings.GITHUB_TOKEN)
+        github = Github(settings.GITHUB_TOKEN, per_page=100)
+        self.pull_requests = GithubPullRequests(github, settings.GITHUB_REPO)
         self.repo_owner: str = settings.GITHUB_REPO.split("/")[0]
 
     def pull(
@@ -143,70 +133,53 @@ class GitManager:
             callbacks=RemoteCallbacks(UserPass(settings.GITHUB_USERNAME, settings.GITHUB_TOKEN)),
         )
 
-    def open_pr(self, title, body, head, base="published") -> None:
-        repo = self.github.get_repo(settings.GITHUB_REPO)
-        if self.is_pr_open(head):
-            return
-        repo.create_pull(title=title, body=body, base=base, head=head)
+    def plan_publication(self, paths: list[Path]) -> PublicationPlan:
+        open_pull_requests = self.pull_requests.list_open()
+        project_pull_request_paths: set[Path] = set()
+        if len(paths) == 1:
+            project_pull_request = open_pull_requests.get(utils.get_project_head(paths[0]))
+            if project_pull_request:
+                self.published.remotes["origin"].fetch(prune=True)
+                base_commit = GitManager.get_remote_commit_id(
+                    self.published, project_pull_request.base.ref
+                )
+                head_commit = GitManager.get_remote_commit_id(
+                    self.published, project_pull_request.head.ref
+                )
+                project_pull_request_paths = GitManager.get_changed_paths(
+                    self.published,
+                    base_commit,
+                    head_commit,
+                )
+        return build_publication_plan(paths, open_pull_requests, project_pull_request_paths)
 
-    def get_prs(self, head: str, state="open") -> PaginatedList[PullRequest]:
-        return self.github.get_repo(settings.GITHUB_REPO).get_pulls(
-            state=state, head=f"{self.repo_owner}:{head}", base="published"
-        )
+    def publish_files(self, paths: list[Path]) -> str:
+        plan = self.plan_publication(paths)
+        message = utils.get_pr_commit_message(plan.target_branch)
+        pr_title = utils.get_pr_title(plan.target_branch)
+        pr_body = utils.get_pr_body(self.user)
+        try:
+            branch_updated = self._process_branch_changes(plan.target_branch, paths, message)
+            if not branch_updated:
+                return plan.target_pull_request.html_url if plan.target_pull_request else ""
 
-    def get_pr(self, head: str, state="open") -> PullRequest | None:
-        if (prs := self.get_prs(head, state)) and prs.totalCount > 0:
-            return prs[0]
+            for pull_request in plan.pull_requests_to_close:
+                self.pull_requests.close(pull_request)
+                self.delete_remote_branch(pull_request.head.ref)
 
-    def is_pr_open(self, head: str) -> bool:
-        if prs := self.get_prs(head):
-            return prs.totalCount > 0
-        return False
-
-    def handle_single_file(self, path: Path, branch, message, pr_title: str = None, pr_body: str = None):
-        if not self.has_changes(branch, path):
-            return
-        if (pr := self.get_pr(branch)) and GitManager.is_file_in_pr(pr, path):
-            self._process_branch_changes(pr.head.ref, [path], message)
-            self._cleanup(branch)
-            return
-        self._process_branch_changes(branch, [path], message)
-        self.open_pr(title=pr_title, body=pr_body, head=f"{self.repo_owner}:{branch}")
-
-    def handle_multiple_files(self, paths: list[Path], branch, message, pr_title: str = None, pr_body: str = None):
-        project_pr = self.get_pr(branch)
-        paths_heads = utils.get_file_heads(paths)
-        file_prs = [self.get_pr(head) for head in paths_heads.values() if self.is_pr_open(head)]
-        for pr in file_prs:
-            GitManager.close_pr(pr)
-            self.delete_remote_branch(pr.head.ref)
-        changed_files = [path for path in paths if self.has_changes(branch, path)]
-        files_in_pr = []
-        if project_pr:
-            files_in_pr = [path for path in changed_files if GitManager.is_file_in_pr(project_pr, path)]
-            if files_in_pr:
-                self._process_branch_changes(project_pr.head.ref, files_in_pr, message)
-        project_files = list(set(changed_files) - set(files_in_pr))
-        self._process_branch_changes(branch, project_files, message)
-        if not project_pr:
-            self.open_pr(title=pr_title, body=pr_body, head=f"{self.repo_owner}:{branch}")
+            pull_request = plan.target_pull_request or self.pull_requests.create(
+                title=pr_title,
+                body=pr_body,
+                head=f"{self.repo_owner}:{plan.target_branch}",
+            )
+            return pull_request.html_url
+        finally:
+            self._cleanup(plan.target_branch)
 
     def has_changes(self, branch_name: str, path: Path) -> bool:
         unpublished_commit: bytes = GitManager.get_latest_commit(self.unpublished, path)
         published_commit: bytes = GitManager.get_latest_commit(self.published, path, branch_name)
         return unpublished_commit != published_commit
-
-    def process_files(self, branch, message, pr_title, pr_body, file_paths: list[Path] | None = None) -> str:
-        paths: list[Path] = file_paths or []
-        if not paths:
-            return ""
-        if len(paths) == 1:
-            self.handle_single_file(paths[0], branch, message, pr_title, pr_body)
-        else:
-            self.handle_multiple_files(paths, branch, message, pr_title, pr_body)
-        url = self.get_pr(branch).html_url
-        self._cleanup(branch)
-        return url
 
     def _cleanup(self, branch: str) -> bool:
         self.checkout(force=True)
@@ -215,13 +188,15 @@ class GitManager:
             return True
         return False
 
-    def _process_branch_changes(self, branch, paths: list[Path], message: str) -> None:
+    def _process_branch_changes(self, branch: str, paths: list[Path], message: str) -> bool:
         if not paths:
-            return
+            return False
         self.checkout(branch)
         changed_files = self.copy_files(paths)
         if changed_files and GitManager.commit(self.published, self.author, self.committer, message, changed_files):
             GitManager.push(self.published, branch=branch)
+            return True
+        return False
 
     def _is_branch_protected(self, name: str) -> bool:
         return name in self._protected_branches
@@ -254,6 +229,23 @@ class GitManager:
             else Path(branch.path).parent / patch.delta.old_file.path
             for patch in diff
         ]
+
+    @staticmethod
+    def get_changed_paths(repo: Repository, base_commit: str, head_commit: str) -> set[Path]:
+        return {
+            Path(patch.delta.old_file.path if patch.delta.status == GIT_DELTA_DELETED else patch.delta.new_file.path)
+            for patch in repo.diff(base_commit, head_commit)
+        }
+
+    @staticmethod
+    def get_remote_commit_id(repo: Repository, branch: str) -> str:
+        reference_name = f"refs/remotes/origin/{branch}"
+        try:
+            return str(repo.lookup_reference(reference_name).peel(Commit).id)
+        except (GitError, KeyError) as exc:
+            raise GitError(
+                f"Remote branch origin/{branch} is unavailable after fetch."
+            ) from exc
 
     @staticmethod
     def separate_existing_files(paths: list[Path]) -> tuple[list[Path], list[Path]]:
@@ -315,10 +307,6 @@ class GitManager:
         )
 
     @staticmethod
-    def close_pr(pr: PullRequest) -> None:
-        pr.edit(state="closed")
-
-    @staticmethod
     def get_latest_commit(repo: Repository, path: Path, branch_name: str = "unpublished") -> bytes | None:
         branch = repo.branches.get(branch_name)
         if not branch:
@@ -329,12 +317,6 @@ class GitManager:
         except KeyError:
             return None
         return data
-
-    @staticmethod
-    def is_file_in_pr(pr: PullRequest, file_path: Path) -> bool:
-        if pr.state == "closed":
-            return False
-        return any(file_path == Path(file.filename) for file in pr.get_files())
 
     @staticmethod
     def has_status_changed(repo: Repository, paths: list[Path] = None) -> bool:

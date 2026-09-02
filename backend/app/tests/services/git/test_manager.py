@@ -352,28 +352,3 @@ class TestManager:
         git_manager.add(git_manager.published, [path])
         git_manager.commit(git_manager.published, git_manager.author, git_manager.committer, "Test commit", [path])
         assert git_manager.has_changes(branch, path) == expected_result
-
-    @pytest.mark.parametrize(
-        "paths, expected_single_call, expected_multiple_calls",
-        [
-            ([Path("translations/en/test/sutta/an/an1/an1.1-10_translation-en-test.json")], True, False),
-            (
-                [
-                    Path("translations/en/test/sutta/an/an1/an1.1-10_translation-en-test.json"),
-                    Path("translations/en/test/sutta/an/an1/an1.11-20_translation-en-test.json"),
-                ],
-                False,
-                True,
-            ),
-            ([], False, False),
-            (None, False, False),
-        ],
-    )
-    def test_process_files(self, paths, expected_single_call, expected_multiple_calls, git_manager):
-        git_manager.handle_single_file = Mock()
-        git_manager.handle_multiple_files = Mock()
-        git_manager.get_pr = Mock(return_value=Mock(html_url="test_url"))
-        git_manager._cleanup = Mock()
-        git_manager.process_files("test_branch", "Test commit", "Test PR title", "Test PR body", paths)
-        assert git_manager.handle_single_file.called == expected_single_call
-        assert git_manager.handle_multiple_files.called == expected_multiple_calls

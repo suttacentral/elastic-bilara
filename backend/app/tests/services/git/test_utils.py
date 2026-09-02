@@ -108,30 +108,3 @@ class TestUtils:
     )
     def test_find_mismatched_paths(self, paths, expected_output):
         assert utils.find_mismatched_paths(paths) == expected_output
-
-    @pytest.mark.parametrize(
-        "paths, expected_output",
-        [
-            (
-                [
-                    Path("directory1/directory2/directory3/directory4/directory5/directory5a/file1.json"),
-                    Path("directory1/directory2/directory3/directory4/directory5/directory5a/file2.json"),
-                ],
-                "directory1_directory2_directory3_directory4_directory5",
-            ),
-            (
-                [Path("directory1/directory2/directory3/directory4/directory5/file1.json")],
-                "directory1_directory2_directory3_directory4_directory5_file1",
-            ),
-            (
-                [],
-                None,
-            ),
-        ],
-    )
-    def test_get_branch_name(self, paths, expected_output, git_manager):
-        if not paths:
-            with pytest.raises(ValueError, match="No file paths provided."):
-                utils.get_branch_name(git_manager, paths)
-        else:
-            assert utils.get_branch_name(git_manager, paths) == expected_output

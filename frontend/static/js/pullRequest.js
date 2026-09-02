@@ -134,7 +134,10 @@ async function showPullRequestTaskResults(tasks, showToast, initialFailures = []
         }
     }
 
-    showToast(message, type, pullRequestCount > 1 || timedOutCount > 0 ? 12000 : 8000, actions);
+    const toastDuration = pullRequestCount > 0
+        ? 0
+        : (timedOutCount > 0 ? 12000 : 8000);
+    showToast(message, type, toastDuration, actions);
     return summary;
 }
 

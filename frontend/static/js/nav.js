@@ -518,7 +518,7 @@ function tree() {
                     this.showToast(
                         `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${pathsToPublish.length} file(s).`,
                         'success',
-                        5000
+                        10000
                     );
                     void showPullRequestTaskResults(
                         scheduledTasks,
