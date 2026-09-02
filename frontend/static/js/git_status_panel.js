@@ -54,13 +54,6 @@ function gitStatusPanel() {
         fileToPublish: null,
         publishingFile: null,
         skipPublishConfirm: false,
-        toast: {
-            show: false,
-            message: '',
-            type: 'success',
-            actions: []
-        },
-        toastTimeoutId: null,
         // Filter, Sort and Pagination state
         filterText: '',
         sortMode: 'default', // 'default' or 'date'
@@ -356,14 +349,10 @@ function gitStatusPanel() {
         },
 
         showToast(message, type = 'success', duration = 3000, actions = []) {
-            if (this.toastTimeoutId) {
-                clearTimeout(this.toastTimeoutId);
+            const toast = document.querySelector('sc-bilara-toast');
+            if (toast) {
+                toast.show(message, type, duration, actions);
             }
-            this.toast = { show: true, message, type, actions };
-            this.toastTimeoutId = setTimeout(() => {
-                this.toast.show = false;
-                this.toastTimeoutId = null;
-            }, duration);
         },
 
         showEditConfirm(file) {
@@ -489,7 +478,7 @@ function gitStatusPanel() {
                 this.showToast(
                     `Pull Request scheduled for: ${file.path}.`,
                     'success',
-                    5000
+                    10000
                 );
                 void showPullRequestTaskResults(
                     [{ taskId: taskID, label: file.path }],
@@ -630,7 +619,7 @@ function gitStatusPanel() {
                     this.showToast(
                         `Pull Request${totalGroups > 1 ? 's' : ''} scheduled for ${this.selectedFiles.length} file(s) across ${totalGroups} project${totalGroups > 1 ? 's' : ''}.`,
                         'success',
-                        5000
+                        10000
                     );
                     void showPullRequestTaskResults(
                         scheduledTasks,
