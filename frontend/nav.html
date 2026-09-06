@@ -94,15 +94,17 @@
         </div>
 
         <div x-show="showPublishModal" x-cloak class="modal-backdrop" @click.self="closePublishModal()">
-            <div class="modal-dialog">
+            <div class="modal-dialog nav-publish-dialog"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="nav-publish-dialog-title">
                 <div class="modal-header modal-header-success">
                     <i class="bi-cloud-upload-fill"></i>
-                    <h3>Publish File</h3>
+                    <h3 id="nav-publish-dialog-title">Publish File</h3>
                 </div>
                 <div class="modal-body">
-                    <p>This will request publication of <span class="file-name" x-text="publishingFile"></span></p>
-                    <p>A GitHub pull request will be automatically created to move the translations into the published branch. You can track all requests on <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="modal-link">GitHub Pull Requests ↗</a>.</p>
-                    <p>Click the accept button to proceed.</p>
+                    <p>Publish this text. A pull request will be created to merge your changes into the published branch. You can track all requests on <a href="https://github.com/suttacentral/bilara-data/pulls" target="_blank" rel="noopener noreferrer" class="modal-link">GitHub Pull Requests ↗</a>.</p>
+                    <div class="file-name" x-text="publishingFile" :title="publishingFile"></div>
                 </div>
                 <div class="modal-footer">
                     <button class="modal-btn modal-btn-cancel" @click="closePublishModal()">
@@ -118,7 +120,7 @@
                             <span>Publishing...</span>
                         </template>
                         <template x-if="!isPublishing">
-                            <span>Accept</span>
+                            <span>Publish</span>
                         </template>
                     </button>
                 </div>

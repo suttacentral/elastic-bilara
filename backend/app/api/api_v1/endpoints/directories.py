@@ -14,6 +14,7 @@ from app.services.auth.utils import get_current_user
 from app.services.directories.remover import Remover
 from app.services.directories.utils import get_muid_from_path, get_language
 from app.services.projects.utils import sort_paths
+from app.services.projects.virtual_projects import list_virtual_directories, list_virtual_files
 from app.services.users.permissions import can_delete_projects
 
 router = APIRouter(prefix="/directories")
@@ -205,7 +206,8 @@ async def get_dir_content(
     from app.db.database import get_sess
     from app.db.models.translation_progress import TranslationProgress
 
-    base = str(target_path.relative_to(settings.WORK_DIR)) + "/"
+    work_dir = settings.WORK_DIR.resolve()
+    base = str(target_path.relative_to(work_dir)) + "/"
     directories = []
     files = []
     files_with_progress = []
@@ -229,13 +231,13 @@ async def get_dir_content(
                     "translated_keys": record.translated_keys,
                 }
 
-    for p in target_path.iterdir():
+    for p in target_path.iterdir() if target_path.is_dir() else []:
         if p.is_dir() and p.name not in {item.value for item in TextType}:
-            dir_path = str(p.relative_to(settings.WORK_DIR)) + "/"
+            dir_path = str(p.relative_to(work_dir)) + "/"
             directories.append(dir_path.replace(base, "", 1))
-        elif p.is_file() and str(target_path) != str(settings.WORK_DIR):
+        elif p.is_file() and target_path != work_dir:
             file_name = p.name
-            file_path = str(p.relative_to(settings.WORK_DIR))
+            file_path = str(p.relative_to(work_dir))
             files.append(file_path.replace(base, "", 1))
 
             if is_translation_dir:
@@ -247,7 +249,7 @@ async def get_dir_content(
                     if progress_info["progress"] is not None and progress_info["progress"] >= 0:
                         from app.tasks import update_file_translation_progress
                         update_file_translation_progress.delay(
-                            str(p.relative_to(settings.WORK_DIR))
+                            str(p.relative_to(work_dir))
                         )
 
     directories.sort(key=lambda s: [int(c) if c.isdigit() else c for c in re.split('(\d+)', s)])
@@ -255,7 +257,23 @@ async def get_dir_content(
     if files_with_progress:
         files_with_progress.sort(key=lambda f: [int(c) if c.isdigit() else c for c in re.split('(\d+)', f["name"])])
 
-    return FilesAndDirsOut(base=base, directories=directories, files=files, files_with_progress=files_with_progress if is_translation_dir else None)
+    virtual_files = []
+    virtual_directories = []
+    if is_translation_dir:
+        try:
+            virtual_files = [item.as_directory_entry() for item in list_virtual_files(target_path)]
+            virtual_directories = list_virtual_directories(target_path)
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error))
+
+    return FilesAndDirsOut(
+        base=base,
+        directories=directories,
+        files=files,
+        files_with_progress=files_with_progress if is_translation_dir else None,
+        virtual_directories=virtual_directories,
+        virtual_files=virtual_files,
+    )
 
 
 @router.delete("/{path:path}/")

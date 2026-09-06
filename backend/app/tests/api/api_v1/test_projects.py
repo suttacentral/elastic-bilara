@@ -1,4 +1,5 @@
 from copy import copy
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -7,6 +8,13 @@ from app.core.config import settings
 from app.services.projects.utils import OverrideException
 from elasticsearch import RequestError
 from fastapi import HTTPException, status
+
+
+def _virtual_source_paths(source_path: Path):
+    def get_file_paths(muid: str, **_kwargs) -> set[str]:
+        return {str(source_path)} if muid == "root-pli-ms" else set()
+
+    return get_file_paths
 
 
 class TestProjects:
@@ -120,6 +128,280 @@ class TestProjects:
         assert response.json() == {"detail": "Could not validate credentials"}
 
     @pytest.mark.asyncio
+    @patch("app.api.api_v1.endpoints.projects.can_edit_translation", return_value=True)
+    @patch("app.api.api_v1.endpoints.projects.search.get_file_paths", return_value=set())
+    async def test_get_virtual_translation_without_creating_file(
+        self,
+        _mock_get_file_paths,
+        _mock_can_edit,
+        async_client,
+        mock_get_current_user,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        work_dir = tmp_path / "unpublished"
+        source_dir = work_dir / "root/pli/ms/sutta/mn"
+        source_dir.mkdir(parents=True)
+        source_file = source_dir / "mn1_root-pli-ms.json"
+        source_file.write_text(json.dumps({"mn1:1.1": "Source"}), encoding="utf-8")
+        (work_dir / "_project-v2.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "root_path": "root/pli/ms/sutta",
+                        "translation_path": "translation/en/tester/sutta",
+                        "translation_muids": "translation-en-tester",
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(settings, "WORK_DIR", work_dir)
+        _mock_get_file_paths.side_effect = _virtual_source_paths(source_file)
+        target_file = (
+            work_dir / "translation/en/tester/sutta/mn/mn1_translation-en-tester.json"
+        )
+
+        response = await async_client.get("/projects/translation-en-tester/mn1/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "can_edit": True,
+            "data": {},
+            "task_id": None,
+            "materialized": False,
+        }
+        assert not target_file.exists()
+
+    @pytest.mark.asyncio
+    async def test_first_virtual_translation_save_writes_every_root_key(
+        self,
+        async_client,
+        mock_get_current_user,
+        monkeypatch,
+        tmp_path,
+        mocker,
+        user,
+    ) -> None:
+        work_dir = tmp_path / "unpublished"
+        source_dir = work_dir / "root/pli/ms/sutta/mn"
+        source_dir.mkdir(parents=True)
+        source_file = source_dir / "mn1_root-pli-ms.json"
+        source_file.write_text(
+            json.dumps(
+                {
+                    "mn1:1.1": "First source",
+                    "mn1:1.2": "Second source",
+                    "mn1:1.3": "Third source",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (work_dir / "_project-v2.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "root_path": "root/pli/ms/sutta",
+                        "translation_path": "translation/en/tester/sutta",
+                        "translation_muids": "translation-en-tester",
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(settings, "WORK_DIR", work_dir)
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.search.get_file_paths",
+            side_effect=_virtual_source_paths(source_file),
+        )
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.can_edit_translation", return_value=True
+        )
+        mocker.patch("app.services.projects.utils.get_user", return_value=user)
+        mocker.patch(
+            "app.services.projects.utils.search.add_to_index", return_value=(True, None)
+        )
+        commit_result = mocker.Mock(id="materialize-task")
+        mocker.patch("app.services.projects.utils.commit.delay", return_value=commit_result)
+        mocker.patch("app.tasks.update_file_translation_progress.delay")
+        target_file = (
+            work_dir / "translation/en/tester/sutta/mn/mn1_translation-en-tester.json"
+        )
+
+        response = await async_client.patch(
+            "/projects/translation-en-tester/mn1/",
+            json={"mn1:1.2": "译文"},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "can_edit": True,
+            "data": {"mn1:1.2": "译文"},
+            "task_id": "materialize-task",
+            "materialized": True,
+        }
+        assert json.loads(target_file.read_text(encoding="utf-8")) == {
+            "mn1:1.1": "",
+            "mn1:1.2": "译文",
+            "mn1:1.3": "",
+        }
+
+    @pytest.mark.asyncio
+    async def test_empty_first_virtual_translation_save_does_not_create_file(
+        self,
+        async_client,
+        mock_get_current_user,
+        monkeypatch,
+        tmp_path,
+        mocker,
+    ) -> None:
+        work_dir = tmp_path / "unpublished"
+        source_dir = work_dir / "root/pli/ms/sutta/mn"
+        source_dir.mkdir(parents=True)
+        source_file = source_dir / "mn1_root-pli-ms.json"
+        source_file.write_text(
+            json.dumps({"mn1:1.1": "Source"}), encoding="utf-8"
+        )
+        (work_dir / "_project-v2.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "root_path": "root/pli/ms/sutta",
+                        "translation_path": "translation/en/tester/sutta",
+                        "translation_muids": "translation-en-tester",
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(settings, "WORK_DIR", work_dir)
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.search.get_file_paths",
+            side_effect=_virtual_source_paths(source_file),
+        )
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.can_edit_translation", return_value=True
+        )
+        target_file = (
+            work_dir / "translation/en/tester/sutta/mn/mn1_translation-en-tester.json"
+        )
+
+        response = await async_client.patch(
+            "/projects/translation-en-tester/mn1/",
+            json={"mn1:1.1": "   "},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["materialized"] is False
+        assert response.json()["task_id"] is None
+        assert not target_file.exists()
+
+    @pytest.mark.asyncio
+    async def test_first_virtual_translation_save_rolls_back_when_indexing_fails(
+        self,
+        async_client,
+        mock_get_current_user,
+        monkeypatch,
+        tmp_path,
+        mocker,
+    ) -> None:
+        work_dir = tmp_path / "unpublished"
+        source_dir = work_dir / "root/pli/ms/sutta/mn"
+        source_dir.mkdir(parents=True)
+        source_file = source_dir / "mn1_root-pli-ms.json"
+        source_file.write_text(
+            json.dumps({"mn1:1.1": "Source"}), encoding="utf-8"
+        )
+        (work_dir / "_project-v2.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "root_path": "root/pli/ms/sutta",
+                        "translation_path": "translation/en/tester/sutta",
+                        "translation_muids": "translation-en-tester",
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(settings, "WORK_DIR", work_dir)
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.search.get_file_paths",
+            side_effect=_virtual_source_paths(source_file),
+        )
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.can_edit_translation", return_value=True
+        )
+        mocker.patch(
+            "app.services.projects.utils.search.add_to_index",
+            return_value=(False, RuntimeError("index unavailable")),
+        )
+        mocker.patch(
+            "app.services.projects.utils.search.remove_segments", return_value=(True, None)
+        )
+        target_file = (
+            work_dir / "translation/en/tester/sutta/mn/mn1_translation-en-tester.json"
+        )
+
+        response = await async_client.patch(
+            "/projects/translation-en-tester/mn1/",
+            json={"mn1:1.1": "Translation"},
+        )
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response.json()["detail"] == "index unavailable"
+        assert not target_file.exists()
+
+    @pytest.mark.asyncio
+    async def test_first_virtual_translation_save_rejects_unknown_root_key(
+        self,
+        async_client,
+        mock_get_current_user,
+        monkeypatch,
+        tmp_path,
+        mocker,
+    ) -> None:
+        work_dir = tmp_path / "unpublished"
+        source_dir = work_dir / "root/pli/ms/sutta/mn"
+        source_dir.mkdir(parents=True)
+        source_file = source_dir / "mn1_root-pli-ms.json"
+        source_file.write_text(
+            json.dumps({"mn1:1.1": "Source"}), encoding="utf-8"
+        )
+        (work_dir / "_project-v2.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "root_path": "root/pli/ms/sutta",
+                        "translation_path": "translation/en/tester/sutta",
+                        "translation_muids": "translation-en-tester",
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(settings, "WORK_DIR", work_dir)
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.search.get_file_paths",
+            side_effect=_virtual_source_paths(source_file),
+        )
+        mocker.patch(
+            "app.api.api_v1.endpoints.projects.can_edit_translation", return_value=True
+        )
+        target_file = (
+            work_dir / "translation/en/tester/sutta/mn/mn1_translation-en-tester.json"
+        )
+
+        response = await async_client.patch(
+            "/projects/translation-en-tester/mn1/",
+            json={"mn1:9.9": "Invalid"},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "mn1:9.9 not found in the root file" in response.json()["detail"]
+        assert not target_file.exists()
+
+    @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
     async def test_get_json_data_for_prefix_in_project_invalid_prefix(
         self, mock_get_file_paths, async_client, mock_get_current_user
@@ -193,6 +475,7 @@ class TestProjects:
             "can_edit": can_edit,
             "data": data,
             "task_id": None,
+            "materialized": True,
         }
 
     @pytest.mark.asyncio
@@ -381,7 +664,12 @@ class TestProjects:
         assert "can_edit" in response.json()
         assert "data" in response.json()
         assert "task_id" in response.json()
-        assert response.json() == {"can_edit": True, "data": data, "task_id": "test_task_id"}
+        assert response.json() == {
+            "can_edit": True,
+            "data": data,
+            "task_id": "test_task_id",
+            "materialized": True,
+        }
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("can_edit", [True, False])

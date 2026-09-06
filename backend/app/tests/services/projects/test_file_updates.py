@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 from app.services.projects import utils as project_utils
 from app.services.projects.file_coordinator import project_file_lock
+from app.services.projects.virtual_projects import VirtualProjectFile
 
 
 def _patch_file_in_process(path_string, key, value, start):
@@ -80,6 +81,100 @@ def test_update_file_preserves_concurrent_segment_patches(tmp_path, monkeypatch)
     assert all(updated and error is None for updated, error, _task_id in results)
     assert json.loads(target_path.read_text(encoding="utf-8")) == {
         "uid:1": "first",
+        "uid:2": "second",
+    }
+
+
+def test_failed_materialization_does_not_delete_concurrent_successful_save(
+    tmp_path,
+    monkeypatch,
+):
+    source_path = tmp_path / "root.json"
+    target_path = tmp_path / "translation.json"
+    source_path.write_text(
+        json.dumps({"uid:1": "source 1", "uid:2": "source 2"}),
+        encoding="utf-8",
+    )
+    virtual_file = VirtualProjectFile(
+        source_path=source_path,
+        source_muid="root-pli-ms",
+        target_path=target_path,
+        target_muid="translation-en-test",
+        prefix="test",
+    )
+    user = SimpleNamespace(
+        github_id="1",
+        username="tester",
+        model_dump=lambda: {"github_id": "1", "username": "tester"},
+    )
+    first_index_started = threading.Event()
+    allow_first_index_to_fail = threading.Event()
+    save_committed = threading.Event()
+    add_to_index_calls = 0
+    add_to_index_lock = threading.Lock()
+
+    def add_to_index(_path):
+        nonlocal add_to_index_calls
+        with add_to_index_lock:
+            add_to_index_calls += 1
+            call_number = add_to_index_calls
+        if call_number == 1:
+            first_index_started.set()
+            allow_first_index_to_fail.wait(timeout=2)
+            return False, RuntimeError("forced indexing failure")
+        return True, None
+
+    def commit_save(*_args, **_kwargs):
+        save_committed.set()
+        return SimpleNamespace(id="task")
+
+    monkeypatch.setattr(project_utils, "sort_data", lambda data, _path: data)
+    monkeypatch.setattr(project_utils, "get_user", lambda _github_id: user)
+    monkeypatch.setattr(project_utils.search, "add_to_index", add_to_index)
+    monkeypatch.setattr(
+        project_utils.search,
+        "update_segments",
+        lambda _path, _data: (True, None),
+    )
+    monkeypatch.setattr(
+        project_utils.search,
+        "remove_segments",
+        lambda _path: (True, None),
+    )
+    monkeypatch.setattr(project_utils.commit, "delay", commit_save)
+
+    results = {}
+
+    def materialize(name, data):
+        results[name] = project_utils.materialize_translation_file(
+            virtual_file,
+            data,
+            user,
+        )
+
+    first = threading.Thread(
+        target=materialize,
+        args=("first", {"uid:1": "first"}),
+    )
+    second = threading.Thread(
+        target=materialize,
+        args=("second", {"uid:2": "second"}),
+    )
+
+    first.start()
+    assert first_index_started.wait(timeout=2)
+    second.start()
+    save_committed.wait(timeout=0.2)
+    allow_first_index_to_fail.set()
+    first.join(timeout=2)
+    second.join(timeout=2)
+
+    assert not first.is_alive()
+    assert not second.is_alive()
+    assert results["first"][0] is False
+    assert results["second"] == (True, None, "task", True)
+    assert json.loads(target_path.read_text(encoding="utf-8")) == {
+        "uid:1": "",
         "uid:2": "second",
     }
 

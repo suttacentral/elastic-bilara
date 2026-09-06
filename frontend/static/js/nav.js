@@ -242,11 +242,25 @@ function tree() {
             }
         },
         hydrateElementFromData(element, data) {
-            const { base, directories, files, files_with_progress } = data;
+            const {
+                base,
+                directories = [],
+                files = [],
+                files_with_progress,
+                virtual_directories = [],
+                virtual_files = [],
+            } = data;
             element.children = [];
 
             for (const directory of directories) {
                 element.add(new Element(directory, base, false, false));
+            }
+            for (const directory of virtual_directories) {
+                if (!directories.includes(directory)) {
+                    const directoryElement = new Element(directory, base, false, false);
+                    directoryElement.isVirtual = true;
+                    element.add(directoryElement);
+                }
             }
 
             const progressMap = {};
@@ -268,6 +282,27 @@ function tree() {
 
                 element.add(fileElement);
             }
+
+            for (const file of virtual_files) {
+                if (files.includes(file.name)) continue;
+                const fileElement = new Element(file.name, base, false, true);
+                fileElement.isVirtual = true;
+                fileElement.muid = file.target_muid;
+                fileElement.prefix = file.prefix;
+                fileElement.sourceMuid = file.source_muid;
+                fileElement.sourcePath = file.source_path;
+                element.add(fileElement);
+            }
+
+            element.children.sort((left, right) => {
+                if (left.isFile !== right.isFile) {
+                    return left.isFile ? 1 : -1;
+                }
+                return left.name.localeCompare(right.name, undefined, {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
+            });
         },
         async addData(element, { force = false } = {}) {
             const data = await this.fetchDirectoryData(element.fullName, { force });
@@ -331,11 +366,15 @@ function tree() {
             // Render node links
             let result = `
                 <a href="${href}"
-                    class="navigation-list__item-link ${element.isOpen ? 'navigation-list--open' : ''}"
+                    class="navigation-list__item-link ${element.isOpen ? 'navigation-list--open' : ''} ${element.isVirtual ? 'navigation-list__item-link--virtual' : ''}"
                     ${clickHandlers}>
                     <i class="mdi ${element.isFile ? 'mdi-file-outline' : (element.isOpen ? 'mdi-folder-open-outline' : 'mdi-folder-outline')}"></i>
                     ${element.name.split("/").join("")}
                 </a>`;
+
+            if (element.isFile && element.isVirtual) {
+                result += `<span class="translation-not-started">Not started</span>`;
+            }
 
             const isTranslationFile = element.fullName && element.fullName.startsWith('translation/');
             if (element.isFile && isTranslationFile && element.progress !== null && element.progress >= 0) {
@@ -353,7 +392,7 @@ function tree() {
                 } else if (this.userRole === ROLES.writer) {
                     showPublish = element.fullName.includes(this.filterUsername);
                 }
-                if (showPublish) {
+                if (showPublish && !element.isVirtual) {
                     result += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
                 }
             }
@@ -376,6 +415,10 @@ function tree() {
         getTranslationHref(element) {
             const prefix = encodeURIComponent(element.prefix || '');
             const muid = encodeURIComponent(element.muid || '');
+            if (element.isVirtual) {
+                const source = encodeURIComponent(element.sourceMuid || '');
+                return `/translation?prefix=${prefix}&muid=${muid}&source=${source}`;
+            }
             const path = encodeURIComponent(element.fullName);
             return `/translation?prefix=${prefix}&muid=${muid}&path=${path}`;
         },
@@ -594,6 +637,10 @@ function tree() {
             return result;
         },
         async redirectToFile(element) {
+            if (element.isVirtual) {
+                this.saveHistoryState();
+                return (window.location.href = this.getTranslationHref(element));
+            }
             const response = await requestWithTokenRetry(`projects/${element.fullName}/source/`);
             const { muid: source } = await response.json();
             const muid = element.muid === source ? "" : element.muid;
@@ -677,6 +724,9 @@ class Element {
         this.totalKeys = 0;
         this.translatedKeys = 0;
         this.loading = false;  // Node loading state
+        this.isVirtual = false;
+        this.sourceMuid = null;
+        this.sourcePath = null;
     }
 
     add(child) {

@@ -17,10 +17,12 @@ from app.services.projects.utils import (
     get_json_data,
     get_split_merge_text_type,
     group_split_merge_publish_paths,
+    materialize_translation_file,
     schedule_split_merge_auto_publish,
     sort_paths,
     update_file,
 )
+from app.services.projects.virtual_projects import VirtualProjectFile
 
 
 class TestProjectsUtils:
@@ -187,6 +189,35 @@ class TestProjectsUtils:
             assert error is None
         else:
             assert isinstance(error, expected_error_type)
+
+    def test_materialize_translation_file_rejects_non_object_root_data(
+        self,
+        tmp_path,
+        user,
+    ):
+        source_path = tmp_path / "mn1_root-pli-ms.json"
+        source_path.write_text(json.dumps([{"mn1:1.1": "Source"}]), encoding="utf-8")
+        target_path = tmp_path / "translation" / "mn1_translation-en-test.json"
+        virtual_file = VirtualProjectFile(
+            source_path=source_path,
+            source_muid="root-pli-ms",
+            target_path=target_path,
+            target_muid="translation-en-test",
+            prefix="mn1",
+        )
+
+        updated, error, task_id, materialized = materialize_translation_file(
+            virtual_file,
+            {"mn1:1.1": "Translation"},
+            user,
+        )
+
+        assert updated is False
+        assert isinstance(error, TypeError)
+        assert str(error) == f"Expected root file to contain a JSON object: {source_path}"
+        assert task_id is None
+        assert materialized is False
+        assert not target_path.exists()
 
 
 @pytest.mark.parametrize(

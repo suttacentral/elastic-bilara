@@ -31,11 +31,13 @@ from app.services.projects.html_validator import validate_bilara_html
 from app.services.projects.uid_expander import UIDExpander
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
+    materialize_translation_file,
     schedule_split_merge_auto_publish,
     sort_paths,
     update_file,
     write_json_data,
 )
+from app.services.projects.virtual_projects import resolve_virtual_file
 from app.services.users.permissions import (
     can_create_projects,
     can_delete_projects,
@@ -382,10 +384,17 @@ async def get_json_data_for_prefix_in_project(
     file: set[str] = _get_project_file_paths(muid, prefix)
 
     if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Data for project '{muid}' and prefix '{prefix}' not found",
-        )
+        try:
+            virtual_file = resolve_virtual_file(muid, prefix, search)
+        except ValueError as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
+        if not virtual_file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Data for project '{muid}' and prefix '{prefix}' not found",
+            )
+        can_edit = can_edit_translation(int(user.github_id), muid)
+        return JSONDataOut(can_edit=can_edit, data={}, materialized=False)
     can_edit: bool = can_edit_translation(int(user.github_id), muid)
     data: dict[str, str] = get_json_data(Path(file.pop()))
     return JSONDataOut(can_edit=can_edit, data=data)
@@ -461,16 +470,27 @@ async def update_json_data_for_prefix_in_project(
                     detail=f"Invalid tags: {', '.join(invalid_tags)}. Tags must be defined in the tag list.",
                 )
 
-    file: set[str] = _get_project_file_paths(muid, prefix)
+    try:
+        virtual_file = resolve_virtual_file(muid, prefix, search)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
 
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Data for project '{muid}' and prefix '{prefix}' not found",
+    if virtual_file:
+        updated, error, task_id, materialized = materialize_translation_file(
+            virtual_file, data, user
         )
-    path: Path = Path(file.pop())
-    root_path: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True)
-    updated, error, task_id = update_file(path, data, Path(root_path.pop()), user)
+        path = virtual_file.target_path
+    else:
+        file: set[str] = _get_project_file_paths(muid, prefix)
+        if not file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Data for project '{muid}' and prefix '{prefix}' not found",
+            )
+        path = Path(file.pop())
+        root_path: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True)
+        updated, error, task_id = update_file(path, data, Path(root_path.pop()), user)
+        materialized = True
     if error:
         code = status.HTTP_500_INTERNAL_SERVER_ERROR
         if isinstance(error, KeyError):
@@ -480,9 +500,15 @@ async def update_json_data_for_prefix_in_project(
     # Trigger async progress update
     from app.tasks import update_file_translation_progress
     relative_path = str(path).replace(str(settings.WORK_DIR), "").lstrip("/")
-    update_file_translation_progress.delay(relative_path)
+    if materialized:
+        update_file_translation_progress.delay(relative_path)
 
-    return JSONDataOut(can_edit=True, data=data, task_id=task_id)
+    return JSONDataOut(
+        can_edit=True,
+        data=data,
+        task_id=task_id,
+        materialized=materialized,
+    )
 
 
 @router.get("/{path:path}/source/")

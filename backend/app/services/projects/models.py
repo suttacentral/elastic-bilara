@@ -22,6 +22,7 @@ class JSONDataOut(BaseModel):
     can_edit: bool
     data: dict[str, str]
     task_id: str | None = None
+    materialized: bool = True
 
 
 class HtmlValidationIn(BaseModel):

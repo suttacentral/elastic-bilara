@@ -136,6 +136,47 @@
     background-color: var(--color-background-tertiary);
 }
 
+.navigation-list__item-link--virtual {
+    color: var(--color-text-secondary);
+}
+
+.translation-not-started {
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    font-style: italic;
+    margin-left: var(--space-xs);
+}
+
+.nav-publish-dialog {
+    width: calc(100% - var(--space-xl));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.nav-publish-dialog .modal-header-success {
+    background-color: color-mix(in srgb, var(--color-success) 12%, var(--color-background-secondary));
+    border-bottom-color: color-mix(in srgb, var(--color-success) 30%, var(--color-background-tertiary));
+}
+
+.nav-publish-dialog .modal-header-success h3 {
+    color: var(--color-success);
+}
+
+.nav-publish-dialog .modal-body .file-name {
+    display: block;
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-background-secondary);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.nav-publish-dialog .modal-btn {
+    border-radius: var(--radius-md);
+}
+
 .navigation-list--open {
     color: var(--color-text-secondary);
 }

@@ -19,10 +19,17 @@ es = Search()
 
 
 def validate_dir_path(path: str):
-    target_path: Path = settings.WORK_DIR / path
-    if not target_path.exists() or not target_path.is_dir():
+    from app.services.projects.virtual_projects import is_virtual_directory
+
+    work_dir = settings.WORK_DIR.resolve()
+    target_path = (settings.WORK_DIR / path).resolve()
+    try:
+        relative_path = target_path.relative_to(work_dir)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Path {path} not allowed")
+    if (not target_path.exists() or not target_path.is_dir()) and not is_virtual_directory(target_path):
         raise HTTPException(status_code=404, detail=f"Path {path} not found")
-    if str(target_path.relative_to(settings.WORK_DIR)).split("/")[0] not in {item.value for item in TextType}:
+    if not relative_path.parts or relative_path.parts[0] not in {item.value for item in TextType}:
         raise HTTPException(status_code=400, detail=f"Path {path} not allowed")
     return target_path
 

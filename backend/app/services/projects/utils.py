@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.text_types import TextType
 from app.db.schemas.user import User, UserBase
 from app.services.git import utils
+from app.services.projects.virtual_projects import VirtualProjectFile
 from app.services.projects.file_coordinator import project_file_lock
 from app.services.users.utils import get_user
 from app.tasks import commit
@@ -100,54 +101,148 @@ def sort_paths(paths: set[str]) -> list[str]:
     return sorted(paths, key=extract_key)
 
 
+def _update_file_locked(
+    path: Path,
+    data: dict[str, str],
+    root_path: Path,
+) -> tuple[bool, Exception | None]:
+    root_data: dict[str, str] = get_json_data(root_path)
+
+    for key in data:
+        if key not in root_data:
+            return False, KeyError(f"{key} not found in the root file")
+
+    file_data: dict[str, str] = get_json_data(path)
+    original_data: dict[str, str] = file_data.copy()
+    file_data.update(data)
+
+    _, elastic_error = search.update_segments(path, file_data)
+    if elastic_error:
+        return False, elastic_error
+
+    written, file_error = write_json_data(path, file_data)
+    if not file_error:
+        return written, None
+
+    restored, rollback_error = search.update_segments(path, original_data)
+    if not restored:
+        return False, RuntimeError(
+            f"{file_error}; search rollback failed: {rollback_error}"
+        )
+    return False, file_error
+
+
+def _schedule_file_commit(path: Path, user: UserBase) -> str:
+    cleaned_path = str(utils.clean_path(str(path)))
+    result = commit.delay(
+        user.model_dump(),
+        [cleaned_path],
+        f"Translations by {user.username} to {cleaned_path}",
+    )
+    return result.id
+
+
 def update_file(
     path: Path, data: dict[str, str], root_path: Path, user: UserBase
 ) -> tuple[bool, Exception | None, str | None]:
-    user: UserBase = get_user(int(user.github_id))
-    task_id = None
+    stored_user: UserBase = get_user(int(user.github_id))
 
     with project_file_lock(path):
-        root_data: dict[str, str] = get_json_data(root_path)
+        updated, error = _update_file_locked(path, data, root_path)
 
-        for key in data:
-            if key not in root_data:
-                return False, KeyError(f"{key} not found in the root file"), task_id
+    if error:
+        return False, error, None
 
-        file_data: dict[str, str] = get_json_data(path)
-
-        original_data: dict[str, str] = file_data.copy()
-
-        for key, value in data.items():
-            file_data[key] = value
-
-        updated, elastic_error = search.update_segments(path, file_data)
-
-        if elastic_error:
-            return False, elastic_error, task_id
-
-        written, file_error = write_json_data(path, file_data)
-        if file_error:
-            restored, rollback_error = search.update_segments(path, original_data)
-            if not restored:
-                return (
-                    False,
-                    RuntimeError(
-                        f"{file_error}; search rollback failed: {rollback_error}"
-                    ),
-                    task_id,
-                )
-            return False, file_error, task_id
-
-    if written:
-        cleaned_path_string = str(utils.clean_path(str(path)))
-        result = commit.delay(
-            user.model_dump(),
-            [cleaned_path_string],
-            f"Translations by {user.username} to {cleaned_path_string}",
-        )
-        task_id = result.id
-
+    task_id = _schedule_file_commit(path, stored_user) if updated else None
     return True, None, task_id
+
+
+def materialize_translation_file(
+    virtual_file: VirtualProjectFile,
+    data: dict[str, str],
+    user: UserBase,
+) -> tuple[bool, Exception | None, str | None, bool]:
+    """Save a configured translation, creating its file on the first nonblank save."""
+    root_data = get_json_data(virtual_file.source_path)
+    if not isinstance(root_data, dict):
+        error = TypeError(
+            f"Expected root file to contain a JSON object: {virtual_file.source_path}"
+        )
+        return False, error, None, False
+
+    unknown_keys = set(data) - set(root_data)
+    if unknown_keys:
+        unknown_key = sorted(unknown_keys)[0]
+        return False, KeyError(f"{unknown_key} not found in the root file"), None, False
+
+    target_path = virtual_file.target_path
+    temporary_path = None
+    created = False
+
+    with project_file_lock(target_path):
+        try:
+            if target_path.exists():
+                stored_user = get_user(int(user.github_id))
+                updated, error = _update_file_locked(
+                    target_path,
+                    data,
+                    virtual_file.source_path,
+                )
+                if error:
+                    return False, error, None, True
+                task_id = (
+                    _schedule_file_commit(target_path, stored_user) if updated else None
+                )
+                return True, None, task_id, True
+
+            if not any(value and value.strip() for value in data.values()):
+                return True, None, None, False
+
+            complete_data = {uid: "" for uid in root_data}
+            complete_data.update(data)
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=target_path.parent,
+                prefix=f".{target_path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary_file:
+                json.dump(complete_data, temporary_file, indent=2, ensure_ascii=False)
+                temporary_file.flush()
+                os.fsync(temporary_file.fileno())
+                temporary_path = Path(temporary_file.name)
+
+            os.link(temporary_path, target_path)
+            created = True
+            temporary_path.unlink(missing_ok=True)
+
+            indexed, index_error = search.add_to_index(target_path)
+            if not indexed:
+                raise index_error or RuntimeError(
+                    "Failed to index materialized translation file"
+                )
+
+            stored_user = get_user(int(user.github_id))
+            task_id = _schedule_file_commit(target_path, stored_user)
+            return True, None, task_id, True
+        except Exception as error:
+            if temporary_path:
+                temporary_path.unlink(missing_ok=True)
+            if created:
+                target_path.unlink(missing_ok=True)
+                try:
+                    removed, cleanup_error = search.remove_segments(target_path)
+                    if not removed:
+                        raise cleanup_error or RuntimeError(
+                            "Failed to roll back search indexes"
+                        )
+                except Exception as cleanup_error:
+                    error = RuntimeError(
+                        f"{error}; index rollback failed: {cleanup_error}"
+                    )
+            return False, error, None, False
 
 
 def write_json_data(path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
