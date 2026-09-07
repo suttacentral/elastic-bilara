@@ -100,7 +100,7 @@ def set_auth_cookies(response: fastapi_Response, access_token: str, refresh_toke
         httponly=True,
         secure=True,
         samesite="strict",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES.total_seconds(),
+        max_age=int(settings.ACCESS_TOKEN_EXPIRE_MINUTES.total_seconds()),
     )
 
     if refresh_token:
@@ -111,5 +111,5 @@ def set_auth_cookies(response: fastapi_Response, access_token: str, refresh_toke
             httponly=True,
             secure=True,
             samesite="strict",
-            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds(),
+            max_age=int(settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds()),
         )

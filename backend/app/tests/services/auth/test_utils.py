@@ -2,12 +2,24 @@ from datetime import datetime, timedelta
 
 import pytest
 from app.core.config import settings
-from app.services.auth.utils import create_jwt_token
+from app.services.auth.utils import create_jwt_token, set_auth_cookies
+from fastapi import Response
 from freezegun import freeze_time
 from jose import JWTError, jwt
 
 
 class TestAuthUtils:
+    def test_auth_cookies_have_integer_max_age(self) -> None:
+        response = Response()
+
+        set_auth_cookies(response, "access", "refresh")
+
+        cookie_headers = response.headers.getlist("set-cookie")
+        access_max_age = int(settings.ACCESS_TOKEN_EXPIRE_MINUTES.total_seconds())
+        refresh_max_age = int(settings.REFRESH_TOKEN_EXPIRE_DAYS.total_seconds())
+        assert any(f"Max-Age={access_max_age};" in header for header in cookie_headers)
+        assert any(f"Max-Age={refresh_max_age};" in header for header in cookie_headers)
+
     @pytest.mark.parametrize(
         "token_type, exp",
         [
