@@ -42,8 +42,8 @@ class VirtualProjectFile:
 @dataclass(frozen=True)
 class ProjectMapping:
     root_path: Path
-    translation_path: Path
-    translation_muid: str
+    target_path: Path
+    target_muid: str
 
 
 def _configured_path(value: str, work_dir: Path) -> Path:
@@ -88,6 +88,18 @@ def _load_project_mappings(
                 translation_muid,
             )
         )
+        relative_translation = translation_path.relative_to(work_dir)
+        if (
+            relative_translation.parts
+            and relative_translation.parts[0] == "translation"
+            and translation_muid.startswith("translation-")
+        ):
+            comment_path = Path("comment", *relative_translation.parts[1:])
+            mappings.append(ProjectMapping(
+                root_path,
+                _configured_path(comment_path.as_posix(), work_dir),
+                "comment-" + translation_muid.removeprefix("translation-"),
+            ))
     return tuple(mappings)
 
 
@@ -116,7 +128,7 @@ def list_virtual_files(directory: Path) -> list[VirtualProjectFile]:
     virtual_files: dict[str, VirtualProjectFile] = {}
     for mapping in _project_mappings():
         try:
-            relative_directory = directory.relative_to(mapping.translation_path)
+            relative_directory = directory.relative_to(mapping.target_path)
         except ValueError:
             continue
 
@@ -128,14 +140,14 @@ def list_virtual_files(directory: Path) -> list[VirtualProjectFile]:
             if not source_path.is_file() or source_path.suffix != ".json":
                 continue
             prefix = get_prefix(source_path)
-            target_path = directory / f"{prefix}_{mapping.translation_muid}.json"
+            target_path = directory / f"{prefix}_{mapping.target_muid}.json"
             if target_path.exists():
                 continue
             candidate = VirtualProjectFile(
                 source_path=source_path,
                 source_muid=get_muid(source_path),
                 target_path=target_path,
-                target_muid=mapping.translation_muid,
+                target_muid=mapping.target_muid,
                 prefix=prefix,
             )
             existing = virtual_files.get(target_path.name)
@@ -149,10 +161,10 @@ def list_virtual_files(directory: Path) -> list[VirtualProjectFile]:
 def is_virtual_directory(directory: Path) -> bool:
     for mapping in _project_mappings():
         try:
-            relative_directory = directory.relative_to(mapping.translation_path)
+            relative_directory = directory.relative_to(mapping.target_path)
         except ValueError:
             try:
-                mapping.translation_path.relative_to(directory)
+                mapping.target_path.relative_to(directory)
             except ValueError:
                 continue
             if mapping.root_path.is_dir():
@@ -167,10 +179,10 @@ def list_virtual_directories(directory: Path) -> list[str]:
     names = set()
     for mapping in _project_mappings():
         try:
-            relative_directory = directory.relative_to(mapping.translation_path)
+            relative_directory = directory.relative_to(mapping.target_path)
         except ValueError:
             try:
-                remaining = mapping.translation_path.relative_to(directory)
+                remaining = mapping.target_path.relative_to(directory)
             except ValueError:
                 continue
             if not mapping.root_path.is_dir():
@@ -208,7 +220,7 @@ def resolve_virtual_file(
     candidates: dict[Path, VirtualProjectFile] = {}
     indexed_paths_by_muid: dict[str, set[str]] = {}
     for mapping in _project_mappings():
-        if mapping.translation_muid != target_muid:
+        if mapping.target_muid != target_muid:
             continue
         if not mapping.root_path.is_dir():
             continue
@@ -229,15 +241,15 @@ def resolve_virtual_file(
             except ValueError:
                 continue
             target_path = (
-                mapping.translation_path
+                mapping.target_path
                 / relative_directory
-                / f"{prefix}_{mapping.translation_muid}.json"
+                / f"{prefix}_{mapping.target_muid}.json"
             )
             candidate = VirtualProjectFile(
                 source_path=source_path,
                 source_muid=get_muid(source_path),
                 target_path=target_path,
-                target_muid=mapping.translation_muid,
+                target_muid=mapping.target_muid,
                 prefix=prefix,
             )
             existing = candidates.get(target_path)

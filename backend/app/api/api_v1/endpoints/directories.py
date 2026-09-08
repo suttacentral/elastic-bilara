@@ -196,7 +196,11 @@ async def get_root_content(user: Annotated[UserBase, Depends(get_current_user)])
         if p.is_dir() and p.name in {item.value for item in TextType}:
             directories.append(str(p.relative_to(settings.WORK_DIR)) + "/")
     directories.sort()
-    return FilesAndDirsOut(directories=directories)
+    try:
+        virtual_directories = list_virtual_directories(settings.WORK_DIR.resolve())
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return FilesAndDirsOut(directories=directories, virtual_directories=virtual_directories)
 
 
 @router.get("/{path:path}/", response_model=FilesAndDirsOut)
@@ -259,7 +263,7 @@ async def get_dir_content(
 
     virtual_files = []
     virtual_directories = []
-    if is_translation_dir:
+    if base.startswith(("translation/", "comment/")):
         try:
             virtual_files = [item.as_directory_entry() for item in list_virtual_files(target_path)]
             virtual_directories = list_virtual_directories(target_path)

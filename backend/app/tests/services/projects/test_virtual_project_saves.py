@@ -15,11 +15,13 @@ from app.services.projects.file_coordinator import project_file_lock
 from app.services.projects.virtual_projects import VirtualProjectFile
 
 
-@pytest.fixture
-def configured_translation(tmp_path, monkeypatch):
+@pytest.fixture(params=["translation", "comment"])
+def configured_translation(tmp_path, monkeypatch, request):
     work_dir = tmp_path / "unpublished"
     source = work_dir / "root/pli/ms/sutta/mn/mn1_root-pli-ms.json"
-    target = work_dir / "translation/en/tester/sutta/mn/mn1_translation-en-tester.json"
+    target_type = request.param
+    target_muid = f"{target_type}-en-tester"
+    target = work_dir / f"{target_type}/en/tester/sutta/mn/mn1_{target_muid}.json"
     source.parent.mkdir(parents=True)
     source.write_text(json.dumps({"mn1:1": "Source 1", "mn1:2": "Source 2"}))
     (work_dir / "_project-v2.json").write_text(json.dumps([
@@ -41,9 +43,43 @@ def configured_translation(tmp_path, monkeypatch):
     monkeypatch.setattr(projects.search, "add_to_index", lambda *_: (True, None))
     monkeypatch.setattr(project_utils.search, "update_segments", lambda *_: (True, None))
     virtual_file = VirtualProjectFile(
-        source, "root-pli-ms", target, "translation-en-tester", "mn1"
+        source, "root-pli-ms", target, target_muid, "mn1"
     )
     return virtual_file, user
+
+
+def test_virtual_directory_read_and_first_save(configured_translation, monkeypatch):
+    from app.api.api_v1.endpoints.directories import get_dir_content, get_root_content
+    from app.services.directories.utils import validate_dir_path
+
+    virtual_file, user = configured_translation
+    monkeypatch.setattr(
+        projects.search, "get_file_paths",
+        lambda muid, **kwargs: {str(virtual_file.source_path)}
+        if muid == virtual_file.source_muid else set(),
+    )
+    relative = virtual_file.target_path.parent.relative_to(settings.WORK_DIR)
+    root_listing = asyncio.run(get_root_content(user))
+    assert f"{relative.parts[0]}/" in root_listing.virtual_directories
+    parent = validate_dir_path(str(relative.parent))
+    parent_listing = asyncio.run(get_dir_content(user, parent))
+    assert "mn/" in parent_listing.virtual_directories
+    directory = validate_dir_path(str(relative))
+    listing = asyncio.run(get_dir_content(user, directory))
+    assert listing.virtual_files[0].target_muid == virtual_file.target_muid
+    response = asyncio.run(projects.get_json_data_for_prefix_in_project(
+        user, virtual_file.target_muid, "mn1"
+    ))
+    assert response.materialized is False
+    assert not virtual_file.target_path.exists()
+    asyncio.run(projects.update_json_data_for_prefix_in_project(
+        user, virtual_file.target_muid, "mn1", {"mn1:1": "New text"}
+    ))
+    assert json.loads(virtual_file.target_path.read_text()) == {
+        "mn1:1": "New text", "mn1:2": "",
+    }
+    from app.services.projects.virtual_projects import list_virtual_files
+    assert list_virtual_files(directory) == []
 
 
 @pytest.mark.parametrize("translation_index_visible", [False, True])

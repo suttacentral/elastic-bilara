@@ -47,7 +47,11 @@ def owns_project(
 def _project_matches_muid(project: dict, muid: str) -> bool:
     if project.get("translation_muids") == muid:
         return True
-    return muid_from_relative_path(project.get("translation_path")) == muid
+    if muid_from_relative_path(project.get("translation_path")) == muid:
+        return True
+    if muid.startswith("comment-"):
+        return _project_matches_muid(project, "translation-" + muid.removeprefix("comment-"))
+    return False
 
 
 def is_user_in_admin_group(user: UserBase) -> bool:

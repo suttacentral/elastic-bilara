@@ -6,6 +6,19 @@ from app.services.users.permissions import can_edit_translation, owns_project, c
 
 
 class TestUserPermissions:
+    @pytest.mark.parametrize("muid", ["comment-en-tester", "translation-en-tester"])
+    def test_configured_collaborator_can_edit_both_types(self, user, muid):
+        user.role = Role.REVIEWER.value
+        user.username = "collaborator"
+        config = [{
+            "translation_path": "translation/en/tester/sutta",
+            "translation_muids": "translation-en-tester",
+            "creator_github_handle": ["collaborator"],
+        }]
+        assert can_edit_translation(user.github_id, muid, projects=config, user=user)
+        user.username = "unrelated"
+        assert not can_edit_translation(user.github_id, muid, projects=config, user=user)
+
     def test_owns_project_valid_muid(self, user, project) -> None:
         project = project(creator_github_handle=user.username)
         assert owns_project(user.username, project, project["translation_muids"])

@@ -43,6 +43,44 @@ def _project_entry(
     }
 
 
+@pytest.mark.parametrize("translation_path", ["", "."])
+def test_project_mappings_allow_work_directory_without_comment_mapping(
+    tmp_path, translation_path,
+):
+    _write_project_config(tmp_path, [_project_entry(translation_path=translation_path)])
+
+    mappings = virtual_projects._load_project_mappings(
+        tmp_path / "_project-v2.json", 0, 0, tmp_path,
+    )
+
+    assert len(mappings) == 1
+    assert mappings[0].target_path == tmp_path
+
+
+@pytest.mark.parametrize(
+    "translation_path",
+    [
+        "translation/en/tester/sutta",
+        "./translation/en/tester/sutta",
+        "other/../translation/en/tester/sutta",
+        "absolute",
+    ],
+)
+def test_comment_mapping_uses_resolved_translation_path(tmp_path, translation_path):
+    if translation_path == "absolute":
+        translation_path = str(tmp_path / "translation/en/tester/sutta")
+    _write_project_config(tmp_path, [_project_entry(translation_path=translation_path)])
+
+    mappings = virtual_projects._load_project_mappings(
+        tmp_path / "_project-v2.json", 0, 0, tmp_path,
+    )
+
+    assert [(mapping.target_path, mapping.target_muid) for mapping in mappings] == [
+        (tmp_path / "translation/en/tester/sutta", "translation-en-tester"),
+        (tmp_path / "comment/en/tester/sutta", "comment-en-tester"),
+    ]
+
+
 def test_project_mappings_cache_resolved_paths_until_config_changes(
     tmp_path,
     monkeypatch,
@@ -71,6 +109,7 @@ def test_project_mappings_cache_resolved_paths_until_config_changes(
     assert configured_paths == [
         "root/pli/ms/sutta",
         "translation/en/tester/sutta",
+        "comment/en/tester/sutta",
     ]
 
     _write_project_config(
@@ -87,14 +126,17 @@ def test_project_mappings_cache_resolved_paths_until_config_changes(
 
     mappings = virtual_projects._project_mappings()
 
-    assert len(mappings) == 2
+    assert len(mappings) == 4
     assert configured_paths == [
         "root/pli/ms/sutta",
         "translation/en/tester/sutta",
+        "comment/en/tester/sutta",
         "root/pli/ms/sutta",
         "translation/en/tester/sutta",
+        "comment/en/tester/sutta",
         "root/en/site/sutta",
         "translation/fr/tester/sutta",
+        "comment/fr/tester/sutta",
     ]
 
 
