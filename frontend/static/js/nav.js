@@ -106,7 +106,7 @@ function tree() {
 
                 if (!this.showAllContent) {
                     const response = await requestWithTokenRetry(`directories/search/${this.filterUsername}/`);
-                    const { matches } = await response.json();
+                    const { matches, publish_permissions = {} } = await response.json();
 
                     if (matches.length === 0 || matches.total_matches === 0) {
                         await this.loadAllDirectories();
@@ -146,6 +146,14 @@ function tree() {
                             }
                         }
                     }
+
+                    const applyPermissions = (elements) => {
+                        for (const element of elements) {
+                            this.applyPublishPermission(element, publish_permissions);
+                            applyPermissions(element.children);
+                        }
+                    };
+                    applyPermissions(this.data);
 
                     const expandNodes = async (elements) => {
                         for (const el of elements) {
@@ -241,6 +249,10 @@ function tree() {
                 throw error;
             }
         },
+        applyPublishPermission(element, permissions) {
+            const muid = getMuid(element.fullName.split('/').filter(Boolean).join('/'));
+            element.canPublish = Object.hasOwn(permissions, muid) && permissions[muid] === true;
+        },
         hydrateElementFromData(element, data) {
             const {
                 base,
@@ -249,6 +261,7 @@ function tree() {
                 files_with_progress,
                 virtual_directories = [],
                 virtual_files = [],
+                publish_permissions = {},
             } = data;
             element.children = [];
 
@@ -292,6 +305,10 @@ function tree() {
                 fileElement.sourceMuid = file.source_muid;
                 fileElement.sourcePath = file.source_path;
                 element.add(fileElement);
+            }
+
+            for (const node of [element, ...element.children]) {
+                this.applyPublishPermission(node, publish_permissions);
             }
 
             element.children.sort((left, right) => {
@@ -386,13 +403,7 @@ function tree() {
             }
 
             if (element.muid && (element.fullName.split('/').length >= 5 || element.isFile)) {
-                let showPublish = false;
-                if (this.userRole === ROLES.admin || this.userRole === ROLES.superuser) {
-                    showPublish = true;
-                } else if (this.userRole === ROLES.writer) {
-                    showPublish = element.fullName.includes(this.filterUsername);
-                }
-                if (showPublish && !element.isVirtual) {
+                if (element.canPublish && !element.isVirtual) {
                     result += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
                 }
             }
@@ -725,6 +736,7 @@ class Element {
         this.translatedKeys = 0;
         this.loading = false;  // Node loading state
         this.isVirtual = false;
+        this.canPublish = false;
         this.sourceMuid = null;
         this.sourcePath = null;
     }

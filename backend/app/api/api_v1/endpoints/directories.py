@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.text_types import TextType
+from app.db.models.user import Role
 from app.db.schemas.user import UserBase
 from app.services.directories.models import FilesAndDirsOut
 from app.services.directories import utils
@@ -15,9 +16,24 @@ from app.services.directories.remover import Remover
 from app.services.directories.utils import get_muid_from_path, get_language
 from app.services.projects.utils import sort_paths
 from app.services.projects.virtual_projects import list_virtual_directories, list_virtual_files
-from app.services.users.permissions import can_delete_projects
+from app.services.users.permissions import can_delete_projects, can_publish_project
+from app.services.users.utils import get_user
+from search.utils import get_json_data, muid_from_relative_path
 
 router = APIRouter(prefix="/directories")
+
+
+def get_publish_permissions(github_id: int, paths: list[str]) -> dict[str, bool]:
+    muids = {muid for path in paths if (muid := muid_from_relative_path(path))}
+    if not muids:
+        return {}
+    user = get_user(github_id)
+    projects = (
+        get_json_data(settings.WORK_DIR / "_project-v2.json")
+        if user.role == Role.WRITER.value
+        else []
+    )
+    return {muid: can_publish_project(user, muid, projects=projects) for muid in sorted(muids)}
 
 
 @router.get("/search/{search_path:path}/", response_model=dict)
@@ -174,7 +190,11 @@ async def search_path_tree(
         "search_query": search_path,
         "exact_match": exact_match,
         "total_matches": len(all_matches),
-        "matches": all_matches
+        "matches": all_matches,
+        "publish_permissions": get_publish_permissions(
+            user.github_id,
+            [path for match in all_matches for path in [*match["parent_tree"], match["path"]]],
+        ),
     }
 
     # Add search statistics
@@ -277,6 +297,11 @@ async def get_dir_content(
         files_with_progress=files_with_progress if is_translation_dir else None,
         virtual_directories=virtual_directories,
         virtual_files=virtual_files,
+        publish_permissions=get_publish_permissions(
+            user.github_id,
+            [base, *(base + name for name in directories + files + virtual_directories),
+             *(item["target_path"] for item in virtual_files)],
+        ),
     )
 
 

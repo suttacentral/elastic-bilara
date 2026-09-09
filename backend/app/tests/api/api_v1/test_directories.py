@@ -366,3 +366,91 @@ class TestDirectories:
         assert response.json()["message"] == "Deletion successful"
         assert response.json()["main_task_id"] == main_path_task_id
         assert response.json()["related_paths_task_id"] == related_paths_task_id
+
+
+@pytest.fixture(autouse=True)
+def directory_permission_user(mocker, user):
+    return mocker.patch("app.api.api_v1.endpoints.directories.get_user", return_value=user)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("username, role, expected", [
+    ("ayyasoma", "writer", True),
+    ("unrelated", "writer", False),
+    ("ayyasoma", "reviewer", False),
+    ("unrelated", "superuser", True),
+])
+async def test_directory_and_search_return_project_publish_permissions(
+    async_client, mock_get_current_user, user, monkeypatch, tmp_path,
+    username, role, expected,
+):
+    user.username = username
+    user.role = role
+    target = tmp_path / "translation/it/soma/sutta"
+    target.mkdir(parents=True)
+    (target / "sn").mkdir()
+    (tmp_path / "_project-v2.json").write_text(json.dumps([{
+        "root_path": "root/pli/ms/sutta",
+        "translation_path": "translation/it/soma/sutta",
+        "translation_muids": "translation-it-soma",
+        "creator_github_handle": "ayyasoma",
+    }]))
+    monkeypatch.setattr(settings, "WORK_DIR", tmp_path)
+    for endpoint in ["/directories/translation/it/soma/sutta/", "/directories/search/soma/"]:
+        response = await async_client.get(endpoint)
+        assert response.status_code == 200, response.text
+        assert response.json()["publish_permissions"] == {"translation-it-soma": expected}
+
+
+@pytest.mark.parametrize("role, expected", [
+    ("administrator", True),
+    ("superuser", True),
+    ("reviewer", False),
+])
+def test_publish_permissions_skip_project_read_for_non_writer(user, mocker, role, expected):
+    from app.api.api_v1.endpoints.directories import get_publish_permissions
+
+    user.role = role
+    read_projects = mocker.patch(
+        "app.api.api_v1.endpoints.directories.get_json_data",
+        side_effect=AssertionError("Project configuration should not be read"),
+    )
+    assert get_publish_permissions(user.github_id, ["translation/it/soma/sutta/"]) == {
+        "translation-it-soma": expected,
+    }
+    read_projects.assert_not_called()
+
+
+def test_writer_publish_permissions_read_projects_once(user, mocker):
+    from app.api.api_v1.endpoints.directories import get_publish_permissions
+
+    user.username = "ayyasoma"
+    user.role = "writer"
+    read_projects = mocker.patch(
+        "app.api.api_v1.endpoints.directories.get_json_data",
+        return_value=[{
+            "translation_muids": "translation-it-soma",
+            "creator_github_handle": "ayyasoma",
+        }],
+    )
+    assert get_publish_permissions(user.github_id, [
+        "translation/it/soma/sutta/", "translation/en/soma/sutta/",
+    ]) == {"translation-it-soma": True, "translation-en-soma": False}
+    read_projects.assert_called_once_with(settings.WORK_DIR / "_project-v2.json")
+
+
+@pytest.mark.parametrize("contents, error", [
+    (None, FileNotFoundError),
+    ("{invalid", json.JSONDecodeError),
+])
+def test_writer_publish_permissions_surface_invalid_configuration(
+    user, monkeypatch, tmp_path, contents, error,
+):
+    from app.api.api_v1.endpoints.directories import get_publish_permissions
+
+    user.role = "writer"
+    monkeypatch.setattr(settings, "WORK_DIR", tmp_path)
+    if contents is not None:
+        (tmp_path / "_project-v2.json").write_text(contents)
+    with pytest.raises(error):
+        get_publish_permissions(user.github_id, ["translation/it/soma/sutta/"])

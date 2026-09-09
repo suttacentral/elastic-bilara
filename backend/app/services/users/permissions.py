@@ -34,6 +34,15 @@ def can_edit_translation(
     return False
 
 
+def can_publish_project(user: UserBase, muid: str, *, projects: list[dict]) -> bool:
+    """Publishing requires a publishing role and access to the project."""
+    if is_user_in_admin_group(user):
+        return True
+    if user.role != Role.WRITER.value:
+        return False
+    return can_edit_translation(user.github_id, muid, projects=projects, user=user)
+
+
 def owns_project(
     username: str,
     project: dict,

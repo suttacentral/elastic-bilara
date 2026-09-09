@@ -25,3 +25,4 @@ class FilesAndDirsOut(BaseModel):
     files_with_progress: list[FileWithProgress] | None = None
     virtual_directories: list[str] = Field(default_factory=list)
     virtual_files: list[VirtualFileOut] = Field(default_factory=list)
+    publish_permissions: dict[str, bool] = Field(default_factory=dict)

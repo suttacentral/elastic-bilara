@@ -166,3 +166,23 @@ class TestUserPermissions:
         if muid.startswith("tag"):
             assert result == expected
         # For non-tag muids, the test shouldn't reach the tag-specific logic
+
+
+@pytest.mark.parametrize("role, username, expected", [
+    ("writer", "ayyasoma", True),
+    ("writer", "unrelated", False),
+    ("reviewer", "ayyasoma", False),
+    ("administrator", "unrelated", True),
+    ("superuser", "unrelated", True),
+])
+def test_publish_project_ownership(user, role, username, expected):
+    from app.services.users.permissions import can_publish_project
+
+    user.role = role
+    user.username = username
+    projects = [{
+        "translation_path": "translation/it/soma/sutta",
+        "translation_muids": "translation-it-soma",
+        "creator_github_handle": "ayyasoma",
+    }]
+    assert can_publish_project(user, "translation-it-soma", projects=projects) is expected
