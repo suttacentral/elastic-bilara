@@ -1146,7 +1146,8 @@
                                     <input class="fields__input"
                                         type="text"
                                         id="search-uid"
-                                        placeholder="an1.1:0.1"
+                                        placeholder="UID prefix or pattern, e.g. sn or sn%"
+                                        title="Case-insensitive UID prefix; % matches any number of characters."
                                         x-model="fields.uid"
                                         @keydown.enter.prevent="await triggerSearch($event)"/>
                                 </div>

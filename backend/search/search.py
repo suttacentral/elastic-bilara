@@ -313,7 +313,7 @@ class Search:
 
     def get_segments(self, size: int, page: int, muids: dict[str, str]) -> dict[str, dict[str, str]] | dict:
         from_: int = page * size
-        uid: str | None = muids.pop("uid", None)
+        uid: str = (muids.pop("uid", None) or "").strip().lower()
         if uid:
             if any(muids.values()):
                 return self._uid_muids_lookup(size, from_, uid, muids)
@@ -356,6 +356,7 @@ class Search:
         muids: dict[str, str],
         uid: str | None = None,
     ) -> dict[str, Any]:
+        uid = (uid or "").strip().lower()
         if uid and not any(muids.values()):
             doc_count = hits_size = len(muids)
             body: dict[str, Any] = {
@@ -363,7 +364,6 @@ class Search:
                     "bool": {
                         "must": [
                             {"bool": {"should": [{"terms": {"muid": [*muids.keys()]}}]}},
-                            {"prefix": {"uid": {"value": uid}}},
                         ]
                     }
                 }
@@ -372,7 +372,7 @@ class Search:
             doc_count, hits_size = self._get_min_doc_count_and_hot_hits_size(muids)
             body: dict[str, Any] = {
                 "query": {
-                    "bool": {"should": []},
+                    "bool": {"should": [], "minimum_should_match": 1},
                 }
             }
             for muid, lookup in muids.items():
@@ -386,11 +386,18 @@ class Search:
                         }
                     }
                 )
-                if uid:
-                    body["query"]["bool"]["should"][0]["bool"]["must"].append({"prefix": {"uid": {"value": uid}}})
+        if uid:
+            body["query"]["bool"]["filter"] = [self._build_uid_filter(uid)]
         body["aggs"] = self._build_aggs(doc_count, hits_size, size, from_)
         body["size"] = 0
         return body
+
+    def _build_uid_filter(self, uid: str) -> dict[str, Any]:
+        if "%" not in uid:
+            return {"prefix": {"uid": {"value": uid}}}
+        # Only % is a user wildcard; preserve literal Elasticsearch metacharacters.
+        pattern = "".join("*" if char == "%" else "\\" + char if char in "\\*?" else char for char in uid)
+        return {"wildcard": {"uid": {"value": pattern}}}
 
     def _get_min_doc_count_and_hot_hits_size(self, muids: dict[str, str]) -> tuple[int, int]:
         doc_count: int = sum(1 for v in muids.values() if v != "")
