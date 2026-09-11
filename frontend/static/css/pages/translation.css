@@ -1336,6 +1336,10 @@ sl-dialog::part(title) {
     flex-wrap: wrap;
     transition: background-color 0.15s ease;
     background-color: var(--color-background);
+}
+
+/* Paint containment clips dropdowns outside the row; optimize only rows without them. */
+.translation-row:not(:has(.translation-cell__hints)) {
     content-visibility: auto;
     contain-intrinsic-size: auto 90px;
 }
@@ -1394,7 +1398,6 @@ sl-dialog::part(title) {
 .translation-row:first-of-type {
     padding: 8px 0 0 0;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    overflow: clip;
 }
 
 .translation-row:last-of-type {
@@ -1410,7 +1413,6 @@ sl-dialog::part(title) {
 
 .translation-row:first-of-type .translation-row__cells {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    overflow: clip;
 }
 
 .translation-cell {
