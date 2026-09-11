@@ -43,17 +43,10 @@ async def search(
 
 
 @router.get("/hints/", response_model=list[TranslationHintsOut], dependencies=[Depends(is_user_active)])
-async def get_translation_hints(
+def get_translation_hints(
     source_muid: str, target_muid: str, segment_id: str, text_value: str
 ) -> list[TranslationHintsOut]:
-    similar_phrases: list[dict] = es.get_phrase_similar_segments(text_value, source_muid)
-    translation_hints = es.get_segment_value_for_uids_and_muid(
-        [phrase_dict.get("uid") for phrase_dict in similar_phrases], target_muid
-    )
-    similar_phrases_with_translation = es.merge_segments_with_translation_hints(similar_phrases, translation_hints)
-    translation_hints = es.aggregate_similar_segments(similar_phrases_with_translation)
     return [
         TranslationHintsOut(**hint)
-        for hint in translation_hints
-        if hint.get("uid") != segment_id and hint.get("translation_hints")
+        for hint in es.get_translation_hints(text_value, source_muid, target_muid, segment_id)
     ]

@@ -1,7 +1,8 @@
 import logging
 import string
+from itertools import batched
 from pathlib import Path
-from typing import Any, Generator, List
+from typing import Any, Generator, Iterable, List
 
 from app.core.config import settings
 from elasticsearch import Elasticsearch, NotFoundError, RequestError, helpers
@@ -13,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 class Search:
     _instance = None
+    # A transport page size, not a candidate limit. All pages are consumed.
+    _hints_batch_size = 10000
 
     def __new__(cls):
         if cls._instance is None:
@@ -192,9 +195,8 @@ class Search:
             query["query"] = {"prefix": {field: prefix}}
         return query
 
-    def _scroll_search(self, query, index: str = settings.ES_INDEX) -> Generator:
+    def _scroll_search(self, query, index: str = settings.ES_INDEX, size: int = 1000) -> Generator:
         scroll = "1m"
-        size = 1000
         response = self._search.search(index=index, body=query, scroll=scroll, size=size)
         scroll_id = response.get("_scroll_id")
         try:
@@ -666,9 +668,9 @@ class Search:
         except RequestError as e:
             return False, e
 
-    def get_phrase_similar_segments(self, phrase_value: str, source_muid: str, size: int = 20) -> list[dict[str, str]]:
+    def get_phrase_similar_segments(self, phrase_value: str, source_muid: str) -> Generator[dict, None, None]:
         if not phrase_value or not phrase_value.strip():
-            return []
+            return
 
         query = {
             "query": {
@@ -691,10 +693,12 @@ class Search:
             },
             "_source": ["segment", "muid", "uid"],
         }
-        response = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=query, size=size)
-        return [hit["_source"] for hit in response["hits"]["hits"]]
+        for hit in self._scroll_search(query, index=settings.ES_SEGMENTS_INDEX, size=self._hints_batch_size):
+            yield hit["_source"]
 
-    def get_segment_value_for_uids_and_muid(self, uids: list[str], muid: str, size: int = 250) -> list[dict]:
+    def get_segment_value_for_uids_and_muid(self, uids: list[str], muid: str) -> list[dict]:
+        if not uids:
+            return []
         query = {
             "query": {
                 "bool": {
@@ -705,17 +709,54 @@ class Search:
                 }
             },
             "_source": ["segment", "uid", "muid"],
+            "track_total_hits": True,
         }
-        response = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=query, size=size)
-        return [hit["_source"] for hit in response["hits"]["hits"]]
+        response = self._search.search(
+            index=settings.ES_SEGMENTS_INDEX, body=query, size=min(len(set(uids)), self._hints_batch_size)
+        )
+        hits = response["hits"]
+        if hits["total"]["value"] == len(hits["hits"]):
+            return [hit["_source"] for hit in hits["hits"]]
+
+        # UID uniqueness is not enforced across files. If there are more hits
+        # than fit in one response, read one complete scroll snapshot rather
+        # than mixing the initial page with a later view of the index.
+        return [
+            hit["_source"]
+            for hit in self._scroll_search(query, index=settings.ES_SEGMENTS_INDEX, size=self._hints_batch_size)
+        ]
+
+    def get_translation_hints(
+        self, text_value: str, source_muid: str, target_muid: str, segment_id: str, size: int = 20
+    ) -> list[dict]:
+        # Page through all source matches before limiting distinct translated
+        # hints: untranslated hits must not consume the result budget.
+        phrases = (
+            phrase
+            for phrase in self.get_phrase_similar_segments(text_value, source_muid)
+            if phrase["uid"] != segment_id
+        )
+
+        def translated_phrases():
+            for batch in batched(phrases, self._hints_batch_size):
+                translations = self.get_segment_value_for_uids_and_muid([phrase["uid"] for phrase in batch], target_muid)
+                yield from self.merge_segments_with_translation_hints(
+                    batch, [translation for translation in translations if (translation.get("segment") or "").strip()]
+                )
+
+        return self.aggregate_similar_segments(translated_phrases(), size=size)
 
     @staticmethod
-    def aggregate_similar_segments(hits: list[dict]) -> list[dict]:
+    def aggregate_similar_segments(hits: Iterable[dict], size: int | None = None) -> list[dict]:
         unique_segments_dict = {}
         for hit in hits:
             segment = hit["translation_hints"].lower()
             segment = segment.translate(str.maketrans("", "", string.punctuation))
             if segment not in unique_segments_dict:
+                # Keep only the returned groups, but continue counting later
+                # occurrences of those groups across all remaining pages.
+                if size is not None and len(unique_segments_dict) >= size:
+                    continue
                 unique_segments_dict[segment] = hit
                 unique_segments_dict[segment]["strength"] = 1
             else:
@@ -723,7 +764,7 @@ class Search:
         return list(unique_segments_dict.values())
 
     @staticmethod
-    def merge_segments_with_translation_hints(similar_phrases: list[dict], translation_hints: list[dict]) -> list[dict]:
+    def merge_segments_with_translation_hints(similar_phrases: Iterable[dict], translation_hints: list[dict]) -> list[dict]:
         hints_by_uid: dict[str, list[dict]] = {}
         for hint in translation_hints:
             hints_by_uid.setdefault(hint["uid"], []).append(hint)
