@@ -13,6 +13,7 @@ function notificationsPanel() {
         pageSize: 10,
         // Action state
         markingDone: null,
+        markingAllDone: false,
         // Toast state
         toast: {
             show: false,
@@ -143,6 +144,7 @@ function notificationsPanel() {
         },
 
         async refresh() {
+            if (this.markingAllDone) return;
             this.selectedNotification = null;
             this.selectedNotificationData = null;
             this.detailError = null;
@@ -214,7 +216,32 @@ function notificationsPanel() {
             }
         },
 
+        async markAllAsRead() {
+            if (this.loading || this.markingDone || this.markingAllDone) return;
+            this.markingAllDone = true;
+            try {
+                const response = await requestWithTokenRetry('notifications/done-all', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('Failed to mark all notifications as read');
+                const data = await response.json();
+                if (!data.success) throw new Error('Failed to mark all notifications as read');
+                this.notifications.forEach(notification => {
+                    notification.isRead = true;
+                    notification.is_done = true;
+                });
+                this.notifyNotificationCountChanged();
+                this.showToast('All notifications marked as read', 'success');
+            } catch (error) {
+                this.showToast(error.message || 'Failed to mark all notifications as read', 'error');
+            } finally {
+                this.markingAllDone = false;
+            }
+        },
+
         async markAsDone(notification, options = {}) {
+            if (this.markingAllDone) return;
             const {
                 silent = false,
                 preserveSelection = false,

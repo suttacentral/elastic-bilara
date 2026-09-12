@@ -42,11 +42,17 @@
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn header-btn" @click="refresh()" :disabled="loading">
+                    <button type="button" class="btn header-btn" @click="markAllAsRead()"
+                            :disabled="loading || markingDone !== null || markingAllDone"
+                            :aria-busy="markingAllDone">
+                        <i class="bi-check2-all" aria-hidden="true"></i>
+                        <span x-text="markingAllDone ? 'Marking all as read...' : 'Mark all as read'"></span>
+                    </button>
+                    <button class="btn header-btn" @click="refresh()" :disabled="loading || markingAllDone">
                         <i class="bi-arrow-clockwise"></i>
                         Refresh
                     </button>
-                    <button class="btn header-btn" @click="openSettings()" :disabled="loading">
+                    <button class="btn header-btn" @click="openSettings()" :disabled="loading || markingAllDone">
                         <i class="bi-gear"></i>
                         Settings
                     </button>

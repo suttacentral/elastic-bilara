@@ -10,6 +10,7 @@ from pydantic_core import ValidationError
 from app.db.database import get_sess
 from app.core.config import settings
 from app.services.auth import utils as auth_utils
+from app.services.auth.schema import TokenData
 from app.services.notifications.models import (
     GitCommitInfoOut,
     NotificationCountOut,
@@ -29,15 +30,21 @@ NOTIFICATION_STREAM_POLL_SECONDS = 30
 NOTIFICATION_STREAM_MAX_RUNTIME_SECONDS = 3600
 
 
+def _get_user_github_id(user: TokenData) -> int:
+    if user.github_id is None:
+        raise auth_utils.get_credentials_exception()
+    return int(user.github_id)
+
+
 def get_notification_authors_or_default(notification_authors):
     return notification_authors or ["sujato"]
 
 
-def _get_selected_authors_and_days(user: str) -> tuple[list[str], int]:
+def _get_selected_authors_and_days(user: TokenData) -> tuple[list[str], int]:
     with get_sess() as sess:
         preference = (
             sess.query(UserPreferenceModel)
-            .filter(UserPreferenceModel.github_id == user.github_id)
+            .filter(UserPreferenceModel.github_id == _get_user_github_id(user))
             .first()
         )
 
@@ -53,9 +60,13 @@ def _get_selected_authors_and_days(user: str) -> tuple[list[str], int]:
     return selected_authors, selected_days
 
 
-def _count_unread_git_updates(user: str) -> int:
+def _count_unread_git_updates(user: TokenData) -> int:
+    return len(_get_unread_git_commit_ids(user))
+
+
+def _get_unread_git_commit_ids(user: TokenData) -> set[str]:
     selected_authors, selected_days = _get_selected_authors_and_days(user)
-    done_commit_ids = set(get_all_commit_ids_in_db(user.github_id))
+    done_commit_ids = set(get_all_commit_ids_in_db(_get_user_github_id(user)))
 
     working_directory = settings.WORK_DIR
     git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
@@ -66,18 +77,27 @@ def _count_unread_git_updates(user: str) -> int:
         "--no-merges",
     ]
 
-    result = subprocess.run(
-        git_log_cmd,
-        cwd=working_directory,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            git_log_cmd,
+            cwd=working_directory,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except OSError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to read Git notification history",
+        ) from error
 
     if result.returncode != 0:
-        return 0
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to read Git notification history",
+        )
 
-    unread_count = 0
+    unread_commit_ids = set()
     for raw_line in result.stdout.split("\n"):
         if not raw_line.strip() or "|" not in raw_line:
             continue
@@ -87,9 +107,9 @@ def _count_unread_git_updates(user: str) -> int:
             continue
 
         if any(selected_author in author for selected_author in selected_authors):
-            unread_count += 1
+            unread_commit_ids.add(commit_id)
 
-    return unread_count
+    return unread_commit_ids
 
 
 def _count_unread_remark_notifications(github_id: int) -> int:
@@ -102,15 +122,15 @@ def _count_unread_remark_notifications(github_id: int) -> int:
         )
 
 
-def get_unread_notification_count(user: str) -> int:
+def get_unread_notification_count(user: TokenData) -> int:
     return _count_unread_git_updates(user) + _count_unread_remark_notifications(
-        int(user.github_id)
+        _get_user_github_id(user)
     )
 
 
 @router.get("/count", response_model=NotificationCountOut)
 def get_notification_count(
-    user: str = Depends(auth_utils.get_current_user),
+    user: TokenData = Depends(auth_utils.get_current_user),
 ) -> NotificationCountOut:
     return NotificationCountOut(
         unread_count=get_unread_notification_count(user)
@@ -120,7 +140,7 @@ def get_notification_count(
 @router.get("/stream")
 async def stream_notification_count(
     request: Request,
-    user: str = Depends(auth_utils.get_current_user),
+    user: TokenData = Depends(auth_utils.get_current_user),
 ):
     async def event_generator():
         previous_count = None
@@ -162,19 +182,19 @@ async def stream_notification_count(
 
 @router.get("/git", response_model=GitCommitInfoOut)
 def get_unread_git_updates(
-    user: str = Depends(auth_utils.get_current_user),
+    user: TokenData = Depends(auth_utils.get_current_user),
 ):
     return GitCommitInfoOut(
         git_recent_commits=get_unread_git_update_items(user)
     )
 
 
-def get_unread_git_update_items(user: str, limit: int | None = None):
+def get_unread_git_update_items(user: TokenData, limit: int | None = None):
     return get_git_update_items(user, include_done=False, limit=limit)
 
 
 def get_git_update_items(
-    user: str,
+    user: TokenData,
     include_done: bool = False,
     limit: int | None = None,
 ):
@@ -185,7 +205,7 @@ def get_git_update_items(
     with get_sess() as sess:
         preference = (
             sess.query(UserPreferenceModel)
-            .filter(UserPreferenceModel.github_id == user.github_id)
+            .filter(UserPreferenceModel.github_id == _get_user_github_id(user))
             .first()
         )
 
@@ -222,7 +242,7 @@ def get_git_update_items(
         return []
 
     if git_log_cmd_process.returncode == 0:
-        all_done_commit_ids = set(get_all_commit_ids_in_db(user.github_id))
+        all_done_commit_ids = set(get_all_commit_ids_in_db(_get_user_github_id(user)))
         git_commits = git_log_output.decode('utf-8').split("\n")
         for git_commit in git_commits:
             if not git_commit.strip():
@@ -420,7 +440,7 @@ def _feed_sort_key(item: dict) -> datetime:
 def get_notifications_feed(
     include_read: bool = False,
     limit: int = 100,
-    user: str = Depends(auth_utils.get_current_user),
+    user: TokenData = Depends(auth_utils.get_current_user),
 ):
     commit_items = []
 
@@ -439,7 +459,7 @@ def get_notifications_feed(
         )
 
     remark_items = _build_remark_notification_items(
-        int(user.github_id),
+        _get_user_github_id(user),
         include_done=include_read,
     )
     notifications = sorted(commit_items + remark_items, key=_feed_sort_key, reverse=True)
@@ -517,14 +537,14 @@ def format_diff_as_html(change_detail, file_name):
 @router.get("/done/{commit_id}", response_model=NotificationDoneOut)
 async def mark_notification_as_done(
     commit_id: str,
-    user: str = Depends(auth_utils.get_current_user),
+    user: TokenData = Depends(auth_utils.get_current_user),
 ):
     with get_sess() as sess:
         if (
             sess.query(Notification)
             .filter(
                 Notification.commit_id == commit_id,
-                Notification.github_id == user.github_id
+                Notification.github_id == _get_user_github_id(user)
             )
             .first()
         ):
@@ -534,7 +554,7 @@ async def mark_notification_as_done(
             )
 
         notification = Notification(
-            github_id=user.github_id,
+            github_id=_get_user_github_id(user),
             commit_id=commit_id,
         )
         print(notification)
@@ -553,10 +573,35 @@ async def mark_notification_as_done(
     return NotificationDoneOut(success=True)
 
 
+@router.post("/done-all", response_model=NotificationDoneOut)
+def mark_all_notifications_as_done(
+    user: TokenData = Depends(auth_utils.get_current_user),
+):
+    github_id = _get_user_github_id(user)
+    # Read all subscribed commit IDs without building notification details.
+    commit_ids = _get_unread_git_commit_ids(user)
+    with get_sess() as sess:
+        done_ids = {
+            row[0] for row in sess.query(Notification.commit_id)
+            .filter(Notification.github_id == github_id).all()
+        }
+        commit_ids -= done_ids
+        sess.add_all([
+            Notification(github_id=github_id, commit_id=commit_id)
+            for commit_id in commit_ids
+        ])
+        sess.query(RemarkNotification).filter(
+            RemarkNotification.recipient_github_id == github_id,
+            RemarkNotification.is_done.is_(False),
+        ).update({RemarkNotification.is_done: True}, synchronize_session=False)
+        sess.commit()
+    return NotificationDoneOut(success=True)
+
+
 @router.post("/done", response_model=NotificationDoneOut)
 async def mark_notification_as_done_by_type(
     payload: NotificationDonePayload,
-    user: str = Depends(auth_utils.get_current_user),
+    user: TokenData = Depends(auth_utils.get_current_user),
 ):
     if payload.notification_type == "commit":
         return await mark_notification_as_done(payload.notification_ref, user)
@@ -574,7 +619,7 @@ async def mark_notification_as_done_by_type(
             notification = (
                 sess.query(RemarkNotification)
                 .filter(RemarkNotification.id == notification_id)
-                .filter(RemarkNotification.recipient_github_id == user.github_id)
+                .filter(RemarkNotification.recipient_github_id == _get_user_github_id(user))
                 .first()
             )
             if not notification:
@@ -595,7 +640,7 @@ async def mark_notification_as_done_by_type(
 
 @router.get("/authors")
 def get_all_authors(
-    user: str = Depends(auth_utils.get_current_user)
+    user: TokenData = Depends(auth_utils.get_current_user)
 ):
     """Get all unique authors from git log."""
     working_directory = settings.WORK_DIR
@@ -632,13 +677,13 @@ def get_all_authors(
 
 @router.get("/preferences", response_model=UserPreference)
 def get_user_preferences(
-    user: str = Depends(auth_utils.get_current_user)
+    user: TokenData = Depends(auth_utils.get_current_user)
 ):
     """Get user notification preferences. Returns default if not set."""
     with get_sess() as sess:
         preference = (
             sess.query(UserPreferenceModel)
-            .filter(UserPreferenceModel.github_id == user.github_id)
+            .filter(UserPreferenceModel.github_id == _get_user_github_id(user))
             .first()
         )
 
@@ -655,7 +700,7 @@ def get_user_preferences(
             # Return default values without creating DB record
             return UserPreference(
                 id=0,  # Dummy id for response
-                github_id=user.github_id,
+                github_id=_get_user_github_id(user),
                 notification_authors=["sujato"],
                 notification_days=360
             )
@@ -664,13 +709,13 @@ def get_user_preferences(
 @router.put("/preferences", response_model=UserPreference)
 def update_user_preferences(
     preferences: UserPreferenceUpdate,
-    user: str = Depends(auth_utils.get_current_user)
+    user: TokenData = Depends(auth_utils.get_current_user)
 ):
     """Create or update user notification preferences."""
     with get_sess() as sess:
         existing = (
             sess.query(UserPreferenceModel)
-            .filter(UserPreferenceModel.github_id == user.github_id)
+            .filter(UserPreferenceModel.github_id == _get_user_github_id(user))
             .first()
         )
 
@@ -690,7 +735,7 @@ def update_user_preferences(
         else:
             # Create new preference
             new_preference = UserPreferenceModel(
-                github_id=user.github_id,
+                github_id=_get_user_github_id(user),
                 notification_authors=preferences.notification_authors,
                 notification_days=preferences.notification_days
             )
