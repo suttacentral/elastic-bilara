@@ -105,8 +105,8 @@ function displayMessage(element, message, type) {
     }, 15000);
 }
 
-function ensureStatusBadge(textarea, muid, uid, isSource) {
-    const badgeId = isSource ? `root-badge-${muid}-${uid}` : `translation-badge-${muid}-${uid}`;
+function ensureStatusBadge(textarea, muid, uid) {
+    const badgeId = `translation-badge-${muid}-${uid}`;
     if (document.getElementById(badgeId)) {
         return;
     }

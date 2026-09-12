@@ -824,7 +824,7 @@
                                                         filterTagSuggestions($event.target.value);
                                                     }
                                                 "
-                                                x-on:keydown="ensureStatusBadge($event.target, muid, uid, isSource)"
+                                                x-on:keydown="ensureStatusBadge($event.target, muid, uid)"
                                                 x-on:keydown.up.prevent="
                                                     if (isTag && showTagSuggestions && tagSuggestions.length > 0) {
                                                         selectedTagIndex = selectedTagIndex <= 0 ? Math.min(tagSuggestions.length, tagSuggestionLimit) - 1 : selectedTagIndex - 1;

@@ -224,32 +224,23 @@ describe('DOM Functions', () => {
     });
 
     describe('ensureStatusBadge', () => {
-        function ensureStatusBadge(textarea, muid, uid, isSource) {
-            const badgeId = isSource ? `root-badge-${muid}-${uid}` : `translation-badge-${muid}-${uid}`;
-            if (document.getElementById(badgeId)) {
-                return;
-            }
-            const badge = document.createElement('sc-bilara-translation-edit-status');
-            badge.id = badgeId;
-            badge.className = 'translation-cell__status';
-            const wrapper = textarea.parentElement;
-            if (wrapper) {
-                wrapper.appendChild(badge);
-            }
-        }
+        const ensureStatusBadge = new Function(
+            require('fs').readFileSync(require('path').resolve(__dirname, '../utils.js'), 'utf8')
+                + '\nreturn ensureStatusBadge;',
+        )();
 
         test('should create badge with correct ID for source', () => {
             const textarea = document.getElementById('test-textarea');
-            ensureStatusBadge(textarea, 'pli-ms', 'mn1:1.1', true);
+            ensureStatusBadge(textarea, 'root-pli-ms', 'mn1:1.1');
 
-            const badge = document.getElementById('root-badge-pli-ms-mn1:1.1');
+            const badge = document.getElementById('translation-badge-root-pli-ms-mn1:1.1');
             expect(badge).not.toBeNull();
             expect(badge.className).toBe('translation-cell__status');
         });
 
         test('should create badge with correct ID for translation', () => {
             const textarea = document.getElementById('test-textarea');
-            ensureStatusBadge(textarea, 'en-sujato', 'mn1:1.1', false);
+            ensureStatusBadge(textarea, 'en-sujato', 'mn1:1.1');
 
             const badge = document.getElementById('translation-badge-en-sujato-mn1:1.1');
             expect(badge).not.toBeNull();
@@ -257,10 +248,10 @@ describe('DOM Functions', () => {
 
         test('should not create duplicate badges', () => {
             const textarea = document.getElementById('test-textarea');
-            ensureStatusBadge(textarea, 'pli-ms', 'mn1:1.1', true);
-            ensureStatusBadge(textarea, 'pli-ms', 'mn1:1.1', true);
+            ensureStatusBadge(textarea, 'root-pli-ms', 'mn1:1.1');
+            ensureStatusBadge(textarea, 'root-pli-ms', 'mn1:1.1');
 
-            const badges = document.querySelectorAll('#root-badge-pli-ms-mn1\\:1\\.1');
+            const badges = document.querySelectorAll('#translation-badge-root-pli-ms-mn1\\:1\\.1');
             expect(badges.length).toBe(1);
         });
 
@@ -268,7 +259,7 @@ describe('DOM Functions', () => {
             const textarea = document.createElement('textarea');
             // textarea 没有父元素
             expect(() => {
-                ensureStatusBadge(textarea, 'pli-ms', 'mn1:1.1', true);
+                ensureStatusBadge(textarea, 'root-pli-ms', 'mn1:1.1');
             }).not.toThrow();
         });
     });
