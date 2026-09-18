@@ -106,7 +106,11 @@ export class ScBilaraPaliLookup extends LitElement {
         .tooltip__play svg {
             width: 16px;
             height: 16px;
-            fill: currentColor;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         .tooltip__close {
@@ -675,9 +679,10 @@ export class ScBilaraPaliLookup extends LitElement {
                 <div class="tooltip__header">
                     <span class="tooltip__word">${this.word}</span>
                     <div style="display: flex; align-items: center;">
-                        <button class="tooltip__play ${this._isPlaying ? 'playing' : ''}" @click=${this._playAudio} title="播放发音">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"></path>
+                        <button class="tooltip__play ${this._isPlaying ? 'playing' : ''}" @click=${this._playAudio} title="Play pronunciation">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
                             </svg>
                         </button>
                         <button class="tooltip__close" @click=${this._hideTooltip}>×</button>
