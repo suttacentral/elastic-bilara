@@ -80,35 +80,19 @@
 
         <sl-dialog label="Affected Files" class="dialog-affected-files">
             <div class="affected-files-dialog">
-                <p class="affected-files-dialog__message">Structural files are scheduled for GitHub automatically. Translation and comment files remain available for manual publishing.</p>
-                <div class="affected-files-dialog__section" x-show="affectedFiles.some(file => file.publishMode === 'auto')">
+                <p class="affected-files-dialog__message">All affected files are saved. GitHub queue status is shown below. If the push was not queued, ask an administrator to commit and push all affected files to the unpublished branch.</p>
+                <div class="affected-files-dialog__section" x-show="affectedFiles.some(file => ['auto', 'pending'].includes(file.publishMode))">
                     <div class="affected-files-dialog__section-header">
-                        <span>Scheduled for GitHub</span>
-                        <span x-text="affectedFiles.filter(file => file.publishMode === 'auto').length + ' files'"></span>
+                        <span x-text="affectedFiles.some(file => file.publishMode === 'pending') ? 'GitHub push not queued' : 'Queued for GitHub unpublished'"></span>
+                        <span x-text="affectedFiles.filter(file => ['auto', 'pending'].includes(file.publishMode)).length + ' files'"></span>
                     </div>
                     <div class="affected-files-dialog__list">
-                        <template x-for="file in affectedFiles.filter(file => file.publishMode === 'auto')" :key="file.path">
+                        <template x-for="file in affectedFiles.filter(file => ['auto', 'pending'].includes(file.publishMode))" :key="file.path">
                             <div class="affected-files-dialog__item" :class="'affected-files-dialog__item--' + file.type">
                                 <i class="bi" :class="file.type === 'main' ? 'bi-file-earmark-code' : 'bi-file-earmark'"></i>
                                 <span class="affected-files-dialog__path" x-text="file.path" :title="file.path"></span>
                                 <span class="affected-files-dialog__badge" x-text="file.type === 'main' ? 'main' : file.muid"></span>
-                                <span class="affected-files-dialog__badge">scheduled</span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-                <div class="affected-files-dialog__section" x-show="affectedFiles.some(file => file.publishMode === 'manual')">
-                    <div class="affected-files-dialog__section-header">
-                        <span>Manual publish required</span>
-                        <span x-text="affectedFiles.filter(file => file.publishMode === 'manual').length + ' files'"></span>
-                    </div>
-                    <div class="affected-files-dialog__list">
-                        <template x-for="file in affectedFiles.filter(file => file.publishMode === 'manual')" :key="file.path">
-                            <div class="affected-files-dialog__item" :class="'affected-files-dialog__item--' + file.type">
-                                <i class="bi" :class="file.type === 'main' ? 'bi-file-earmark-code' : 'bi-file-earmark'"></i>
-                                <span class="affected-files-dialog__path" x-text="file.path" :title="file.path"></span>
-                                <span class="affected-files-dialog__badge" x-text="file.type === 'main' ? 'main' : file.muid"></span>
-                                <span class="affected-files-dialog__badge">manual publish</span>
+                                <span class="affected-files-dialog__badge" x-text="file.publishMode === 'pending' ? 'not queued' : 'scheduled'"></span>
                             </div>
                         </template>
                     </div>
@@ -117,11 +101,6 @@
                     <sl-button variant="default"
                         @click="document.querySelector('.dialog-affected-files').hide();"
                         class="cc">Close
-                    </sl-button>
-                    <sl-button variant="primary"
-                        x-show="affectedFiles.some(file => file.publishMode === 'manual')"
-                        @click="document.querySelector('.dialog-affected-files').hide(); window.open('/git_status_panel?filter=' + encodeURIComponent(affectedPrefix), '_blank', 'noopener');"
-                        class="cc cc-logo">View Manual Publish Files
                     </sl-button>
                 </div>
             </div>
@@ -243,7 +222,11 @@
                 </div>
                 <span class="translation-grid-skeleton__status">Loading translation text</span>
             </div>
-            <template x-if="!loading">
+            <div class="structure-draft-review" x-show="!loading && loadError" x-cloak role="alert">
+                <p x-text="loadError"></p>
+                <button type="button" @click="init()">Retry loading</button>
+            </div>
+            <template x-if="!loading && !loadError">
                 <div class="translation-grid"
                     x-data="{
                     columnWidths: [],
@@ -471,6 +454,43 @@
                 @mousemove.window="onResize($event)"
                 @mouseup.window="stopResize()">
 
+                <template x-if="structureDraft">
+                    <section class="structure-draft-review" aria-label="Structure draft review" :aria-busy="splitMergeProcessing">
+                        <div class="structure-draft-review__heading">
+                            <div>
+                                <div class="structure-draft-review__title">
+                                    <h2 x-text="structureDraft.preview.operation === 'split' ? 'Split segment' : 'Merge segments'"></h2>
+                                    <span class="structure-draft-review__status" x-text="structureDraft.submission ? 'Awaiting result' : 'Unsaved draft'"></span>
+                                </div>
+                                <p class="structure-draft-review__mapping" x-text="structureDraft.preview.operation === 'split'
+                                    ? structureDraft.preview.uid + ' → ' + structureDraft.preview.uid + ' + ' + structureDraft.preview.splitter_uid
+                                    : structureDraft.preview.merger_uid + ' + ' + structureDraft.preview.mergee_uid + ' → ' + structureDraft.preview.merger_uid"></p>
+                                <p class="structure-draft-review__help">Edit the result below, then review each required project. Confirm saves all changes. Other segments are read-only.</p>
+                            </div>
+                            <div class="structure-draft-review__actions">
+                                <button type="button" class="structure-draft-review__button btn--cancel"
+                                    :disabled="splitMergeProcessing || !!structureDraft.submission"
+                                    @click="cancelStructureDraft()">Cancel</button>
+                                <button type="button" class="structure-draft-review__button structure-draft-review__button--primary btn--confirm-split-merge"
+                                    x-show="isAdmin && isActive" :disabled="splitMergeProcessing" aria-describedby="structure-review-progress"
+                                    @click="submitStructureDraftFromReview()"
+                                    x-text="splitMergeProcessing ? 'Saving…' : structureDraft.submission ? 'Check submission status' : structureDraft.preview.operation === 'split' ? 'Confirm split' : 'Confirm merge'"></button>
+                            </div>
+                        </div>
+                        <p class="structure-draft-review__warning" x-show="structureDraft.preview.merge_crosses_section" x-text="getStructureMergeSummary()"></p>
+                        <div class="structure-draft-review__checks">
+                            <span id="structure-review-progress" role="status" x-text="structurePendingReviews().length ? structurePendingReviews().length + (structurePendingReviews().length === 1 ? ' project to review' : ' projects to review') : 'All required reviews complete'"></span>
+                            <template x-for="manualMuid in structureDraft.preview.manual_projects" :key="manualMuid">
+                                <label class="structure-draft-review__project">
+                                    <input type="checkbox" :value="manualMuid" x-model="structureDraft.reviewed" @change="structureDraftError = ''" :disabled="splitMergeProcessing || !!structureDraft.submission">
+                                    <span x-text="manualMuid + ' · I checked the affected content'"></span>
+                                </label>
+                            </template>
+                        </div>
+                        <p class="structure-draft-review__warning" x-show="structureDraft.submission">Editing is locked until the submission result is known. Check submission status to safely resume.</p>
+                        <p class="structure-draft-review__error" role="alert" x-show="structureDraftError" x-text="structureDraftError"></p>
+                    </section>
+                </template>
                 <!-- Grid Header: Column titles for each translation project -->
                 <div class="translation-grid__header">
                     <template x-for="(translation, index) in translations" :key="translation.muid">
@@ -495,6 +515,7 @@
                                 <span class="translation-grid__header-title" x-text="isRemarkProject(translation.muid) ? getRemarkLabel(translation.muid) : translation.muid"
                                     :class="'translation-grid__header-badge--' + (isRemarkProject(translation.muid) ? 'remarks' : (translation.muid || '').split('-')[0])">
                                 </span>
+                                <span class="structure-column-state" x-show="structureDraft" x-text="!structureDraft ? '' : !structureDraft.preview.projects.some(project => project.muid === translation.muid) ? 'Read-only' : structureDraft.preview.manual_projects.includes(translation.muid) ? (structureDraft.reviewed.includes(translation.muid) ? 'Reviewed' : 'Needs review') : 'Included'"></span>
                                 <button
                                     type="button"
                                     class="translation-grid__html-preview-toggle"
@@ -609,7 +630,7 @@
                                             hintStyle: window.userSettings.hint_style || 'dropdown',
                                             hintCount: Number(window.userSettings.hint_count) || 5,
                                             isSource: translation.isSource,
-                                            isRoot: translation.isSource,
+                                            isRoot: translation.muid.startsWith('root-'),
                                             muid: translation.muid,
                                             isTag: translation.muid && translation.muid.startsWith('tag'),
                                             tagSuggestions: [],
@@ -628,6 +649,7 @@
                                                 return this.hints.slice(0, this.hintCount);
                                             },
                                             applyHintToTextarea(value) {
+                                                if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
                                                 const textarea = this.$el.querySelector('textarea');
                                                 if (!textarea) return;
                                                 textarea.focus();
@@ -664,6 +686,7 @@
                                                 this.selectedTagIndex = -1;
                                             },
                                             selectTag(index) {
+                                                if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
                                                 const tag = this.tagSuggestions[index];
                                                 if (!tag) return;
                                                 const textarea = this.$el.querySelector('textarea');
@@ -683,6 +706,12 @@
                                             }
                                         }"
                                         x-effect="
+                                            if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) {
+                                                showHints = false;
+                                                selectedHintIndex = -1;
+                                                hintSelectionViaKeyboard = false;
+                                                if (showTagSuggestions) closeTagSuggestions();
+                                            }
                                             $dispatch('sync-row-hints', {
                                                 hints: visibleHints,
                                                 show: hints.length > 0 && showHints && !translation.isSource && hintStyle === 'inline',
@@ -717,28 +746,29 @@
                                                     :class="{'project-container__content-body__text--hide': !translation.isSource}"
                                                     x-text="uid">
                                                 </span>
-                                                <template x-if="isAdmin && isActive && translation.isSource && structureEditingEnabled">
+                                                <template x-if="isAdmin && isActive && translation.isSource && translation.muid.startsWith('root-') && structureEditingEnabled">
                                                     <sc-bilara-translation-project-actions></sc-bilara-translation-project-actions>
                                                 </template>
                                             </div>
                                         </div>
 
-                                        <div class="translation-cell__textarea-wrapper">
+                                        <div class="translation-cell__textarea-wrapper" :class="{'translation-cell__textarea-wrapper--draft': isStructureResult(translation.muid, uid)}">
                                             <template x-if="merging && uid === merger_uid && getMergePreviewParts(translation, uid)">
-                                                <div class="translation-cell__merge-preview" x-data="{ parts: getMergePreviewParts(translation, uid) }">
+                                                <details class="translation-cell__before" open><summary>Before merge · original segments</summary><div class="translation-cell__merge-preview" x-data="{ parts: getMergePreviewParts(translation, uid) }">
                                                     <span class="translation-cell__merge-preview-badge translation-cell__merge-preview-badge--merger" x-text="parts.mergerUid"></span>
                                                     <span class="translation-cell__merge-preview-part translation-cell__merge-preview-part--merger" x-text="parts.mergerText"></span>
                                                     <span class="translation-cell__merge-preview-separator" aria-hidden="true"> + </span>
                                                     <span class="translation-cell__merge-preview-badge translation-cell__merge-preview-badge--mergee" x-text="parts.mergeeUid"></span>
                                                     <span class="translation-cell__merge-preview-part translation-cell__merge-preview-part--mergee" x-text="parts.mergeeText"></span>
-                                                </div>
+                                                </div></details>
                                             </template>
-                                            <template x-if="splitting && isSplitHighlightedRow(uid, splittingUid) && getSplitPreviewPart(translation, uid, splittingUid)">
-                                                <div class="translation-cell__split-preview" x-data="{ part: getSplitPreviewPart(translation, uid, splittingUid) }">
-                                                    <span class="translation-cell__split-preview-badge" :class="'translation-cell__split-preview-badge--' + part.role" x-text="part.label"></span>
-                                                    <span class="translation-cell__split-preview-part" :class="'translation-cell__split-preview-part--' + part.role" x-text="part.text"></span>
-                                                </div>
+                                            <template x-if="splitting && uid === splittingUid && isStructureResult(translation.muid, uid)">
+                                                <details class="translation-cell__before" open>
+                                                    <summary>Before split · original segment</summary>
+                                                    <div class="translation-cell__original" x-text="getSplitPreviewPart(translation, uid, splittingUid)?.text"></div>
+                                                </details>
                                             </template>
+                                            <p class="structure-result-label" x-show="isStructureResult(translation.muid, uid)" x-text="structureResultLabel(translation.muid, uid)"></p>
                                             <template x-if="shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)">
                                                 <div
                                                     class="translation-cell__html-preview"
@@ -747,11 +777,13 @@
                                             </template>
                                             <textarea
                                                 class="translation-cell__textarea"
+                                                :aria-label="translation.muid + ' · ' + (structureResultLabel(translation.muid, uid) || uid)"
+                                                :placeholder="isStructureResult(translation.muid, uid) && translation.canEdit ? 'Enter segment content…' : ''"
                                                 x-show="!shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)"
-                                                :class="{ 'translation-cell__textarea--readonly': !translation.canEdit }"
+                                                :class="{ 'translation-cell__textarea--readonly': !translation.canEdit || !canEditStructureSegment(translation.muid, uid) }"
                                                 x-bind:id="isSource ? `root-textarea-${muid}-${uid}` : `translation-textarea-${muid}-${uid}`"
                                                 x-bind:value="getValue(translation, uid)"
-                                                x-bind:readonly="!translation.canEdit"
+                                                x-bind:readonly="!translation.canEdit || !canEditStructureSegment(translation.muid, uid)"
                                                 x-on:dblclick="
                                                     if (window.userSettings && window.userSettings.dblclick_search === false) return;
                                                     setTimeout(() => {
@@ -788,12 +820,13 @@
                                                     hintClicked = false;
                                                     selectedHintIndex = -1;
                                                     hintSelectionViaKeyboard = false;
+                                                    if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
                                                     if (isTag) {
                                                         filterTagSuggestions(getValue(translation, uid) || '');
                                                     } else if (hints.length === 0 && muid.startsWith('translation')) {
                                                         hints = await getHints(uid, muid, sourceMuid, sourceValue);
                                                     }
-                                                    if (document.activeElement !== $event.target) return;
+                                                    if (document.activeElement !== $event.target || !translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
                                                     showHints = true;
                                                 "
                                                 x-on:blur="
@@ -809,13 +842,6 @@
                                                     if (!inHints) {
                                                         showHints = false;
                                                         closeTagSuggestions();
-                                                        if (isTag) {
-                                                            const curVal = getValue(translation, uid) || '';
-                                                            const validNames = new Set(availableTags.map(t => t.tag));
-                                                            const cleaned = curVal.split(',').map(t => t.trim()).filter(t => validNames.has(t)).join(', ');
-                                                            setValue(translation, uid, cleaned);
-                                                            $event.target.value = cleaned;
-                                                        }
                                                     }
                                                 "
                                                 x-on:input="
@@ -984,13 +1010,15 @@
                     }
                 }"
                 @toggle-detail-panel.window="
+                    if (relatedProjectsLocked()) { active = false; return; }
                     active = $event.detail.panel === 'related' ? !active : false;
                     if (active) {
                         filterText = ''; // Reset filter when opened
                         $nextTick(() => { alignToButton(); $el.querySelector('.project-container__detail-panel__related-search-input')?.focus(); });
                     }
                 "
-                x-show="active"
+                x-effect="if (relatedProjectsLocked()) active = false"
+                x-show="active && !relatedProjectsLocked()"
                 @click.outside="active = false"
                 :class="{'active': active}"
                 @restore-related-projects.window="$event.detail.projects.forEach(p => { selectedProjects[p] = true; $dispatch('toggle-search-field', { project: p, selected: true }); })">
@@ -1010,7 +1038,7 @@
                             </div>
                             <div
                                 class="project-container__detail-panel__related-item"
-                                @click="selectedProjects[project] = !selectedProjects[project]; await toggleRelatedProject(project); $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] })"
+                                @click="if (await toggleRelatedProject(project)) { selectedProjects[project] = !selectedProjects[project]; $dispatch('toggle-search-field', { project: project, selected: selectedProjects[project] }); }"
                                 :class="{ 'project-container__detail-panel__related-item--selected': selectedProjects[project], 'project-container__detail-panel__related-item--remarks': isRemarkProject(project) }">
                                 <span class="project-container__detail-panel__related-item-check"
                                     x-text="selectedProjects[project] ? '✓' : ''"></span>
@@ -1222,7 +1250,8 @@
                                                 <button class="btn search__replace-btn"
                                                     x-show="replacementText && canEditMuid(seg.muid, isAdmin) && !seg.muid.startsWith('root-') && !replacedItems[entry.uid + '::' + seg.muid] && hasReplaceTerm(seg.muid, seg.segment)"
                                                     x-cloak
-                                                    @click="replaceSegment(entry.uid, seg.muid, seg)"
+                                                    @click="await replaceSegment(entry.uid, seg.muid, seg)"
+                                                    :disabled="!!editLoads[entry.uid + '::' + seg.muid]"
                                                 >REPLACE</button>
                                                 <!-- SUBMIT button -->
                                                 <button class="btn search__submit-btn"
@@ -1254,8 +1283,8 @@
                                                             :class="{ 'search__results-textarea--readonly': seg.muid.startsWith('root-') }"
                                                             :id="'search-textarea-' + seg.muid + '-' + entry.uid"
                                                             :value="seg.segment"
-                                                            :readonly="seg.muid.startsWith('root-')"
-                                                            @focus="searchResultFocus(entry.uid, seg.muid)"
+                                                            :readonly="seg.muid.startsWith('root-') || !editStructureRevisions[entry.uid + '::' + seg.muid]"
+                                                            @focus="await searchResultFocus(entry.uid, seg.muid)"
                                                             @input="searchResultInput(entry.uid, seg.muid, $event.target.value)"
                                                             @keydown.enter.prevent="await searchResultSave(entry.uid, seg.muid, $event.target.value)"
                                                         ></textarea>

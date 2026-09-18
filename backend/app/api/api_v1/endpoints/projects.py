@@ -11,28 +11,23 @@ from app.services.directories.utils import (
     get_language,
     validate_path,
     validate_root_data,
-    get_matches,
 )
 from app.services.projects.models import (
     JSONDataOut,
+    StructurePreviewIn,
+    StructureCommitIn,
+    StructureStatusIn,
     PathsOut,
     ProjectsOut,
-    MergeIn,
-    SplitIn,
-    MergeOut,
-    SplitOut,
-    CalleeMerge,
-    Affected,
-    CalleeSplit,
     HtmlValidationIn,
     HtmlValidationOut,
 )
 from app.services.projects.html_validator import validate_bilara_html
-from app.services.projects.uid_expander import UIDExpander
+from app.services.projects import structure_service
+from app.services.projects.structure_store import StructureConflict
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
     materialize_translation_file,
-    schedule_split_merge_auto_publish,
     sort_paths,
     update_file,
     write_json_data,
@@ -47,7 +42,7 @@ from app.services.users.permissions import (
 )
 from app.services.users.utils import get_user
 from app.tasks import commit
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 from search.search import Search
@@ -222,124 +217,59 @@ async def get_projects(
     return ProjectsOut(projects=projects)
 
 
-@router.patch(
-    "/merge/",
-    response_model=MergeOut,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
-)
-async def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: MergeIn):
-    file_path = Path(
-        list(search.get_file_paths(muid=payload.muid, prefix=payload.prefix, exact=True, _type="file_path"))[0]
-    )
-    affected_paths_data_before = {}
-    related = get_matches(file_path, True)
-    for path in related:
-        data = get_json_data(path)
-        if path == file_path:
-            callee_data_before = data
-        else:
-            affected_paths_data_before[path] = data
-
-        if payload.merger_uid in data and payload.mergee_uid in data:
-            data[payload.merger_uid] = (
-                f"{data[payload.merger_uid]} {data[payload.mergee_uid]}"
-            )
-        write_json_data(path, data)
-
-    reducer = UIDReducer(user, file_path, [payload.mergee_uid], auto_commit=False)
-    main_task_id, related_task_id = reducer.decrement()
-    publish_result = schedule_split_merge_auto_publish(user, related, "merged")
-
-    affected_paths_data_after = {}
-    for path in related:
-        if path == file_path:
-            callee_data_after = get_json_data(path)
-        else:
-            affected_paths_data_after[path] = get_json_data(path)
-
-    callee = CalleeMerge(
-        prefix=payload.prefix,
-        muid=payload.muid,
-        data_before=callee_data_before,
-        data_after=callee_data_after,
-        merger={"uid": payload.merger_uid, "value": callee_data_before[payload.merger_uid]},
-        mergee={"uid": payload.mergee_uid, "value": callee_data_before[payload.mergee_uid]},
-    )
-
-    affected = [
-        Affected(
-            muid=get_muid(path),
-            source_muid=get_muid(find_root_path(path)),
-            language=get_language(path),
-            filename=get_filename(path),
-            prefix=get_prefix(path),
-            path=str(path).replace(str(settings.WORK_DIR), ""),
-            data_after=affected_paths_data_after[path],
-            data_before=affected_paths_data_before[path],
+def _structure_http_error(error: ValueError | structure_service.StructureOperationIncomplete) -> HTTPException:
+    if isinstance(error, structure_service.StructureOperationIncomplete):
+        return HTTPException(status_code=500, detail={
+            'code': 'structure_operation_incomplete',
+            'message': 'Structure operation is incomplete. Retry confirmation or reload to resume it.',
+            'operation_id': error.operation_id,
+        })
+    if isinstance(error, structure_service.SubmissionRejected):
+        return HTTPException(
+            status_code={'invalid_input': 400, 'conflict': 409}[error.reason],
+            detail={'code': 'submission_rejected', 'message': str(error)},
         )
-        for path in related
-        if path != file_path
-    ]
-
-    return MergeOut(
-        main_task_id=main_task_id,
-        related_task_id=related_task_id,
-        auto_publish_task_id=publish_result.task_id,
-        auto_published_paths=publish_result.auto_published_paths,
-        manual_publish_paths=publish_result.manual_publish_paths,
-        message="Segments merged successfully!",
-        path=str(file_path).replace(str(settings.WORK_DIR), ""),
-        callee=callee,
-        affected=affected,
-    )
+    if isinstance(error, StructureConflict):
+        return HTTPException(status_code=409, detail=str(error))
+    return HTTPException(status_code=400, detail=str(error))
 
 
-@router.patch(
-    "/split/",
-    response_model=SplitOut,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
-)
-async def split_segments(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: SplitIn):
-    file_path = Path(
-        list(search.get_file_paths(muid=payload.muid, prefix=payload.prefix, exact=True, _type="file_path"))[0]
-    )
-    uid_expander = UIDExpander(user, file_path, payload.splitter_uid)
-    data, main_task_id, related_task_id = uid_expander.expand()
-    publish_result = schedule_split_merge_auto_publish(user, data.keys(), "split")
-    callee = CalleeSplit(
-        prefix=payload.prefix,
-        muid=payload.muid,
-        data_before=data[file_path]["data_before"],
-        data_after=data[file_path]["data_after"],
-        splitter={"uid": payload.splitter_uid, "value": data[file_path]["data_before"][payload.splitter_uid]},
-    )
-    affected = [
-        Affected(
-            muid=get_muid(path),
-            source_muid=get_muid(find_root_path(path)),
-            language=get_language(path),
-            filename=get_filename(path),
-            prefix=get_prefix(path),
-            path=str(path).replace(str(settings.WORK_DIR), ""),
-            data_after=data["data_after"],
-            data_before=data["data_before"],
-        )
-        for path, data in data.items()
-        if path != file_path
-    ]
-    return SplitOut(
-        main_task_id=main_task_id,
-        related_task_id=related_task_id,
-        auto_publish_task_id=publish_result.task_id,
-        auto_published_paths=publish_result.auto_published_paths,
-        manual_publish_paths=publish_result.manual_publish_paths,
-        message="Segments split successfully!",
-        path=str(file_path).replace(str(settings.WORK_DIR), ""),
-        callee=callee,
-        affected=affected,
-    )
+@router.post("/structure/preview/", dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)])
+def preview_structure(payload: StructurePreviewIn):
+    try:
+        root = structure_service.resolve_root(payload.muid, payload.prefix, search)
+        return structure_service.preview(root, payload.operation, payload.uid)
+    except ValueError as error:
+        raise _structure_http_error(error) from error
+
+
+@router.post("/structure/status/", dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)])
+def structure_status(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: StructureStatusIn):
+    try:
+        root = structure_service.resolve_root(payload.muid, payload.prefix, search)
+        return structure_service.operation_status(root, payload.operation_id, search, user)
+    except (ValueError, structure_service.StructureOperationIncomplete) as error:
+        raise _structure_http_error(error) from error
+
+
+def _commit_structure(user, payload, operation):
+    try:
+        if payload.operation != operation:
+            raise ValueError('Operation does not match endpoint')
+        root = structure_service.resolve_root(payload.muid, payload.prefix, search)
+        return structure_service.commit_operation(root, payload, search, user)
+    except (ValueError, structure_service.StructureOperationIncomplete) as error:
+        raise _structure_http_error(error) from error
+
+
+@router.patch("/merge/", dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)])
+def merge_segments(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: StructureCommitIn):
+    return _commit_structure(user, payload, 'merge')
+
+
+@router.patch("/split/", dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)])
+def split_segments(user: Annotated[UserBase, Depends(utils.get_current_user)], payload: StructureCommitIn):
+    return _commit_structure(user, payload, 'split')
 
 
 @router.get("/{muid}/", response_model=PathsOut)
@@ -378,7 +308,7 @@ async def get_can_edit(user: Annotated[UserBase, Depends(utils.get_current_user)
 
 
 @router.get("/{muid}/{prefix}/", response_model=JSONDataOut)
-async def get_json_data_for_prefix_in_project(
+def get_json_data_for_prefix_in_project(
     user: Annotated[UserBase, Depends(utils.get_current_user)], muid: str, prefix: str
 ) -> JSONDataOut:
     file: set[str] = _get_project_file_paths(muid, prefix)
@@ -393,11 +323,15 @@ async def get_json_data_for_prefix_in_project(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Data for project '{muid}' and prefix '{prefix}' not found",
             )
-        can_edit = can_edit_translation(int(user.github_id), muid)
-        return JSONDataOut(can_edit=can_edit, data={}, materialized=False)
+        project = virtual_file
+    else:
+        project = Path(file.pop())
     can_edit: bool = can_edit_translation(int(user.github_id), muid)
-    data: dict[str, str] = get_json_data(Path(file.pop()))
-    return JSONDataOut(can_edit=can_edit, data=data)
+    try:
+        snapshot = structure_service.read_project(project)
+    except StructureConflict as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return JSONDataOut(can_edit=can_edit, **snapshot)
 
 
 @router.post(
@@ -424,6 +358,13 @@ async def validate_html_project(
             detail=f"Data for project '{muid}' and prefix '{prefix}' not found",
         )
 
+    if payload.segments is not None:
+        result = validate_bilara_html(payload.segments)
+        return HtmlValidationOut(
+            valid=result.valid, checked_segments=result.checked_segments,
+            errors=[issue.__dict__ for issue in result.errors],
+            warnings=[issue.__dict__ for issue in result.warnings],
+        )
     segments: dict[str, str] = get_json_data(Path(files.pop()))
     unknown_uids = set(payload.overrides) - set(segments)
     if unknown_uids:
@@ -448,6 +389,7 @@ async def update_json_data_for_prefix_in_project(
     muid: str,
     prefix: str,
     data: dict[str, str],
+    x_structure_revision: str | None = Header(default=None),
 ) -> JSONDataOut:
     if not can_edit_translation(int(user.github_id), muid):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to edit this resource")
@@ -477,7 +419,7 @@ async def update_json_data_for_prefix_in_project(
 
     if virtual_file:
         updated, error, task_id, materialized = materialize_translation_file(
-            virtual_file, data, user
+            virtual_file, data, user, x_structure_revision
         )
         path = virtual_file.target_path
     else:
@@ -489,10 +431,12 @@ async def update_json_data_for_prefix_in_project(
             )
         path = Path(file.pop())
         root_path: set[str] = search.get_file_paths(muid=muid, prefix=prefix, exact=True)
-        updated, error, task_id = update_file(path, data, Path(root_path.pop()), user)
+        updated, error, task_id = update_file(path, data, Path(root_path.pop()), user, x_structure_revision)
         materialized = True
     if error:
         code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        if isinstance(error, StructureConflict):
+            code = status.HTTP_409_CONFLICT
         if isinstance(error, KeyError):
             code = status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=code, detail=str(error).strip("'"))

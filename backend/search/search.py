@@ -625,6 +625,36 @@ class Search:
                 index=segments_index, body={"query": {"match": {"main_doc_id": utils.create_doc_id(path)}}}
             )
 
+    def replace_structure_segments(self, path: Path, previous_uids: list[str]) -> tuple[bool, Exception | None]:
+        """Replace a known file snapshot without a stale delete-by-query snapshot.
+
+        The structure journal supplies the previous UIDs. Stable document IDs
+        make both deletes and upserts idempotent, including interrupted retries.
+        Refresh explicitly so reads after confirmation see the committed result.
+        """
+        data = self._process_file(path)
+        source = data['_source']
+        current_uids = {item['uid'] for item in source['segments']}
+        actions = [
+            {'_op_type': 'delete', '_index': settings.ES_SEGMENTS_INDEX,
+             '_id': utils.create_doc_id(path, uid)}
+            for uid in set(previous_uids) - current_uids
+        ]
+        actions.extend({
+            '_index': settings.ES_SEGMENTS_INDEX,
+            '_id': utils.create_doc_id(path, item['uid']),
+            '_source': {'main_doc_id': data['_id'], 'muid': source['muid'],
+                        'uid': item['uid'], 'segment': item['segment']},
+        } for item in source['segments'])
+        _, errors = helpers.bulk(self._search, actions, chunk_size=self._batch_size,
+                                 raise_on_error=False, refresh=True)
+        failures = [error for error in errors
+                    if not ('delete' in error and error['delete'].get('status') == 404)]
+        if failures:
+            return False, RuntimeError(f'Structure indexing failed: {failures}')
+        self._search.index(index=settings.ES_INDEX, id=data['_id'], body=source, refresh=True)
+        return True, None
+
     def remove_segments(self, path: Path) -> tuple[bool, Exception | None]:
         doc_id: str = utils.create_doc_id(path)
         try:

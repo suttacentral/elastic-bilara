@@ -67,13 +67,13 @@ def test_virtual_directory_read_and_first_save(configured_translation, monkeypat
     directory = validate_dir_path(str(relative))
     listing = asyncio.run(get_dir_content(user, directory))
     assert listing.virtual_files[0].target_muid == virtual_file.target_muid
-    response = asyncio.run(projects.get_json_data_for_prefix_in_project(
+    response = projects.get_json_data_for_prefix_in_project(
         user, virtual_file.target_muid, "mn1"
-    ))
+    )
     assert response.materialized is False
     assert not virtual_file.target_path.exists()
     asyncio.run(projects.update_json_data_for_prefix_in_project(
-        user, virtual_file.target_muid, "mn1", {"mn1:1": "New text"}
+        user, virtual_file.target_muid, "mn1", {"mn1:1": "New text"}, x_structure_revision=None
     ))
     assert json.loads(virtual_file.target_path.read_text()) == {
         "mn1:1": "New text", "mn1:2": "",
@@ -99,7 +99,7 @@ def test_consecutive_saves_preserve_both_segments(
     monkeypatch.setattr(projects.search, "get_file_paths", indexed_paths)
     for uid, value in [("mn1:1", "First"), ("mn1:2", "Second"), ("mn1:1", "")]:
         response = asyncio.run(projects.update_json_data_for_prefix_in_project(
-            user, virtual_file.target_muid, virtual_file.prefix, {uid: value}
+            user, virtual_file.target_muid, virtual_file.prefix, {uid: value}, x_structure_revision=None
         ))
         assert response.materialized is True
         assert response.task_id == "save-task"
@@ -130,7 +130,7 @@ def test_existing_translation_without_mapping_still_saves(configured_translation
 
     monkeypatch.setattr(projects.search, "get_file_paths", indexed_paths)
     response = asyncio.run(projects.update_json_data_for_prefix_in_project(
-        user, virtual_file.target_muid, virtual_file.prefix, {"mn1:2": "Second"}
+        user, virtual_file.target_muid, virtual_file.prefix, {"mn1:2": "Second"}, x_structure_revision=None
     ))
     assert response.materialized is True
     assert json.loads(virtual_file.target_path.read_text()) == {"mn1:1": "First", "mn1:2": "Second"}

@@ -13,6 +13,8 @@ const search = () => {
             uid: "",
         },
         results: {},
+        editStructureRevisions: {},
+        editLoads: {},
         // Editable search results support
         editableMusids: {},       // { muid: bool } — cached can_edit per muid
         originalValues: {},       // { "uid::muid": string } — snapshot on focus
@@ -51,7 +53,7 @@ const search = () => {
                     this.toggleSelectedProjects(source);
                 }
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         updateSuggestions() {
@@ -82,21 +84,19 @@ const search = () => {
             try {
                 const params = this.constructQueryParams();
                 const response = await requestWithTokenRetry(`search/?${params.toString()}`);
-                const { results } = await response.json();
+                const { results, detail } = await response.json();
+                if (!response.ok) throw new Error(detail || "Search failed");
                 if (!results) {
                     throw new Error("Invalid data format from the API");
                 }
                 this.results = results;
-                this.originalValues = {};
-                this.replacedItems = {};
-                this.submittedItems = {};
-                await this._fetchEditPermissions(results);
                 this._buildResultEntries();
+                await this._fetchEditPermissions(results);
                 this.currentPage = this.page;
                 this.page++;
                 await this.prefetchNextPage();
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         async triggerSearch(event = null, { collapseOptions = undefined } = {}) {
@@ -111,7 +111,8 @@ const search = () => {
             const nextPageParams = new URLSearchParams(this.constructQueryParams());
             nextPageParams.set("page", this.page);
             const response = await requestWithTokenRetry(`search/?${nextPageParams.toString()}`);
-            const { results } = await response.json();
+            const { results, detail } = await response.json();
+            if (!response.ok) throw new Error(detail || "Search failed");
             if (!results) {
                 throw new Error("Invalid data format from the API");
             }
@@ -124,9 +125,8 @@ const search = () => {
                 this.prefetchedData = null;
                 this.currentPage = this.page;
                 this.page++;
-                this.originalValues = {};
-                await this._fetchEditPermissions(this.results);
                 this._buildResultEntries();
+                await this._fetchEditPermissions(this.results);
                 if (this.isNextPage) {
                     await this.prefetchNextPage();
                 }
@@ -182,6 +182,11 @@ const search = () => {
         },
         /** Build the reactive resultEntries array from raw results dict */
         _buildResultEntries() {
+            this.editStructureRevisions = {};
+            this.editLoads = {};
+            this.originalValues = {};
+            this.replacedItems = {};
+            this.submittedItems = {};
             this.resultEntries = Object.entries(this.results).map(([uid, muidSegments]) => ({
                 uid,
                 segments: Object.entries(muidSegments).map(([muid, segment]) => ({
@@ -190,12 +195,35 @@ const search = () => {
                 })),
             }));
         },
-        /** Called on textarea focus to snapshot original value */
-        searchResultFocus(uid, muid) {
+        /** Load content and its structure version together before allowing edits. */
+        async searchResultFocus(uid, muid) {
+            if (muid.startsWith('root-')) return;
             const key = uid + '::' + muid;
-            if (!(key in this.originalValues)) {
-                this.originalValues[key] = this.results[uid]?.[muid] || '';
+            if (this.editStructureRevisions[key]) return;
+            if (this.editLoads[key]) return this.editLoads[key];
+            const loads = this.editLoads;
+            loads[key] = this._loadEditSnapshot(uid, muid);
+            try {
+                await loads[key];
+            } finally {
+                delete loads[key];
             }
+        },
+        async _loadEditSnapshot(uid, muid) {
+            const results = this.results;
+            const prefix = this.getPrefixFromUid(uid);
+            const response = await requestWithTokenRetry(`projects/${muid}/${prefix}/`);
+            const snapshot = await response.json();
+            if (!response.ok) throw new Error(snapshot.detail || 'Could not load the text for editing.');
+            if (this.results !== results) throw new Error('Search results changed. Select the text again.');
+            if (!snapshot.can_edit || !snapshot.structure_revision ||
+                !Object.hasOwn(snapshot.data || {}, uid)) {
+                throw new Error('This segment is no longer available for editing. Search again.');
+            }
+            const key = uid + '::' + muid;
+            this.searchResultInput(uid, muid, snapshot.data[uid]);
+            this.originalValues[key] = snapshot.data[uid];
+            this.editStructureRevisions[key] = snapshot.structure_revision;
         },
         /** Called on textarea input to update in-memory data */
         searchResultInput(uid, muid, value) {
@@ -241,9 +269,10 @@ const search = () => {
             const original = this.originalValues[key];
             // Only save if actually modified
             if (currentValue === original) return;
-            // Update original to new value so subsequent Enter without changes won't re-save
-            this.originalValues[key] = currentValue;
-
+            await this._saveSegment(uid, muid, currentValue);
+        },
+        async _saveSegment(uid, muid, currentValue) {
+            const key = uid + '::' + muid;
             const prefix = this.getPrefixFromUid(uid);
             const badgeId = `search-badge-${muid}-${uid}`;
 
@@ -260,18 +289,22 @@ const search = () => {
                     }
                 }
 
+                const revision = this.editStructureRevisions[key];
+                if (!revision) throw new Error("Load the segment for editing before saving.");
                 displayBadge(badgeId, BadgeStatus.PENDING);
                 const response = await requestWithTokenRetry(`projects/${muid}/${prefix}/`, {
                     credentials: "include",
                     method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", "X-Structure-Revision": revision },
                     body: JSON.stringify({ [uid]: currentValue }),
                 });
-                await response.json();
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || "Save failed");
+                this.originalValues[key] = currentValue;
                 displayBadge(badgeId, BadgeStatus.COMMITTED);
             } catch (error) {
                 displayBadge(badgeId, BadgeStatus.ERROR);
-                throw new Error(error);
+                throw error;
             }
         },
         /** Check if a segment contains the search term that would be replaced */
@@ -292,7 +325,7 @@ const search = () => {
             return !!(searchTerm && segment && segment.includes(searchTerm));
         },
         /** Replace search keyword in a single segment with replacementText */
-        replaceSegment(uid, muid, seg) {
+        async replaceSegment(uid, muid, seg) {
             // Find the search term for this muid
             let searchTerm = this.fields[muid];
             if (!searchTerm) {
@@ -306,6 +339,7 @@ const search = () => {
             }
             if (!searchTerm) return;
 
+            await this.searchResultFocus(uid, muid);
             const newValue = seg.segment.replaceAll(searchTerm, this.replacementText);
             seg.segment = newValue;
             if (this.results[uid]) {
@@ -315,36 +349,8 @@ const search = () => {
         },
         /** Submit a single replaced segment to the server */
         async submitReplacement(uid, muid, currentValue) {
-            const key = uid + '::' + muid;
-            const prefix = this.getPrefixFromUid(uid);
-            const badgeId = `search-badge-${muid}-${uid}`;
-
-            try {
-                const textarea = document.getElementById(`search-textarea-${muid}-${uid}`);
-                if (textarea) {
-                    let badge = document.getElementById(badgeId);
-                    if (!badge) {
-                        badge = document.createElement('sc-bilara-translation-edit-status');
-                        badge.id = badgeId;
-                        badge.className = 'search__results-status';
-                        textarea.parentElement.appendChild(badge);
-                    }
-                }
-
-                displayBadge(badgeId, BadgeStatus.PENDING);
-                const response = await requestWithTokenRetry(`projects/${muid}/${prefix}/`, {
-                    credentials: "include",
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ [uid]: currentValue }),
-                });
-                await response.json();
-                displayBadge(badgeId, BadgeStatus.COMMITTED);
-                this.submittedItems[key] = true;
-            } catch (error) {
-                displayBadge(badgeId, BadgeStatus.ERROR);
-                throw new Error(error);
-            }
+            await this._saveSegment(uid, muid, currentValue);
+            this.submittedItems[uid + '::' + muid] = true;
         },
         scrollTop(selector) {
             document.querySelector(selector).scrollTop = 0;

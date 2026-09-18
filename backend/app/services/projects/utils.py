@@ -12,16 +12,13 @@ from app.db.schemas.user import User, UserBase
 from app.services.git import utils
 from app.services.projects.virtual_projects import VirtualProjectFile
 from app.services.projects.file_coordinator import project_file_lock
+from app.services.projects.structure_store import StructureStore, StructureConflict
 from app.services.users.utils import get_user
 from app.tasks import commit
 from search.search import Search
 from search.utils import find_root_path, get_json_data
 
 search = Search()
-
-AUTO_PUBLISH_SPLIT_MERGE_TYPES = {"root", "html", "reference", "variant"}
-MANUAL_PUBLISH_SPLIT_MERGE_TYPES = {"translation", "comment"}
-
 
 @dataclass(frozen=True)
 class SplitMergePublishResult:
@@ -51,44 +48,22 @@ def get_split_merge_text_type(path: Path) -> str:
     return relative_path.parts[0] if relative_path.parts else ""
 
 
-def group_split_merge_publish_paths(paths: list[Path] | set[Path] | tuple[Path, ...]) -> tuple[list[Path], list[Path]]:
-    auto_publish_paths = []
-    manual_publish_paths = []
-    seen_paths = set()
-    for path in [Path(path) for path in paths]:
-        formatted_path = format_split_merge_publish_path(path)
-        if formatted_path in seen_paths:
-            continue
-        seen_paths.add(formatted_path)
-        text_type = get_split_merge_text_type(path)
-        if text_type in AUTO_PUBLISH_SPLIT_MERGE_TYPES:
-            auto_publish_paths.append(path)
-        else:
-            manual_publish_paths.append(path)
-    return auto_publish_paths, manual_publish_paths
-
-
 def schedule_split_merge_auto_publish(
     user: UserBase,
     paths: list[Path] | set[Path] | tuple[Path, ...],
     operation: str,
 ) -> SplitMergePublishResult:
-    auto_publish_paths, manual_publish_paths = group_split_merge_publish_paths(paths)
-    formatted_auto_paths = [format_split_merge_publish_path(path) for path in auto_publish_paths]
-    formatted_manual_paths = [format_split_merge_publish_path(path) for path in manual_publish_paths]
-
+    commit_paths = list(dict.fromkeys(_relative_split_merge_path(path).as_posix() for path in paths))
     task_id = None
-    if formatted_auto_paths:
+    if commit_paths:
         user_data = get_user(int(user.github_id))
-        message = f"{user.username} {operation} structural split/merge files"
-        commit_paths = [_relative_split_merge_path(path).as_posix() for path in auto_publish_paths]
+        message = f"{user.username} {operation} split/merge files"
         result = commit.delay(user_data.model_dump(), commit_paths, message)
         task_id = result.id
-
     return SplitMergePublishResult(
         task_id=task_id,
-        auto_published_paths=formatted_auto_paths,
-        manual_publish_paths=formatted_manual_paths,
+        auto_published_paths=[f"/{path}" for path in commit_paths],
+        manual_publish_paths=[],
     )
 
 
@@ -104,10 +79,8 @@ def sort_paths(paths: set[str]) -> list[str]:
 def _update_file_locked(
     path: Path,
     data: dict[str, str],
-    root_path: Path,
+    root_data: dict[str, str],
 ) -> tuple[bool, Exception | None]:
-    root_data: dict[str, str] = get_json_data(root_path)
-
     for key in data:
         if key not in root_data:
             return False, KeyError(f"{key} not found in the root file")
@@ -143,12 +116,20 @@ def _schedule_file_commit(path: Path, user: UserBase) -> str:
 
 
 def update_file(
-    path: Path, data: dict[str, str], root_path: Path, user: UserBase
+    path: Path, data: dict[str, str], root_path: Path, user: UserBase,
+    structure_revision: str | None = None,
 ) -> tuple[bool, Exception | None, str | None]:
     stored_user: UserBase = get_user(int(user.github_id))
 
-    with project_file_lock(path):
-        updated, error = _update_file_locked(path, data, root_path)
+    store = StructureStore(settings.WORK_DIR, root_path)
+    try:
+        with store.lock(), project_file_lock(path):
+            store.check_ready()
+            root_data = get_json_data(root_path)
+            store.check_revision(structure_revision, root_data)
+            updated, error = _update_file_locked(path, data, root_data)
+    except StructureConflict as error:
+        return False, error, None
 
     if error:
         return False, error, None
@@ -161,9 +142,21 @@ def materialize_translation_file(
     virtual_file: VirtualProjectFile,
     data: dict[str, str],
     user: UserBase,
+    structure_revision: str | None = None,
 ) -> tuple[bool, Exception | None, str | None, bool]:
+    store = StructureStore(settings.WORK_DIR, virtual_file.source_path)
+    try:
+        with store.lock():
+            store.check_ready()
+            root_data = get_json_data(virtual_file.source_path)
+            store.check_revision(structure_revision, root_data)
+            return _materialize_translation_file_locked(virtual_file, data, user, root_data)
+    except StructureConflict as error:
+        return False, error, None, False
+
+
+def _materialize_translation_file_locked(virtual_file, data, user, root_data):
     """Save a configured translation, creating its file on the first nonblank save."""
-    root_data = get_json_data(virtual_file.source_path)
     if not isinstance(root_data, dict):
         error = TypeError(
             f"Expected root file to contain a JSON object: {virtual_file.source_path}"
@@ -186,7 +179,7 @@ def materialize_translation_file(
                 updated, error = _update_file_locked(
                     target_path,
                     data,
-                    virtual_file.source_path,
+                    root_data,
                 )
                 if error:
                     return False, error, None, True
@@ -271,15 +264,6 @@ def write_json_data(path: Path, data: dict[str, str]) -> tuple[bool, Exception |
     finally:
         if temporary_path:
             temporary_path.unlink(missing_ok=True)
-    return True, None
-
-
-def write_json_data_for_split_or_merge(path: Path, data: dict[str, str]) -> tuple[bool, Exception | None]:
-    try:
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-    except (OSError, TypeError) as e:
-        return False, e
     return True, None
 
 

@@ -246,7 +246,8 @@ export class SCBilaraTranslationProjectHeader extends LitElement {
           <nav class="project-header__nav">
               <ul class="project-header__nav-list">
                    <li class="project-header__nav-item">
-                      <sl-button size="small" data-related-btn @click="$dispatch('toggle-detail-panel', {panel: 'related'});">
+                      <sl-button size="small" data-related-btn :disabled="relatedProjectsLocked()"
+                          @click="if (!relatedProjectsLocked()) $dispatch('toggle-detail-panel', {panel: 'related'});">
                           <i class="bi bi-collection" style="margin-right: 6px;"></i>Related
                       </sl-button>
                   </li>

@@ -128,9 +128,14 @@ class TestSearch:
     )
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.search.es.get_segments")
-    async def test_search(self, mock_get_segments, async_client, mock_get_current_user, params, results) -> None:
+    async def test_search(self, mock_get_segments, async_client, mock_get_current_user, params, results, mocker) -> None:
         mock_get_segments.return_value = results
+        paths = mocker.patch(
+            'app.api.api_v1.endpoints.search.es.get_file_paths',
+            side_effect=AssertionError('Search must not resolve project files'),
+        )
         response = await async_client.get(f"/search/{params}")
         assert response.status_code == 200
         assert "results" in response.json()
         assert response.json() == {"results": results}
+        paths.assert_not_called()

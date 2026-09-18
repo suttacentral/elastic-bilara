@@ -39,6 +39,7 @@ function fetchTranslation() {
     return {
         translations: [],
         loading: true,
+        loadError: '',
         relatedProjects: [],
         remarkUsers: [],
         currentUserGithubId: null,
@@ -63,6 +64,15 @@ function fetchTranslation() {
             total: 0,
         },
         originalTranslations: null,
+        structureDraft: null,
+        structureDraftError: "",
+        structurePreviewLoading: false,
+        relatedProjectLoads: 0,
+        relatedProjectsLocked() {
+            return this.structurePreviewLoading || !!this.structureDraft;
+        },
+        dirtySegments: {},
+        structureRevisions: {},
         splitter_uid: null,
         merger_uid: null,
         mergee_uid: null,
@@ -137,7 +147,9 @@ function fetchTranslation() {
                         credentials: 'include',
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ overrides: this.htmlDraftOverrides }),
+                        body: JSON.stringify(this.structureDraft
+                            ? {segments: this.translations.find(t => t.muid === this.htmlProjectName).data}
+                            : { overrides: this.htmlDraftOverrides }),
                     },
                 );
                 if (!response.ok) {
@@ -192,8 +204,11 @@ function fetchTranslation() {
         },
         async init() {
             this.loading = true;
+            this.loadError = '';
             try {
                 await this.initialize();
+            } catch (error) {
+                this.loadError = error.message || 'Could not load this text. Retry loading.';
             } finally {
                 this.loading = false;
             }
@@ -207,6 +222,7 @@ function fetchTranslation() {
 
             this.muid = muid;
             this.sourceMuid = source;
+            await this.resumeStructureOperation();
 
             const currentUserPromise = this.loadCurrentUserForTranslation();
             await this.loadHyphenatedPrefixRanges();
@@ -456,10 +472,20 @@ function fetchTranslation() {
             return translation.data[uid] || "";
         },
         setValue(translation, uid, value) {
+            if (!this.canEditStructureSegment(translation.muid, uid)) return;
             if (!translation.data) {
                 translation.data = {};
             }
             const previousValue = translation.data[uid] || "";
+            if (!this.structureDraft && !this.isRemarkProject(translation.muid)) {
+                const key = translation.muid + ':' + uid;
+                if (!Object.hasOwn(this.dirtySegments, key)) this.dirtySegments[key] = previousValue;
+                if (this.dirtySegments[key] === value) delete this.dirtySegments[key];
+            }
+            if (this.structureDraft && previousValue !== value) {
+                this.structureDraft.reviewed = this.structureDraft.reviewed.filter(muid => muid !== translation.muid);
+                this.structureDraftError = '';
+            }
             translation.data[uid] = value;
             if (translation.muid && translation.muid.startsWith('html-')) {
                 this.htmlDraftOverrides[uid] = value;
@@ -584,382 +610,139 @@ function fetchTranslation() {
             }
         },
         async splitBasedOnUid(translations, uid, element) {
-            if (!isMergeSplitConditionMet(uid)) {
-                displayMessage(
-                    element,
-                    "This type of uid does not support splitting."
-                );
+            return this.startStructureDraft('split', uid, element);
+        },
+        async mergeBasedOnUid(translations, uid, element) {
+            return this.startStructureDraft('merge', uid, element);
+        },
+        async startStructureDraft(operation, uid, element) {
+            if (this.relatedProjectsLocked()) return false;
+            if (this.relatedProjectLoads) {
+                displayMessage(element, 'Wait for related projects to finish loading before splitting or merging.');
                 return false;
             }
-
-            if (this.hasActiveOperation()) {
-                const confirmed = confirm(
-                    'You have an unsaved split/merge operation.\n\n' +
-                    'Click OK to discard it and start a new split. ' +
-                    'Click Cancel to continue the current operation.'
-                );
-                if (!confirmed) {
-                    return false;
-                }
-            }
-
-            if (localStorage.getItem('enableSplitHintDialog') === null) {
-                localStorage.setItem('enableSplitHintDialog', 'true');
-            }
-
-            if (localStorage.getItem('enableSplitHintDialog') === "true") {
-                document.querySelector('.dialog-split-hint')?.show();
-            }
-
-            this._ensureHtmlProjectInTranslations(translations);
-            this.invalidateHtmlValidation();
-            this._backupTranslations();
-
-            const [sectionUid, sectionNumber] = uid.split(':');
-            const isTwoLevelFormat = /^\d+\.\d+$/.test(sectionNumber);
-            const isThreeLevelFormat = /^\d+\.\d+\.\d+$/.test(sectionNumber);
-
-            // Processing two-level format: mn1:1.1
-            if (isTwoLevelFormat) {
-                this._handleTwoLevelSplit(
-                    translations,
-                    sectionUid,
-                    sectionNumber
-                );
-            }
-            // Processing level 3 format: dn1:1.1.1
-            else if (isThreeLevelFormat) {
-                this._handleThreeLevelSplit(
-                    translations,
-                    sectionUid,
-                    sectionNumber
-                );
-            }
-
-            this.updateProgress();
-
-            return true;
-        },
-        _handleTwoLevelSplit(translations, sectionUid, sectionNumber) {
-            const [integerPart, decimalPart] = sectionNumber.split('.');
-            const splitPointNumber = parseInt(decimalPart);
-            this.splitter_uid = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-
-            translations.forEach(translation => {
-                const newObj = {};
-
-                for (const key in translation.data) {
-                    const [keySectionUid, keySectionNumber] = key.split(':');
-                    const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
-                    const keyDecimalNumber = parseInt(keyDecimalPart);
-
-                    // Paragraphs that do not match the current section
-                    if (keySectionUid !== sectionUid || keyIntegerPart !== integerPart) {
-                        newObj[key] = translation.data[key];
-                        continue;
-                    }
-
-                    // Process matching paragraphs
-                    if (keyDecimalNumber < splitPointNumber) {
-                        newObj[key] = translation.data[key];
-                    } else if (keyDecimalNumber === splitPointNumber) {
-                        newObj[key] = translation.data[key];
-                        const newKey = `${sectionUid}:${integerPart}.${splitPointNumber + 1}`;
-                        newObj[newKey] = translation.muid.includes('html')
-                            ? "{}"
-                            : "";
-                    } else {
-                        const newKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
-                        newObj[newKey] = translation.data[key];
-                    }
-                }
-                translation.data = newObj;
-            });
-        },
-        _handleThreeLevelSplit(translations, sectionUid, sectionNumber) {
-            const sectionMainPart = getBeforeLastDot(sectionNumber);
-            const sectionLastPart = parseInt(getLastNumber(sectionNumber));
-            this.splitter_uid = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-
-            translations.forEach(translation => {
-                const newObj = {};
-
-                for (const key in translation.data) {
-                    const [keySectionUid, keySectionNumber] = key.split(':');
-
-                    if (keySectionUid !== sectionUid) {
-                        newObj[key] = translation.data[key];
-                        continue;
-                    }
-
-                    const keyMainPart = getBeforeLastDot(keySectionNumber);
-                    const keyLastPart = parseInt(getLastNumber(keySectionNumber));
-
-                    if (keyMainPart !== sectionMainPart) {
-                        newObj[key] = translation.data[key];
-                        continue;
-                    }
-
-                    if (keyLastPart < sectionLastPart) {
-                        newObj[key] = translation.data[key];
-                    } else if (keyLastPart === sectionLastPart) {
-                        newObj[key] = translation.data[key];
-                        const newKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-                        newObj[newKey] = translation.muid.includes('html')
-                            ? "{}"
-                            : "";
-                    } else {
-                        const newKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
-                        newObj[newKey] = translation.data[key];
-                    }
-                }
-                translation.data = newObj;
-            });
-        },
-        cancelSplit(translations) {
-            this._restoreTranslations();
-            // localStorage.setItem('displayButtonForSplitOrMerge', 'false');
-        },
-        mergeBasedOnUid(translations, uid, element) {
-            if (!isMergeSplitConditionMet(uid)) {
-                displayMessage(
-                    element,
-                    "This type of uid does not support merging.",
-                );
+            if (Object.keys(this.dirtySegments).length) {
+                displayMessage(element, 'Save your pending edits with Enter before splitting or merging.');
                 return false;
             }
-
-            let newObj = {};
-            this.merger_uid = uid;
-            this._ensureHtmlProjectInTranslations(translations);
-            this.invalidateHtmlValidation();
-            this._backupTranslations();
-
-            if (localStorage.getItem('enableMergeHintDialog') === null) {
-                localStorage.setItem('enableMergeHintDialog', 'true');
+            const root = this.translations.find(t => t.isSource);
+            if (!root?.muid.startsWith('root-')) {
+                displayMessage(element, 'Split and merge are only available on root text.');
+                return false;
             }
-
-            if (localStorage.getItem('enableMergeHintDialog') === "true") {
-                document.querySelector('.dialog-merge-hint')?.show();
-            }
-
-            const [sectionUid, sectionNumber] = uid.split(':');
-            const isTwoLevelFormat = /^\d+\.\d+$/.test(sectionNumber);
-            const isThreeLevelFormat = /^\d+\.\d+\.\d+$/.test(sectionNumber);
-
-            // Two-level format: mn1:1.1
-            if (isTwoLevelFormat) {
-                this._handleTwoLevelMerge(translations, sectionUid, sectionNumber);
-            }
-            // Three-level format: dn1:1.1.1
-            else if (isThreeLevelFormat) {
-                this._handleThreeLevelMerge(translations, sectionUid, sectionNumber);
-            }
-
-            this.updateProgress();
-
-            return true;
-        },
-        /**
-         * Handle two-level format merge (e.g., mn1:1.1 + mn1:1.2)
-         * @param {Array} translations - Translation objects array
-         * @param {string} sectionUid - Section UID (e.g., 'mn1')
-         * @param {string} sectionNumber - Section number (e.g., '1.1')
-         */
-        _handleTwoLevelMerge(translations, sectionUid, sectionNumber) {
-            const [integerPart, decimalPart] = sectionNumber.split('.');
-            const decimalNumber = parseInt(decimalPart);
-            this.mergee_uid = `${sectionUid}:${integerPart}.${decimalNumber + 1}`;
-
-            let needToMergeNextSection = false;
-            let nextSectionFirstKey = '';
-
-            translations.forEach(translation => {
-                const newObj = {};
-
-                for (const key in translation.data) {
-                    const [keySectionUid, keySectionNumber] = key.split(':');
-
-                    // If it does not match the current section, keep it directly.
-                    if (keySectionUid !== sectionUid) {
-                        newObj[key] = translation.data[key];
-                        continue;
+            this.structurePreviewLoading = true;
+            try {
+                const response = await requestWithTokenRetry('projects/structure/preview/', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({muid: root.muid, prefix: this.prefix, operation, uid}),
+                });
+                const preview = await response.json();
+                if (!response.ok) throw new Error(preview.detail || 'Could not preview operation');
+                this._backupTranslations();
+                this.structureDraftError = '';
+                this.structureDraft = {preview, reviewed: [], submission: null,
+                    htmlOverrides: {...this.htmlDraftOverrides}};
+                this.splitter_uid = preview.splitter_uid;
+                this.merger_uid = preview.merger_uid;
+                this.mergee_uid = preview.mergee_uid;
+                for (const project of preview.projects) {
+                    let column = this.translations.find(t => t.muid === project.muid);
+                    if (!column && project.manual) {
+                        column = {muid: project.muid, prefix: this.prefix, canEdit: true};
+                        this.translations.push(column);
+                        // Original text is available in the merge comparison for newly shown columns.
+                        this.originalTranslations.push({...column, _structureAdded: true, data: project.before});
                     }
-
-                    const [keyIntegerPart, keyDecimalPart] = keySectionNumber.split('.');
-                    const keyDecimalNumber = parseInt(keyDecimalPart);
-
-                    // If it does not match the current section, keep it directly.
-                    if (keyIntegerPart !== integerPart) {
-                        // If cross-section merging is needed, check if it is a paragraph of the target section
-                        if (needToMergeNextSection) {
-                            const nextSectionNumber = parseInt(nextSectionFirstKey.split(':')[1].split('.')[0]);
-                            const currentSectionNumber = parseInt(keyIntegerPart);
-
-                            if (currentSectionNumber === nextSectionNumber) {
-                                this.mergeSectionByNextKey(key, translation, newObj);
-                                continue;
-                            }
-                        }
-                        newObj[key] = translation.data[key];
-                        continue;
-                    }
-
-                    // Process the paragraph of the current section
-                    if (keyDecimalNumber < decimalNumber) {
-                        // Paragraphs before the merge point remain unchanged.
-                        newObj[key] = translation.data[key];
-                    } else if (keyDecimalNumber === decimalNumber) {
-                        // Merge point: merge current paragraph with next one
-                        const nextKey = `${sectionUid}:${integerPart}.${decimalNumber + 1}`;
-
-                        if (translation.data[nextKey]) {
-                            // The next paragraph within the same section exists
-                            newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
-                        } else {
-                            // Try to merge across sections
-                            const nextSectionIntegerPart = parseInt(integerPart) + 1;
-                            const possibleNextKey1 = `${sectionUid}:${nextSectionIntegerPart}.0`;
-                            const possibleNextKey2 = `${sectionUid}:${nextSectionIntegerPart}.1`;
-                            const crossSectionNextKey = translation.data[possibleNextKey1]
-                                ? possibleNextKey1
-                                : possibleNextKey2;
-
-                            if (translation.data[crossSectionNextKey]) {
-                                this.mergee_uid = crossSectionNextKey;
-                                nextSectionFirstKey = crossSectionNextKey;
-                                needToMergeNextSection = true;
-                                newObj[key] = `${translation.data[key]} ${translation.data[crossSectionNextKey]}`;
-                            } else {
-                                // No mergeable paragraph exists, keep it unchanged
-                                newObj[key] = translation.data[key];
-                            }
-                        }
-                    } else {
-                        // Paragraphs after the merge point: shift down by decrementing the number
-                        const nextKey = `${sectionUid}:${integerPart}.${keyDecimalNumber + 1}`;
-                        if (translation.data[nextKey]) {
-                            newObj[key] = translation.data[nextKey];
-                        }
-                        // If no next key exists, this paragraph is deleted (merged into previous)
-                    }
+                    if (column) column.data = JSON.parse(JSON.stringify(project.data));
                 }
-
-                translation.data = newObj;
-                translation.splitting = true;
-            });
-        },
-
-        /**
-         * Handle three-level format merge (e.g., dn1:1.1.1 + dn1:1.1.2)
-         * @param {Array} translations - Translation objects array
-         * @param {string} sectionUid - Section UID (e.g., 'dn1')
-         * @param {string} sectionNumber - Section number (e.g., '1.1.1')
-         */
-        _handleThreeLevelMerge(translations, sectionUid, sectionNumber) {
-            const sectionMainPart = getBeforeLastDot(sectionNumber);
-            const sectionLastPart = parseInt(getLastNumber(sectionNumber));
-            this.mergee_uid = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-
-            let needToMergeNextSection = false;
-            let nextSectionFirstKey = '';
-
-            translations.forEach(translation => {
-                const newObj = {};
-
-                for (const key in translation.data) {
-                    const [keySectionUid, keySectionNumber] = key.split(':');
-
-                    // If it does not match the current section, keep it directly.
-                    if (keySectionUid !== sectionUid) {
-                        newObj[key] = translation.data[key];
-                        continue;
-                    }
-
-                    const keyMainPart = getBeforeLastDot(keySectionNumber);
-                    const keyLastPart = parseInt(getLastNumber(keySectionNumber));
-
-                    // If it does not match the current subsection, keep it directly.
-                    if (keyMainPart !== sectionMainPart) {
-                        // If cross-subsection merging is needed, check if it is a paragraph of the target subsection
-                        if (needToMergeNextSection) {
-                            const [nextChapter, nextSection] = nextSectionFirstKey.split(':')[1].split('.');
-                            const [keyChapter, keySection] = keySectionNumber.split('.');
-
-                            if (keyChapter === nextChapter && keySection === nextSection) {
-                                this.mergeSectionByNextSubsectionKey(key, translation, newObj);
-                                continue;
-                            }
-                        }
-                        newObj[key] = translation.data[key];
-                        continue;
-                    }
-
-                    // Process the paragraph of the current subsection
-                    if (keyLastPart < sectionLastPart) {
-                        // Paragraphs before the merge point remain unchanged.
-                        newObj[key] = translation.data[key];
-                    } else if (keyLastPart === sectionLastPart) {
-                        // Merge point: merge current paragraph with next one
-                        const nextKey = `${sectionUid}:${sectionMainPart}${sectionLastPart + 1}`;
-
-                        if (translation.data[nextKey]) {
-                            // The next paragraph within the same subsection exists
-                            newObj[key] = `${translation.data[key]} ${translation.data[nextKey]}`;
-                        } else {
-                            // Try to merge across subsections
-                            const [chapter, section] = sectionNumber.split('.');
-                            const nextSection = parseInt(section) + 1;
-                            const crossSubsectionNextKey = `${sectionUid}:${chapter}.${nextSection}.1`;
-
-                            if (translation.data[crossSubsectionNextKey]) {
-                                this.mergee_uid = crossSubsectionNextKey;
-                                nextSectionFirstKey = crossSubsectionNextKey;
-                                needToMergeNextSection = true;
-                                newObj[key] = `${translation.data[key]} ${translation.data[crossSubsectionNextKey]}`;
-                            } else {
-                                // No mergeable paragraph exists, keep it unchanged
-                                newObj[key] = translation.data[key];
-                            }
-                        }
-                    } else {
-                        // Paragraphs after the merge point: shift down by decrementing the number
-                        const nextKey = `${sectionUid}:${sectionMainPart}${keyLastPart + 1}`;
-                        if (translation.data[nextKey]) {
-                            newObj[key] = translation.data[nextKey];
-                        }
-                        // If no next key exists, this paragraph is deleted (merged into previous)
-                    }
-                }
-
-                translation.data = newObj;
-                translation.splitting = true;
-            });
-        },
-        mergeSectionByNextKey(key, translation, newObj) {
-            let nextSectionKeySectionUid = key.split(':')[0];
-            let nextSectionKeySectionNumber = key.split(':')[1];
-            let nextSectionKeyIntegerPart = nextSectionKeySectionNumber.split('.')[0];
-            let nextSectionKeyDecimalPart = nextSectionKeySectionNumber.split('.')[1];
-            let nextKey = nextSectionKeySectionUid + ':' + nextSectionKeyIntegerPart + '.' + (parseInt(nextSectionKeyDecimalPart) + 1);
-            if (translation.data[nextKey]) {
-                newObj[key] = translation.data[nextKey];
+                this.invalidateHtmlValidation();
+                this.updateProgress();
+                return true;
+            } catch (error) {
+                displayMessage(element, error.message);
+                return false;
+            } finally {
+                this.structurePreviewLoading = false;
             }
         },
-        mergeSectionByNextSubsectionKey(key, translation, newObj) {
-            let nextSectionKeySectionUid = key.split(':')[0];
-            let nextSectionKeySectionNumber = key.split(':')[1];
-            let SectionNumberParts = nextSectionKeySectionNumber.split('.');
-            let nextKey = nextSectionKeySectionUid + ':' + SectionNumberParts[0] + '.' + SectionNumberParts[1] + '.' + (parseInt(SectionNumberParts[2]) + 1);
-            if (translation.data[nextKey]) {
-                newObj[key] = translation.data[nextKey];
+        canEditStructureSegment(muid, uid) {
+            if (this.structurePreviewLoading) return false;
+            if (!this.structureDraft) return true;
+            const {preview, submission} = this.structureDraft;
+            return !submission && preview.projects.some(project => project.muid === muid) &&
+                (uid === preview.uid || (preview.operation === 'split' && uid === preview.splitter_uid));
+        },
+        structurePendingReviews() {
+            const draft = this.structureDraft;
+            return draft ? draft.preview.manual_projects.filter(muid => !draft.reviewed.includes(muid)) : [];
+        },
+        isStructureResult(muid, uid) {
+            const preview = this.structureDraft?.preview;
+            return !!preview && preview.projects.some(project => project.muid === muid) &&
+                (uid === preview.uid || (preview.operation === 'split' && uid === preview.splitter_uid));
+        },
+        structureResultLabel(muid, uid) {
+            if (!this.isStructureResult(muid, uid)) return '';
+            const preview = this.structureDraft.preview;
+            const role = preview.operation === 'merge' ? 'Merged segment' : uid === preview.splitter_uid ? 'New segment' : 'Retained segment';
+            const column = this.translations.find(project => project.muid === muid);
+            return role + ' · ' + uid + (column?.canEdit && !this.structureDraft.submission ? ' · Editable' : ' · Read-only');
+        },
+        async submitStructureDraftFromReview() {
+            if (this.splitMergeProcessing || !this.structureDraft) return;
+            this.structureDraftError = '';
+            if (!this.structureDraft.submission && this.structurePendingReviews().length) {
+                this.structureDraftError = 'Check each required project before confirming.';
+                document.querySelector('.structure-draft-review input:not(:checked)')?.focus();
+                return;
+            }
+            const operation = this.structureDraft.preview.operation === 'split' ? 'Split' : 'Merge';
+            this.splitMergeProcessing = true;
+            try {
+                const result = await this.confirmStructureDraft(this.sourceMuid, this.prefix);
+                if (!result) return;
+                this.splitting = false;
+                this.merging = false;
+                this.affectedFiles = result.affectedFiles;
+                this.affectedPrefix = result.prefix;
+                const pending = ['pending', 'failed'].includes(result.publicationStatus);
+                document.querySelector('sc-bilara-toast')?.show(pending
+                    ? operation + ' saved. Automatic publication has not been queued. Ask an administrator to commit and push the affected files.'
+                    : operation + ' saved. ' + result.autoPublishedPaths.length + ' files queued for GitHub unpublished',
+                    pending ? 'warning' : 'success', 5000);
+                this.$nextTick(() => document.querySelector('.dialog-affected-files')?.show());
+            } catch (error) {
+                this.structureDraftError = error.message;
+            } finally {
+                this.splitMergeProcessing = false;
             }
         },
-        cancelMerge(translations) {
+        getStructureMergeSummary() {
+            const preview = this.structureDraft?.preview;
+            if (preview?.operation !== 'merge') return '';
+            const summary = `Merge ${preview.mergee_uid} into ${preview.merger_uid}.`;
+            return preview.merge_crosses_section
+                ? summary + ' This crosses a section boundary. If the next segment is the only segment in its section, that section will no longer have a separate UID; its content is merged into the preceding segment.'
+                : summary;
+        },
+        cancelSplit() { this.cancelStructureDraft(); },
+        cancelMerge() { this.cancelStructureDraft(); },
+        cancelStructureDraft() {
+            if (this.structureDraft?.submission) {
+                throw new Error('The submitted operation must be checked before cancelling. Click Confirm to check its status.');
+            }
+            this.htmlDraftOverrides = this.structureDraft?.htmlOverrides || {};
             this._restoreTranslations();
+            this.translations = this.translations.filter(t => !t._structureAdded);
+            this.htmlProject = this.translations.find(t => t.muid === this.htmlProjectName) || this.htmlProject;
+            this.structureDraft = null;
+            this.structureDraftError = '';
+            this.splitting = false;
+            this.merging = false;
+            this.invalidateHtmlValidation();
         },
         isMergeHighlightedRow(uid) {
-            return this.merger_uid === uid || this.mergee_uid === uid;
+            return this.merger_uid === uid;
         },
         isSplitHighlightedRow(uid, splittingUid) {
             return splittingUid === uid || this.splitter_uid === uid;
@@ -1037,8 +820,9 @@ function fetchTranslation() {
                     obj = { canEdit: false, muid: key, prefix: prefix };
                     obj["data"] = data.data;
                     obj["canEdit"] = data["can_edit"];
+                    obj.materialized = data.materialized;
                 } catch (error) {
-                    throw new Error(error);
+                    throw error;
                 }
                 if (source) {
                     obj.isSource = true;
@@ -1063,8 +847,9 @@ function fetchTranslation() {
                     obj = { canEdit: false, muid: key, prefix: prefix };
                     obj["data"] = data.data;
                     obj["canEdit"] = data["can_edit"];
+                    obj.materialized = data.materialized;
                 } catch (error) {
-                    throw new Error(error);
+                    throw error;
                 }
                 if (source) {
                     obj.isSource = true;
@@ -1076,12 +861,16 @@ function fetchTranslation() {
             try {
                 const response = await requestWithTokenRetry(`projects/${key}/${prefix}/`);
                 const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || `Server error (${response.status})`);
+                }
                 if (!data.data) {
                     throw new Error("Invalid data format from the API");
                 }
+                this.structureRevisions[key] = data.structure_revision;
                 return data;
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         async refreshHtmlProject(prefix = this.prefix) {
@@ -1144,10 +933,11 @@ function fetchTranslation() {
                     can_edit: true,
                 };
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         async handleEnter(event, uid, segment, translation, originalValue = '') {
+            if (this.structurePreviewLoading || this.structureDraft) return;
             if (translation.canEdit) {
                 if (event.shiftKey) {
                     event.target.value += "\n";
@@ -1169,8 +959,12 @@ function fetchTranslation() {
                     }
                 }
 
-                // Save only when content is modified.
-                if (segment !== originalValue) {
+                // Ordinary edits are compared with saved content, not the latest focus value.
+                const key = translation.muid + ':' + uid;
+                const modified = this.isRemarkProject(translation.muid)
+                    ? segment !== originalValue
+                    : Object.hasOwn(this.dirtySegments, key) && segment !== this.dirtySegments[key];
+                if (modified) {
                     // Validate tag values before saving
                     if (translation.muid && translation.muid.startsWith('tag')) {
                         const invalidTags = this.getInvalidTags(segment);
@@ -1193,7 +987,7 @@ function fetchTranslation() {
                             );
                         }
                     } catch (error) {
-                        throw new Error(error);
+                        throw error;
                     }
                 }
             }
@@ -1229,10 +1023,11 @@ function fetchTranslation() {
                     throw new Error(body?.detail ?? "Failed to save remark");
                 }
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         async updateHandler(muid, data, element, btnId='btn-translation-commit') {
+            if (this.structureDraft) throw new Error('Confirm or cancel the structure draft before saving.');
             const badgeId = `translation-badge-${muid}-${Object.keys(data)[0]}`;
             if (Object.keys(data).length === 1) {
                 hideBadge(badgeId);
@@ -1242,7 +1037,7 @@ function fetchTranslation() {
                 const response = await requestWithTokenRetry(`projects/${muid}/${this.prefix}/`, {
                     credentials: "include",
                     method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", ...(this.structureRevisions[muid] ? {"X-Structure-Revision": this.structureRevisions[muid]} : {}) },
                     body: JSON.stringify(data),
                 });
                 if (!response.ok) {
@@ -1252,7 +1047,14 @@ function fetchTranslation() {
                 if (muid && muid.startsWith('html-')) {
                     Object.keys(data).forEach(uid => delete this.htmlDraftOverrides[uid]);
                 }
-                const { task_id: taskID } = await response.json();
+                const { materialized } = await response.json();
+                const column = this.translations.find(t => t.muid === muid);
+                if (column) column.materialized = materialized;
+                for (const [uid, value] of Object.entries(data)) {
+                    const key = muid + ":" + uid;
+                    if (column?.data[uid] === value) delete this.dirtySegments[key];
+                    else if (column) this.dirtySegments[key] = value;
+                }
                 // if (!taskID) {
                 //     displayMessage(
                 //         element,
@@ -1273,101 +1075,127 @@ function fetchTranslation() {
                 }
             } catch (error) {
                 displayBadge(badgeId, BadgeStatus.ERROR);
-                throw new Error(error);
-            }
-        },
-        async updateHandlerForSplit(muid, prefix, element) {
-            try {
-                let payload = {
-                    muid: muid,
-                    prefix: prefix,
-                    splitter_uid: this.splitter_uid,
-                }
-                const response = await requestWithTokenRetry(`projects/split/`, {
-                    credentials: "include",
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                });
-                if (!response.ok) {
-                    const body = await response.json().catch(() => null);
-                    let errorMessage = `Server error (${response.status})`;
-                    if (body?.detail) {
-                        errorMessage = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
-                    }
-                    throw new Error(errorMessage);
-                }
-                const result = await response.json();
-                await this.refreshHtmlProjectAfterSplitMerge(prefix);
-                this._commitSplitMergeOperation();
-
-                const publishModeByPath = this._buildSplitMergePublishModeMap(result);
-                const affectedFiles = [
-                    this._buildAffectedFile(result.path, muid, 'main', publishModeByPath),
-                    ...(result.affected || []).map(a => this._buildAffectedFile(a.path, a.muid, 'related', publishModeByPath))
-                ];
-
-                return {
-                    affectedFiles,
-                    prefix,
-                    autoPublishedPaths: result.auto_published_paths || [],
-                    manualPublishPaths: result.manual_publish_paths || [],
-                    autoPublishTaskId: result.auto_publish_task_id || null,
-                };
-            } catch (error) {
                 throw error;
             }
         },
-        async updateHandlerForMerge(muid, prefix, element) {
-            try {
-                let payload = {
-                    muid: muid,
-                    prefix: prefix,
-                    merger_uid: this.merger_uid,
-                    mergee_uid: this.mergee_uid,
+        async updateHandlerForSplit(muid, prefix) {
+            return this.confirmStructureDraft(muid, prefix);
+        },
+        async updateHandlerForMerge(muid, prefix) {
+            return this.confirmStructureDraft(muid, prefix);
+        },
+        async confirmStructureDraft(muid, prefix) {
+            const draft = this.structureDraft;
+            if (!draft) throw new Error('Generate a preview before confirming');
+            const preview = draft.preview;
+            if (!draft.submission) {
+                if (preview.manual_projects.some(muid => !draft.reviewed.includes(muid))) {
+                    throw new Error('Review every manual project before confirming.');
                 }
-                const response = await requestWithTokenRetry(`projects/merge/`, {
-                    credentials: "include",
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                });
-                if (!response.ok) {
-                    const body = await response.json().catch(() => null);
-                    let errorMessage = `Server error (${response.status})`;
-                    if (body?.detail) {
-                        errorMessage = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+                const edits = {};
+                for (const column of this.translations) {
+                    const original = preview.projects.find(p => p.muid === column.muid);
+                    if (!original) continue;
+                    const changes = {};
+                    for (const [uid, value] of Object.entries(column.data)) {
+                        if (value !== original.data[uid]) changes[uid] = value;
                     }
-                    throw new Error(errorMessage);
+                    if (Object.keys(changes).length) edits[column.muid] = changes;
                 }
-                const result = await response.json();
-                await this.refreshHtmlProjectAfterSplitMerge(prefix);
-                this._commitSplitMergeOperation();
-
-                const publishModeByPath = this._buildSplitMergePublishModeMap(result);
-                const affectedFiles = [
-                    this._buildAffectedFile(result.path, muid, 'main', publishModeByPath),
-                    ...(result.affected || []).map(a => this._buildAffectedFile(a.path, a.muid, 'related', publishModeByPath))
-                ];
-
-                return {
-                    affectedFiles,
-                    prefix,
-                    autoPublishedPaths: result.auto_published_paths || [],
-                    manualPublishPaths: result.manual_publish_paths || [],
-                    autoPublishTaskId: result.auto_publish_task_id || null,
-                };
-            } catch (error) {
-                throw error;
+                draft.submission = {muid, prefix: this.prefix, operation: preview.operation,
+                    uid: preview.uid, revision: preview.revision, edits,
+                    reviewed: [...draft.reviewed],
+                    operation_id: crypto.randomUUID()};
+            } else {
+                const statusResponse = await requestWithTokenRetry('projects/structure/status/', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({muid, prefix: this.prefix, operation_id: draft.submission.operation_id}),
+                });
+                const status = await statusResponse.json().catch(() => ({}));
+                if (!statusResponse.ok) throw new Error(status.detail?.message || status.detail || 'Operation is still pending; retry confirmation.');
+                if (status.status === 'complete') return this.applyStructureResult(status);
+                if (status.status !== 'not_found') throw new Error('Unknown structure operation status. Retry confirmation.');
             }
+            return this.submitStructureOperation(draft.submission);
+        },
+        async submitStructureOperation(submission) {
+            localStorage.setItem(this.structureRecoveryKey(), JSON.stringify(submission));
+            const response = await requestWithTokenRetry(`projects/${submission.operation}/`, {
+                credentials: 'include', method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(submission),
+            });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                if (response.status >= 400 && response.status < 500 && error.detail?.code === 'submission_rejected') {
+                    if (this.structureDraft) this.structureDraft.submission = null;
+                    localStorage.removeItem(this.structureRecoveryKey());
+                }
+                throw new Error(error.detail?.message || error.detail || 'Submission interrupted. Click Confirm to check and resume the operation.');
+            }
+            return this.applyStructureResult(await response.json());
+        },
+        structureRecoveryKey() {
+            return `bilara:structure:${this.sourceMuid}:${this.prefix}`;
+        },
+        async resumeStructureOperation() {
+            const saved = localStorage.getItem(this.structureRecoveryKey());
+            if (!saved) return;
+            let submission;
+            try {
+                submission = JSON.parse(saved);
+            } catch (error) {
+                throw new Error('Saved structure operation recovery data is corrupted. The record has been preserved; contact an administrator to recover the operation.');
+            }
+            const response = await requestWithTokenRetry('projects/structure/status/', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({muid: submission.muid, prefix: submission.prefix, operation_id: submission.operation_id}),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.detail?.message || result.detail || 'A structure operation is pending. Retry loading to resume it.');
+            if (result.status === 'complete') {
+                if (['pending', 'failed'].includes(result.publication_status)) {
+                    document.querySelector('sc-bilara-toast')?.show('Structure changes are saved. Automatic publication is not confirmed. Ask an administrator to commit and push the affected files.', 'warning', 10000);
+                }
+                return this.applyStructureResult(result);
+            }
+            if (result.status === 'not_found') return this.submitStructureOperation(submission);
+            throw new Error('Unknown structure operation status. Retry loading to resume it.');
+        },
+        applyStructureResult(result) {
+            // Virtual translations share the root's revision but have no file in the result.
+            for (const column of this.translations) {
+                if (column.muid.startsWith('translation-') && column.materialized === false && column.prefix === this.prefix) {
+                    this.structureRevisions[column.muid] = result.structure_revision;
+                }
+            }
+            for (const project of result.projects) {
+                const column = this.translations.find(t => t.muid === project.muid);
+                if (column) {
+                    column.data = project.data;
+                    column.materialized = true;
+                }
+                this.structureRevisions[project.muid] = result.structure_revision;
+            }
+            this.structureDraft = null;
+            this.htmlDraftOverrides = {};
+            this.dirtySegments = {};
+            this.htmlProject = this.translations.find(t => t.muid === this.htmlProjectName) || this.htmlProject;
+            this.invalidateHtmlValidation();
+            this._commitSplitMergeOperation();
+            localStorage.removeItem(this.structureRecoveryKey());
+            const modes = this._buildSplitMergePublishModeMap(result);
+            return {affectedFiles: result.projects.map(p => this._buildAffectedFile('/' + p.path, p.muid, p.muid === this.sourceMuid ? 'main' : 'related', modes)),
+                prefix: this.prefix, autoPublishedPaths: result.auto_published_paths || [],
+                autoPublishTaskId: result.auto_publish_task_id || null,
+                publicationStatus: result.publication_status};
         },
         _buildSplitMergePublishModeMap(result) {
             const publishModeByPath = new Map();
+            for (const path of result.auto_publish_pending_paths || []) {
+                publishModeByPath.set(path, 'pending');
+            }
             for (const path of result.auto_published_paths || []) {
                 publishModeByPath.set(path, 'auto');
-            }
-            for (const path of result.manual_publish_paths || []) {
-                publishModeByPath.set(path, 'manual');
             }
             return publishModeByPath;
         },
@@ -1376,7 +1204,7 @@ function fetchTranslation() {
                 path,
                 muid,
                 type,
-                publishMode: publishModeByPath.get(path) || 'manual',
+                publishMode: publishModeByPath.get(path) || 'pending',
             };
         },
         async fetchRelatedProjects(prefix) {
@@ -1388,7 +1216,7 @@ function fetchTranslation() {
                 }
                 return data.projects;
             } catch (error) {
-                throw new Error(error);
+                throw error;
             }
         },
         async loadAvailableTags() {
@@ -1413,12 +1241,14 @@ function fetchTranslation() {
             return tags.filter(t => !validNames.has(t));
         },
         async toggleRelatedProject(project) {
+            if (this.relatedProjectsLocked()) return false;
             const index = this.translations.findIndex(t => t.muid === project);
             if (index > -1) {
                 this.translations.splice(index, 1);
                 const saved = this.getSavedRelatedProjects().filter(p => p !== project);
                 this.saveRelatedProjects(saved);
             } else {
+                this.relatedProjectLoads++;
                 try {
                     await this.findOrCreateObject(project, this.prefix);
                     const saved = this.getSavedRelatedProjects();
@@ -1427,9 +1257,12 @@ function fetchTranslation() {
                         this.saveRelatedProjects(saved);
                     }
                 } catch (error) {
-                    throw new Error(error);
+                    throw error;
+                } finally {
+                    this.relatedProjectLoads--;
                 }
             }
+            return true;
         },
         getSavedRelatedProjects() {
             try {
@@ -1480,10 +1313,7 @@ function getBeforeLastDot(str) {
 }
 
 function isMergeSplitConditionMet(uid, key) {
-    const regex = /:([0-9]+(\.[0-9]+)?)$/;
-    const sectionRegex = /:[0-9]+\.[0-9]+\.[0-9]+$/;
-
-    return (regex.test(uid) || sectionRegex.test(uid));
+    return /^[^:]+:[0-9]+(?:\.[0-9]+)*$/.test(uid);
 }
 
 function escapeHtml(text) {

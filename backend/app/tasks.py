@@ -50,11 +50,12 @@ def commit(user: dict, file_paths: list[str], message: str, add: bool = True) ->
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
     git_operation = GitManager.add if add else GitManager.remove
 
-    if not (
-        git_operation(manager.unpublished, paths)
-        and GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
-    ):
+    if not git_operation(manager.unpublished, paths):
         return False
+    # A retry after a failed push may already have committed these files.
+    # No new commit is needed in that case, but the existing commit must be pushed.
+    # commit() returns False only for no changes; write failures raise and stop here.
+    GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
 
     changed_files = manager.pull(manager.unpublished)
     GitManager.push(manager.unpublished, "origin", "unpublished")

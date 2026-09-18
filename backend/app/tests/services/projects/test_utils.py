@@ -6,8 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from app.services.projects.utils import (
-    AUTO_PUBLISH_SPLIT_MERGE_TYPES,
-    MANUAL_PUBLISH_SPLIT_MERGE_TYPES,
     OverrideException,
     compute_target_path,
     create_new_project_file_names,
@@ -16,7 +14,6 @@ from app.services.projects.utils import (
     generate_file_name_prefixes,
     get_json_data,
     get_split_merge_text_type,
-    group_split_merge_publish_paths,
     materialize_translation_file,
     schedule_split_merge_auto_publish,
     sort_paths,
@@ -40,77 +37,6 @@ class TestProjectsUtils:
     )
     def test_get_split_merge_text_type(self, path, expected):
         assert get_split_merge_text_type(path) == expected
-
-    def test_group_split_merge_publish_paths(self):
-        paths = [
-            Path("/app/checkouts/unpublished/root/pli/ms/sutta/dn/dn1_root-pli-ms.json"),
-            Path("/app/checkouts/unpublished/html/pli/ms/sutta/dn/dn1_html-pli-ms.json"),
-            Path("/app/checkouts/unpublished/reference/pli/ms/sutta/dn/dn1_reference-pli-ms.json"),
-            Path("/app/checkouts/unpublished/variant/pli/ms/sutta/dn/dn1_variant-pli-ms.json"),
-            Path("/app/checkouts/unpublished/translation/en/user/sutta/dn/dn1_translation-en-user.json"),
-            Path("/app/checkouts/unpublished/comment/en/user/sutta/dn/dn1_comment-en-user.json"),
-        ]
-
-        auto_publish_paths, manual_publish_paths = group_split_merge_publish_paths(paths)
-
-        assert {get_split_merge_text_type(path) for path in auto_publish_paths} == AUTO_PUBLISH_SPLIT_MERGE_TYPES
-        assert {get_split_merge_text_type(path) for path in manual_publish_paths} == MANUAL_PUBLISH_SPLIT_MERGE_TYPES
-
-    @patch("app.services.projects.utils.get_user")
-    @patch("app.services.projects.utils.commit")
-    def test_schedule_split_merge_auto_publish_only_commits_structural_files(
-        self,
-        mock_commit,
-        mock_get_user,
-        user,
-    ):
-        paths = [
-            Path("/app/checkouts/unpublished/root/pli/ms/sutta/dn/dn1_root-pli-ms.json"),
-            Path("/app/checkouts/unpublished/html/pli/ms/sutta/dn/dn1_html-pli-ms.json"),
-            Path("/app/checkouts/unpublished/translation/en/user/sutta/dn/dn1_translation-en-user.json"),
-            Path("/app/checkouts/unpublished/comment/en/user/sutta/dn/dn1_comment-en-user.json"),
-        ]
-        mock_get_user.return_value = user
-        mock_commit.delay.return_value.id = "task-id"
-
-        result = schedule_split_merge_auto_publish(user, paths, "split")
-
-        assert result.task_id == "task-id"
-        assert result.auto_published_paths == [
-            "/root/pli/ms/sutta/dn/dn1_root-pli-ms.json",
-            "/html/pli/ms/sutta/dn/dn1_html-pli-ms.json",
-        ]
-        assert result.manual_publish_paths == [
-            "/translation/en/user/sutta/dn/dn1_translation-en-user.json",
-            "/comment/en/user/sutta/dn/dn1_comment-en-user.json",
-        ]
-        mock_commit.delay.assert_called_once()
-        committed_paths = mock_commit.delay.call_args.args[1]
-        assert committed_paths == [
-            "root/pli/ms/sutta/dn/dn1_root-pli-ms.json",
-            "html/pli/ms/sutta/dn/dn1_html-pli-ms.json",
-        ]
-
-    @patch("app.services.projects.utils.commit")
-    def test_schedule_split_merge_auto_publish_skips_commit_without_structural_files(
-        self,
-        mock_commit,
-        user,
-    ):
-        paths = [
-            Path("/app/checkouts/unpublished/translation/en/user/sutta/dn/dn1_translation-en-user.json"),
-            Path("/app/checkouts/unpublished/comment/en/user/sutta/dn/dn1_comment-en-user.json"),
-        ]
-
-        result = schedule_split_merge_auto_publish(user, paths, "merge")
-
-        assert result.task_id is None
-        assert result.auto_published_paths == []
-        assert result.manual_publish_paths == [
-            "/translation/en/user/sutta/dn/dn1_translation-en-user.json",
-            "/comment/en/user/sutta/dn/dn1_comment-en-user.json",
-        ]
-        mock_commit.delay.assert_not_called()
 
     def test_sort_paths(self):
         paths = {"path/2b", "path/10a", "path/1c"}
@@ -178,7 +104,7 @@ class TestProjectsUtils:
         ), patch(
             "app.services.projects.utils.sort_data",
             side_effect=lambda current_data, _path: current_data,
-        ), write_failure:
+        ), patch("app.services.projects.utils.settings.WORK_DIR", tmp_path), write_failure:
             mock_get_user.return_value = user
             mock_search.update_segments.return_value = update_segments_return
             result, error, task_id = update_file(path, data, root_path, user)
@@ -194,7 +120,9 @@ class TestProjectsUtils:
         self,
         tmp_path,
         user,
+        monkeypatch,
     ):
+        monkeypatch.setattr("app.services.projects.utils.settings.WORK_DIR", tmp_path)
         source_path = tmp_path / "mn1_root-pli-ms.json"
         source_path.write_text(json.dumps([{"mn1:1.1": "Source"}]), encoding="utf-8")
         target_path = tmp_path / "translation" / "mn1_translation-en-test.json"

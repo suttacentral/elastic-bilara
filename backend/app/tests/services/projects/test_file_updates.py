@@ -3,13 +3,75 @@ import multiprocessing
 import stat
 import threading
 import time
+import builtins
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from app.services.projects import utils as project_utils
 from app.services.projects.file_coordinator import project_file_lock
 from app.services.projects.virtual_projects import VirtualProjectFile
+from app.services.projects.structure_store import StructureStore, StructureConflict
+
+
+@pytest.mark.parametrize("mode", ["existing", "virtual", "materialized"])
+@pytest.mark.parametrize("change", [None, "order", "epoch", "unknown_uid"])
+def test_save_reuses_root_for_revision_and_uid_validation(tmp_path, monkeypatch, mode, change):
+    monkeypatch.setattr(project_utils.settings, "WORK_DIR", tmp_path)
+    root = tmp_path / "root.json"
+    target = tmp_path / "translation.json"
+    root.write_text(json.dumps({"uid:1": "A", "uid:2": "B"}))
+    original = {"uid:1": "", "uid:2": "kept"}
+    if mode != "virtual":
+        target.write_text(json.dumps(original))
+    store = StructureStore(tmp_path, root)
+    revision = store.revision()
+    if change == "order":
+        root.write_text(json.dumps({"uid:2": "B", "uid:1": "A"}))
+    elif change == "epoch":
+        store.write_json(store.directory / "head.json", "new-epoch")
+    user = SimpleNamespace(github_id="1")
+    monkeypatch.setattr(project_utils, "get_user", lambda _id: user)
+    monkeypatch.setattr(project_utils, "_schedule_file_commit", lambda *_args: "task")
+    # Sorting has its own existing Root lookup; measure the validation reads here.
+    monkeypatch.setattr(project_utils, "sort_data", lambda data, _path: data)
+    monkeypatch.setattr(project_utils.search, "update_segments", lambda *_args: (True, None))
+    monkeypatch.setattr(project_utils.search, "add_to_index", lambda *_args: (True, None))
+    reads = []
+    builtin_open, path_open = builtins.open, Path.open
+
+    def track_open(path, *args, **kwargs):
+        if Path(path) == root:
+            reads.append(path)
+        return builtin_open(path, *args, **kwargs)
+
+    def track_path_open(path, *args, **kwargs):
+        if path == root:
+            reads.append(path)
+        return path_open(path, *args, **kwargs)
+
+    with monkeypatch.context() as tracking:
+        tracking.setattr(builtins, "open", track_open)
+        tracking.setattr(Path, "open", track_path_open)
+        data = {"unknown" if change == "unknown_uid" else "uid:1": "saved"}
+        if mode == "existing":
+            result = project_utils.update_file(target, data, root, user, revision)
+        else:
+            virtual = VirtualProjectFile(source_path=root, source_muid="root-pli-ms",
+                target_path=target, target_muid="translation-en-test", prefix="test")
+            result = project_utils.materialize_translation_file(virtual, data, user, revision)
+    assert len(reads) == 1
+    if change:
+        assert result[0] is False
+        assert isinstance(result[1], KeyError if change == "unknown_uid" else StructureConflict)
+        assert result[2] is None
+        assert not target.exists() if mode == "virtual" else json.loads(target.read_text()) == original
+    else:
+        assert result[:3] == (True, None, "task")
+        assert json.loads(target.read_text()) == {
+            "uid:1": "saved", "uid:2": "" if mode == "virtual" else "kept"}
 
 
 def _patch_file_in_process(path_string, key, value, start):
@@ -23,6 +85,7 @@ def _patch_file_in_process(path_string, key, value, start):
 
 
 def test_update_file_preserves_concurrent_segment_patches(tmp_path, monkeypatch):
+    monkeypatch.setattr(project_utils.settings, 'WORK_DIR', tmp_path)
     target_path = tmp_path / "translation.json"
     root_path = tmp_path / "root.json"
     target_path.write_text(json.dumps({"uid:1": "", "uid:2": ""}), encoding="utf-8")
@@ -89,6 +152,7 @@ def test_failed_materialization_does_not_delete_concurrent_successful_save(
     tmp_path,
     monkeypatch,
 ):
+    monkeypatch.setattr(project_utils.settings, 'WORK_DIR', tmp_path)
     source_path = tmp_path / "root.json"
     target_path = tmp_path / "translation.json"
     source_path.write_text(

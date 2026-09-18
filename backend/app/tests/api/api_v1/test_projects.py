@@ -1,4 +1,5 @@
 from copy import copy
+import hashlib
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -170,6 +171,7 @@ class TestProjects:
             "data": {},
             "task_id": None,
             "materialized": False,
+            "structure_revision": hashlib.sha256(b'[["mn1:1.1"],null]').hexdigest(),
         }
         assert not target_file.exists()
 
@@ -239,6 +241,7 @@ class TestProjects:
             "data": {"mn1:1.2": "译文"},
             "task_id": "materialize-task",
             "materialized": True,
+            "structure_revision": None,
         }
         assert json.loads(target_file.read_text(encoding="utf-8")) == {
             "mn1:1.1": "",
@@ -416,25 +419,28 @@ class TestProjects:
 
     @pytest.mark.asyncio
     @patch("app.api.api_v1.endpoints.projects.search.add_to_index")
-    @patch("app.api.api_v1.endpoints.projects.yield_file_path")
     @patch("app.api.api_v1.endpoints.projects.search.get_file_paths")
     @patch("app.api.api_v1.endpoints.projects.can_edit_translation")
-    @patch("app.api.api_v1.endpoints.projects.get_json_data")
     async def test_get_json_data_for_prefix_in_project_discovers_unindexed_project_file(
         self,
-        mock_get_json_data,
         mock_can_edit_translation,
         mock_get_file_paths,
-        mock_yield_file_path,
         mock_add_to_index,
         async_client,
         mock_get_current_user,
+        tmp_path,
+        monkeypatch,
     ) -> None:
-        file_path = settings.WORK_DIR / "translation/zh/blurb/an-blurbs_translation-zh.json"
+        work_dir = tmp_path / "unpublished"
+        file_path = work_dir / "translation/zh/blurb/an-blurbs_translation-zh.json"
+        root_path = work_dir / "root/pli/ms/an-blurbs_root-pli-ms.json"
+        file_path.parent.mkdir(parents=True)
+        root_path.parent.mkdir(parents=True)
+        file_path.write_text(json.dumps({"an1:0.1": "Test"}), encoding="utf-8")
+        root_path.write_text(json.dumps({"an1:0.1": "Source"}), encoding="utf-8")
+        monkeypatch.setattr(settings, "WORK_DIR", work_dir)
         mock_get_file_paths.return_value = set()
-        mock_yield_file_path.return_value = [file_path]
         mock_can_edit_translation.return_value = True
-        mock_get_json_data.return_value = {"an1:0.1": "Test"}
 
         response = await async_client.get("/projects/translation-zh-blurb/an-blurbs/")
 
@@ -463,8 +469,15 @@ class TestProjects:
         mock_get_current_user,
         can_edit,
         data,
+        tmp_path,
+        monkeypatch,
     ) -> None:
-        mock_get_file_paths.return_value = set("root/an1.1-10")
+        work_dir = tmp_path / 'unpublished'
+        root = work_dir / 'root/pli/ms/an1.1-10_root-pli-ms.json'
+        root.parent.mkdir(parents=True)
+        root.write_text(json.dumps(data))
+        monkeypatch.setattr(settings, 'WORK_DIR', work_dir)
+        mock_get_file_paths.return_value = {str(root)}
         mock_can_edit_translation.return_value = can_edit
         mock_get_json_data.return_value = data
         response = await async_client.get("/projects/translation-en-test/an1.1-10/")
@@ -476,6 +489,9 @@ class TestProjects:
             "data": data,
             "task_id": None,
             "materialized": True,
+            "structure_revision": hashlib.sha256(
+                json.dumps([list(data), None], ensure_ascii=False, separators=(",", ":")).encode()
+            ).hexdigest(),
         }
 
     @pytest.mark.asyncio
@@ -669,6 +685,7 @@ class TestProjects:
             "data": data,
             "task_id": "test_task_id",
             "materialized": True,
+            "structure_revision": None,
         }
 
     @pytest.mark.asyncio
