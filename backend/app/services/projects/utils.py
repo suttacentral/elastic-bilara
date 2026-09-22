@@ -89,7 +89,8 @@ def _update_file_locked(
     original_data: dict[str, str] = file_data.copy()
     file_data.update(data)
 
-    _, elastic_error = search.update_segments(path, file_data)
+    # Index only the submitted segments; the file still stores the full document.
+    _, elastic_error = search.update_segments(path, data)
     if elastic_error:
         return False, elastic_error
 

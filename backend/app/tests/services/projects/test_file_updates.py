@@ -4,9 +4,11 @@ import stat
 import threading
 import time
 import builtins
+from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -14,6 +16,90 @@ from app.services.projects import utils as project_utils
 from app.services.projects.file_coordinator import project_file_lock
 from app.services.projects.virtual_projects import VirtualProjectFile
 from app.services.projects.structure_store import StructureStore, StructureConflict
+from search.utils import create_doc_id
+
+
+@pytest.mark.parametrize("mode", ["existing", "materialized"])
+@pytest.mark.parametrize("size", [10, 1000])
+@pytest.mark.parametrize("patch", [{"uid:0": "changed"}, {"uid:0": ""},
+                                    {"uid:0": "changed", "uid:1": "second"}])
+def test_save_indexes_only_submitted_segments(tmp_path, monkeypatch, mode, size, patch):
+    monkeypatch.setattr(project_utils.settings, "WORK_DIR", tmp_path)
+    root = tmp_path / "root.json"
+    target = tmp_path / "translation.json"
+    original = {f"uid:{i}": f"text {i}" for i in range(size)}
+    root.write_text(json.dumps(original))
+    target.write_text(json.dumps(original))
+    user = SimpleNamespace(github_id="1")
+    monkeypatch.setattr(project_utils, "get_user", lambda _: user)
+    monkeypatch.setattr(project_utils, "_schedule_file_commit", lambda *_: "task")
+    monkeypatch.setattr(project_utils, "sort_data", lambda data, _: data)
+
+    main_index = project_utils.settings.ES_INDEX
+    segments_index = project_utils.settings.ES_SEGMENTS_INDEX
+    main_id = create_doc_id(target)
+    documents = {(main_index, main_id): {
+        "segments": [{"uid": uid, "segment": text} for uid, text in original.items()]
+    }}
+    documents.update({(segments_index, create_doc_id(target, uid)): {
+        "uid": uid, "segment": text, "muid": "translation-en-test"
+    } for uid, text in original.items()})
+
+    def index(*, index, id, body):
+        documents[index, id] = deepcopy(body)
+
+    transport = Mock()
+    transport.get.side_effect = lambda *, index, id: {"_source": deepcopy(documents[index, id])}
+    transport.index.side_effect = index
+    # Exercise the real index-update methods, replacing only the ES transport.
+    monkeypatch.setattr(project_utils.search, "_search", transport)
+    revision = StructureStore(tmp_path, root).revision()
+    if mode == "existing":
+        result = project_utils.update_file(target, patch, root, user, revision)
+    else:
+        virtual = VirtualProjectFile(root, "root-pli-ms", target, "translation-en-test", "test")
+        result = project_utils.materialize_translation_file(virtual, patch, user, revision)
+
+    assert result[:3] == (True, None, "task")
+    expected = original | patch
+    assert json.loads(target.read_text()) == expected
+    assert {item["uid"]: item["segment"] for item in documents[main_index, main_id]["segments"]} == expected
+    assert {uid: documents[segments_index, create_doc_id(target, uid)]["segment"] for uid in original} == expected
+    expected_ids = [main_id, *(create_doc_id(target, uid) for uid in patch)]
+    assert [call.kwargs["id"] for call in transport.get.call_args_list] == expected_ids
+    assert [call.kwargs["id"] for call in transport.index.call_args_list] == expected_ids
+
+
+@pytest.mark.parametrize("rollback_fails", [False, True])
+def test_incremental_save_rolls_back_index_when_file_write_fails(tmp_path, monkeypatch, rollback_fails):
+    monkeypatch.setattr(project_utils.settings, "WORK_DIR", tmp_path)
+    root = tmp_path / "root.json"
+    target = tmp_path / "translation.json"
+    original = {"uid:1": "original", "uid:2": "kept"}
+    root.write_text(json.dumps(original))
+    target.write_text(json.dumps(original))
+    user = SimpleNamespace(github_id="1")
+    monkeypatch.setattr(project_utils, "get_user", lambda _: user)
+    commit = Mock()
+    monkeypatch.setattr(project_utils, "_schedule_file_commit", commit)
+    file_error = OSError("write failed")
+    monkeypatch.setattr(project_utils, "write_json_data", Mock(return_value=(False, file_error)))
+    rollback = (False, RuntimeError("index unavailable")) if rollback_fails else (True, None)
+    index = Mock(side_effect=[(True, None), rollback])
+    monkeypatch.setattr(project_utils.search, "update_segments", index)
+
+    updated, error, task_id = project_utils.update_file(target, {"uid:1": ""}, root, user)
+
+    assert updated is False
+    assert task_id is None
+    assert index.call_args_list[0].args == (target, {"uid:1": ""})
+    assert index.call_args_list[1].args == (target, original)
+    if rollback_fails:
+        assert "write failed; search rollback failed: index unavailable" in str(error)
+    else:
+        assert error is file_error
+    assert json.loads(target.read_text()) == original
+    commit.assert_not_called()
 
 
 @pytest.mark.parametrize("mode", ["existing", "virtual", "materialized"])
