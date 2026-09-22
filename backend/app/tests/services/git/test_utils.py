@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -108,3 +109,37 @@ class TestUtils:
     )
     def test_find_mismatched_paths(self, paths, expected_output):
         assert utils.find_mismatched_paths(paths) == expected_output
+
+
+@pytest.mark.parametrize(
+    "path, expected",
+    json.loads((Path(__file__).resolve().parents[2] / "fixtures/publication-project-heads.json").read_text()),
+)
+def test_publication_project_heads(path, expected):
+    assert utils.get_project_head(Path(path)) == expected
+
+
+def test_kn_paths_across_vaggas_belong_to_one_project():
+    paths = [
+        "translation/de/sabbamitta/sutta/kn/ud/vagga1/ud1.1.json",
+        "translation/de/sabbamitta/sutta/kn/iti/vagga2/iti11.json",
+        "translation/de/sabbamitta/sutta/kn/kp/kp1.json",
+    ]
+    assert utils.find_mismatched_paths(paths) == (True, [])
+
+
+@pytest.mark.parametrize("prefix", ["", "checkouts/unpublished/", "/app/checkouts/unpublished/"])
+def test_supported_publication_paths_are_normalized_before_grouping(prefix):
+    relative_paths = [
+        "translation/de/sabbamitta/sutta/kn/ud/vagga1/ud1.1.json",
+        "translation/de/sabbamitta/sutta/kn/iti/vagga2/iti11.json",
+    ]
+    input_paths = [prefix + path for path in relative_paths]
+
+    for input_path, relative_path in zip(input_paths, relative_paths):
+        cleaned = utils.clean_path(input_path)
+        assert cleaned == Path(relative_path)
+        assert not cleaned.is_absolute()
+        assert utils.get_project_head(cleaned) == "translation_de_sabbamitta_sutta_kn"
+
+    assert utils.find_mismatched_paths(input_paths) == (True, [])

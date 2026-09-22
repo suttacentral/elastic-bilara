@@ -15,8 +15,8 @@
 
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/utils.js"></script>
-    <script src="./static/js/nav.js"></script>
     <script src="./static/js/pullRequest.js"></script>
+    <script src="./static/js/nav.js"></script>
     <script src="./static/js/elements/notification/sc-bilara-notification-icon.js" type="module"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav.js" type="module"></script>
 
@@ -29,7 +29,6 @@
   <body class="page-layout" x-data="getUserInfo()" x-init="await getRole(); if (!isActive) window.location.href = '/'">
     <header>
       <sc-bilara-nav></sc-bilara-nav>
-
     </header>
 
     <main class="main-content">

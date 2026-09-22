@@ -26,7 +26,16 @@ def get_file_heads(paths: list[Path] = None) -> dict[Path, str]:
 
 
 def get_project_head(path: Path) -> str:
+    """Return the publication group for a repository-relative file path.
+
+    Callers must remove supported checkout prefixes with clean_path first.
+    Absolute filesystem paths (including /translation/...) are not supported;
+    this function groups paths and does not normalize or validate them.
+    """
     parts: tuple = path.parts[:-1]
+    # Group Sutta publications by collection, regardless of nesting below it.
+    if len(parts) >= 5 and parts[3] == "sutta":
+        return "_".join(parts[:5])
     if len(parts) == 6 and parts[-3] not in parts[-2]:
         return str(Path().joinpath(*parts[:-1])).replace("/", "_")
     elif len(parts) > 6 and parts[-3] in parts[-2]:
@@ -35,6 +44,11 @@ def get_project_head(path: Path) -> str:
 
 
 def clean_path(path: str) -> Path:
+    """Remove the two supported unpublished checkout prefixes.
+
+    Other inputs are passed to Path unchanged; this does not turn arbitrary
+    absolute paths into repository-relative paths or validate their safety.
+    """
     return (
         Path(path.removeprefix("/app/checkouts/unpublished/"))
         if "/app/checkouts/unpublished/" in path

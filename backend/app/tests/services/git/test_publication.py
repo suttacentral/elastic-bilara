@@ -202,3 +202,25 @@ def test_pull_request_file_membership_comes_from_local_git_diff(tmp_path):
     )
 
     assert changed_paths == {path}
+
+
+def test_kn_publication_reuses_collection_pr_without_closing_vagga_prs():
+    paths = [
+        Path("translation/de/sabbamitta/sutta/kn/ud/vagga1/ud1.1.json"),
+        Path("translation/de/sabbamitta/sutta/kn/iti/vagga2/iti11.json"),
+    ]
+    kn_branch = "translation_de_sabbamitta_sutta_kn"
+    kn_pr = Mock()
+    vagga_pr = Mock()
+
+    plan = build_publication_plan(
+        paths,
+        {
+            kn_branch: kn_pr,
+            f"{kn_branch}_ud_vagga1": vagga_pr,
+        },
+    )
+
+    assert plan.target_branch == kn_branch
+    assert plan.target_pull_request is kn_pr
+    assert plan.pull_requests_to_close == ()

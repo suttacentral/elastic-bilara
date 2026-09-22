@@ -561,28 +561,7 @@ function gitStatusPanel() {
                 return;
             }
 
-            // Group files by project head (same logic as backend get_project_head)
-            // so that each /pr/ call only contains files from the same project.
-            const groupByProject = (paths) => {
-                const groups = {};
-                for (const path of paths) {
-                    const parts = path.split('/').filter(Boolean);
-                    const dirParts = parts.slice(0, -1);
-                    let head;
-                    if (dirParts.length === 6 && !dirParts[dirParts.length - 2].includes(dirParts[dirParts.length - 3])) {
-                        head = dirParts.slice(0, -1).join('_');
-                    } else if (dirParts.length > 6 && dirParts[dirParts.length - 3] && dirParts[dirParts.length - 2].includes(dirParts[dirParts.length - 3])) {
-                        head = dirParts.slice(0, -2).join('_');
-                    } else {
-                        head = dirParts.join('_');
-                    }
-                    if (!groups[head]) groups[head] = [];
-                    groups[head].push(path);
-                }
-                return Object.values(groups);
-            };
-
-            const fileGroups = groupByProject([...this.selectedFiles]);
+            const fileGroups = groupPublicationPathsByProject([...this.selectedFiles]);
             const totalGroups = fileGroups.length;
 
             this.batchPublishing = true;

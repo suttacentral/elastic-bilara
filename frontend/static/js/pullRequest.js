@@ -1,3 +1,28 @@
+function getPublicationProjectHead(path) {
+    const parts = path.split('/').filter(Boolean).slice(0, -1);
+    // Keep aligned with backend get_project_head: Sutta groups stop at the collection.
+    if (parts.length >= 5 && parts[3] === 'sutta') {
+        return parts.slice(0, 5).join('_');
+    }
+    if (parts.length === 6 && !parts[parts.length - 2].includes(parts[parts.length - 3])) {
+        return parts.slice(0, -1).join('_');
+    }
+    if (parts.length > 6 && parts[parts.length - 2].includes(parts[parts.length - 3])) {
+        return parts.slice(0, -2).join('_');
+    }
+    return parts.join('_');
+}
+
+function groupPublicationPathsByProject(paths) {
+    const groups = new Map();
+    for (const path of paths) {
+        const head = getPublicationProjectHead(path);
+        if (!groups.has(head)) groups.set(head, []);
+        groups.get(head).push(path);
+    }
+    return [...groups.values()];
+}
+
 const PULL_REQUEST_TASK_POLL_INTERVAL = 750;
 const PULL_REQUEST_TASK_MAX_POLL_INTERVAL = 10000;
 const PULL_REQUEST_TASK_MONITOR_TIMEOUT = 65 * 60 * 1000;

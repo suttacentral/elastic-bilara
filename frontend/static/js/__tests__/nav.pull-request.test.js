@@ -87,10 +87,17 @@ describe('navigation pull request notifications', () => {
         await flushMicrotasks();
 
         expect(nav.isPublishing).toBe(false);
+        expect(toast.show).toHaveBeenNthCalledWith(
+            1,
+            'Pull Requests scheduled for 2 file(s).',
+            'success',
+            10000,
+            [],
+        );
         expect(toast.show).toHaveBeenLastCalledWith(
             '2 Pull Requests created.',
             'success',
-            12000,
+            0,
             [
                 {
                     label: 'View Pull Request 1 ↗',
@@ -140,7 +147,7 @@ describe('navigation pull request notifications', () => {
         expect(toast.show).toHaveBeenLastCalledWith(
             'Pull Request created. 1 failed.',
             'error',
-            8000,
+            0,
             [{
                 label: 'View Pull Request ↗',
                 href: 'https://github.com/suttacentral/bilara-data/pull/1234',
@@ -194,4 +201,29 @@ describe('navigation pull request notifications', () => {
             }),
         );
     });
+});
+
+
+test('publishing KN files across vaggas schedules exactly one PR', async () => {
+    const paths = [
+        'translation/de/sabbamitta/sutta/kn/ud/vagga1/ud1.1.json',
+        'translation/de/sabbamitta/sutta/kn/iti/vagga2/iti11.json',
+        'translation/de/sabbamitta/sutta/kn/kp/kp1.json',
+    ];
+    const request = jest.fn(async endpoint => ({
+        ok: true,
+        json: async () => endpoint === 'pr/'
+            ? { task_id: 'kn-task' }
+            : { status: 'SUCCESS', result: 'https://github.com/example/pull/1' },
+    }));
+    const toast = { show: jest.fn() };
+    const nav = loadNav(request, toast);
+    nav.publishingFile = 'translation/de/sabbamitta/sutta/kn';
+    nav.getElementByName = jest.fn(() => ({ isFile: false }));
+    nav.getModifiedFiles = jest.fn().mockResolvedValue(paths);
+    await nav.confirmPublish();
+    await flushMicrotasks();
+    const submissions = request.mock.calls.filter(([endpoint]) => endpoint === 'pr/');
+    expect(submissions).toHaveLength(1);
+    expect(JSON.parse(submissions[0][1].body)).toEqual({ paths });
 });
