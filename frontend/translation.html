@@ -244,49 +244,6 @@
                     reorderDragIndex: -1,
                     reorderDropIndex: -1,
                     reorderDropSide: '',
-                    columnOrderSaveErrorShown: false,
-                    getColumnOrderKey() {
-                        const p = new URLSearchParams(window.location.search);
-                        return `bilara:col-order:${p.get('prefix')}:${p.get('source')}:${p.get('muid')}`;
-                    },
-                    applySavedColumnOrder() {
-                        try {
-                            const saved = JSON.parse(localStorage.getItem(this.getColumnOrderKey()));
-                            if (!Array.isArray(saved) || saved.length === 0) return;
-                            // Only apply when all columns are loaded
-                            if (translations.length < saved.length) return;
-                            const byMuid = {};
-                            translations.forEach(t => byMuid[t.muid] = t);
-                            const reordered = [];
-                            const used = new Set();
-                            saved.forEach(muid => {
-                                if (byMuid[muid] && !used.has(muid)) {
-                                    reordered.push(byMuid[muid]);
-                                    used.add(muid);
-                                }
-                            });
-                            translations.forEach(t => {
-                                if (!used.has(t.muid)) reordered.push(t);
-                            });
-                            if (reordered.length === translations.length) {
-                                translations.splice(0, translations.length, ...reordered);
-                            }
-                        } catch(e) { /* ignore corrupt data */ }
-                    },
-                    saveColumnOrder() {
-                        try {
-                            localStorage.setItem(this.getColumnOrderKey(), JSON.stringify(translations.map(t => t.muid)));
-                        } catch (error) {
-                            console.warn('Failed to persist column order to localStorage.', error);
-                            if (!this.columnOrderSaveErrorShown) {
-                                const toast = document.querySelector('sc-bilara-toast');
-                                if (toast) {
-                                    toast.show('Column order could not be saved in this browser.', 'warning');
-                                }
-                                this.columnOrderSaveErrorShown = true;
-                            }
-                        }
-                    },
                     initWidths() {
                         if (this.columnWidths.length !== translations.length) {
                             const w = 100 / translations.length;

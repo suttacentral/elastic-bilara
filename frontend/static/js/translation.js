@@ -68,6 +68,7 @@ function fetchTranslation() {
         structureDraftError: "",
         structurePreviewLoading: false,
         relatedProjectLoads: 0,
+        columnOrderSaveErrorShown: false,
         relatedProjectsLocked() {
             return this.structurePreviewLoading || !!this.structureDraft;
         },
@@ -334,26 +335,63 @@ function fetchTranslation() {
             }
             window.dispatchEvent(new CustomEvent('restore-related-projects', { detail: { projects: allLoaded } }));
 
-            // Apply saved column order after all translations are loaded
-            try {
-                const orderKey = `bilara:col-order:${this.prefix}:${source}:${muid}`;
-                const saved = JSON.parse(localStorage.getItem(orderKey));
-                if (Array.isArray(saved) && saved.length > 0) {
-                    const byMuid = {};
-                    this.translations.forEach(t => byMuid[t.muid] = t);
-                    const reordered = [];
-                    const used = new Set();
-                    saved.forEach(m => {
-                        if (byMuid[m] && !used.has(m)) { reordered.push(byMuid[m]); used.add(m); }
-                    });
-                    reordered.push(...this.translations.filter(t => !used.has(t.muid)));
-                    if (reordered.length === this.translations.length) {
-                        this.translations.splice(0, this.translations.length, ...reordered);
-                    }
-                }
-            } catch(e) { /* ignore corrupt data */ }
+            this.applySavedColumnOrder();
 
             this.updateProgress();
+        },
+        getColumnOrderKey() {
+            const scope = this.muid || `source:${this.sourceMuid}`;
+            return `bilara:col-order:v2:${scope}`;
+        },
+        getSavedColumnOrder() {
+            try {
+                const stored = localStorage.getItem(this.getColumnOrderKey());
+                // Only migrate this sutta's old preference when no project preference exists.
+                const legacyKey = `bilara:col-order:${this.prefix}:${this.sourceMuid}:${this.muid}`;
+                const saved = JSON.parse(stored === null ? localStorage.getItem(legacyKey) : stored);
+                if (!Array.isArray(saved) || !saved.every(muid => typeof muid === 'string')) return [];
+                const order = [...new Set(saved)];
+                if (stored === null) this.persistColumnOrder(order);
+                return order;
+            } catch (error) {
+                return [];
+            }
+        },
+        applySavedColumnOrder() {
+            const saved = this.getSavedColumnOrder();
+            const remaining = new Map(this.translations.map(item => [item.muid, item]));
+            const reordered = [];
+            for (const muid of saved) {
+                if (remaining.has(muid)) {
+                    reordered.push(remaining.get(muid));
+                    remaining.delete(muid);
+                }
+            }
+            reordered.push(...remaining.values());
+            this.translations.splice(0, this.translations.length, ...reordered);
+        },
+        saveColumnOrder() {
+            const visible = this.translations.map(item => item.muid);
+            const visibleSet = new Set(visible);
+            const complete = [...new Set([...this.getSavedColumnOrder(), ...visible])];
+            let index = 0;
+            // Keep unavailable/unselected columns in their slots while reordering visible ones.
+            const order = complete.map(muid => visibleSet.has(muid) ? visible[index++] : muid);
+            this.persistColumnOrder(order);
+        },
+        persistColumnOrder(order) {
+            try {
+                localStorage.setItem(this.getColumnOrderKey(), JSON.stringify(order));
+            } catch (error) {
+                console.warn('Failed to persist column order to localStorage.', error);
+                if (!this.columnOrderSaveErrorShown) {
+                    const toast = document.querySelector('sc-bilara-toast');
+                    if (toast) {
+                        toast.show('Column order could not be saved in this browser.', 'warning');
+                    }
+                    this.columnOrderSaveErrorShown = true;
+                }
+            }
         },
         async loadCurrentUserForTranslation() {
             try {
@@ -1256,6 +1294,8 @@ function fetchTranslation() {
                         saved.push(project);
                         this.saveRelatedProjects(saved);
                     }
+                    this.applySavedColumnOrder();
+                    this.saveColumnOrder();
                 } catch (error) {
                     throw error;
                 } finally {
