@@ -607,7 +607,7 @@
                                             },
                                             applyHintToTextarea(value) {
                                                 if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
-                                                const textarea = this.$el.querySelector('textarea');
+                                                const textarea = this.$el.closest('.translation-cell').querySelector('textarea');
                                                 if (!textarea) return;
                                                 textarea.focus();
                                                 textarea.setSelectionRange(0, textarea.value.length);
