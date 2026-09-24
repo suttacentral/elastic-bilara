@@ -111,9 +111,63 @@
 }
 
 .navigation-list__item {
-    padding: var(--space-xxs) 0 var(--space-xxs) var(--space-md);
+    padding: 0 0 0 var(--space-md);
     min-width: var(--space-xxl);
     color: var(--color-text);
+}
+
+.navigation-list__row {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: var(--space-xxs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease;
+}
+
+.navigation-list__row:hover,
+.navigation-list__row:focus-within {
+    background-color: color-mix(in srgb, var(--color-background-secondary) 35%, transparent);
+}
+
+.navigation-list__item-content {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.navigation-list__guide-line {
+    flex: 1;
+    height: 1px;
+    margin: 0 var(--space-xs);
+    border-bottom: 1px dashed color-mix(in srgb, var(--color-text-secondary) 40%, transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.navigation-list__row:hover .navigation-list__guide-line,
+.navigation-list__row:focus-within .navigation-list__guide-line {
+    opacity: 1;
+}
+
+.navigation-list__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.navigation-list__actions .btn {
+    float: none;
+    margin-left: 0;
+}
+
+.navigation-list__actions .translation-progress {
+    float: none;
+    margin: 0;
 }
 
 .navigation-list__item-link {
@@ -122,13 +176,15 @@
     color: var(--color-text);
     padding: var(--space-xxs) var(--space-sm);
     border-radius: var(--radius-sm);
-    transition: 0.3s ease;
+    transition: color 0.15s ease;
     margin-right: var(--space-sm);
     cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .navigation-list__item-link:hover {
-    background-color: var(--color-background-secondary);
     color: var(--color-text-emphasized);
 }
 
@@ -223,6 +279,10 @@
         padding: 0;
     }
 
+    .navigation-list__guide-line {
+        display: none;
+    }
+
     .container-flex {
         gap: var(--space-xxs);
     }
@@ -314,5 +374,13 @@
 
     .translation-progress .progress-text {
         font-size: 9px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navigation-list__row,
+    .navigation-list__item-link,
+    .navigation-list__guide-line {
+        transition: none;
     }
 }

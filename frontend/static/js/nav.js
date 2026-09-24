@@ -381,7 +381,7 @@ function tree() {
                 : `x-on:click.prevent="itemClicked('${element.fullName}')"`;
 
             // Render node links
-            let result = `
+            let contentHtml = `
                 <a href="${href}"
                     class="navigation-list__item-link ${element.isOpen ? 'navigation-list--open' : ''} ${element.isVirtual ? 'navigation-list__item-link--virtual' : ''}"
                     ${clickHandlers}>
@@ -390,13 +390,18 @@ function tree() {
                 </a>`;
 
             if (element.isFile && element.isVirtual) {
-                result += `<span class="translation-not-started">Not started</span>`;
+                contentHtml += `<span class="translation-not-started">Not started</span>`;
             }
 
+            if (element.loading) {
+                contentHtml += `<div class="node-loading"><div class="spinner-small"></div></div>`;
+            }
+
+            let actionsHtml = '';
             const isTranslationFile = element.fullName && element.fullName.startsWith('translation/');
             if (element.isFile && isTranslationFile && element.progress !== null && element.progress >= 0) {
                 const progressClass = element.progress >= 90 ? 'high' : (element.progress >= 50 ? 'medium' : 'low');
-                result += `<span class="translation-progress ${progressClass}" title="${element.progress}% translated (${element.translatedKeys}/${element.totalKeys})">
+                actionsHtml += `<span class="translation-progress ${progressClass}" title="${element.progress}% translated (${element.translatedKeys}/${element.totalKeys})">
                     <span class="progress-bar" style="width: ${element.progress}%"></span>
                     <span class="progress-text">${element.progress}%</span>
                 </span>`;
@@ -404,13 +409,21 @@ function tree() {
 
             if (element.muid && (element.fullName.split('/').length >= 5 || element.isFile)) {
                 if (element.canPublish && !element.isVirtual) {
-                    result += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
+                    actionsHtml += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
                 }
             }
 
-            if (element.loading) {
-                result += `<div class="node-loading"><div class="spinner-small"></div></div>`;
-            }
+            const hasActions = Boolean(actionsHtml);
+            const guideLineHtml = hasActions ? `<span class="navigation-list__guide-line" aria-hidden="true"></span>` : '';
+
+            let result = `
+                <div class="navigation-list__row ${hasActions ? 'navigation-list__row--has-actions' : ''}">
+                    <div class="navigation-list__item-content">
+                        ${contentHtml}
+                    </div>
+                    ${guideLineHtml}
+                    ${hasActions ? `<div class="navigation-list__actions">${actionsHtml}</div>` : ''}
+                </div>`;
 
             // Render child nodes (only when expanded and not a file)
             if (element.isOpen && !element.isFile && element.children.length) {
@@ -651,52 +664,6 @@ function tree() {
             const { muid: source } = await response.json();
             const muid = elementMuid === source ? "" : elementMuid;
             return `/translation?prefix=${elementPrefix}&muid=${muid}&source=${source}`;
-        },
-
-        async fetchProgress(element) {
-            if (!element.isFile) return;
-            try {
-                const response = await requestWithTokenRetry(`projects/${element.fullName}/translation-progress/`);
-                if (response.ok) {
-                    const data = await response.json();
-                    element.progress = data.progress;
-                    element.totalKeys = data.total_keys;
-                    element.translatedKeys = data.translated_keys;
-                    this.updateProgressInDOM(element);
-                } else {
-                    element.progress = -1;
-                }
-            } catch (error) {
-                console.error('Error fetching progress:', error);
-                element.progress = -1;
-            }
-        },
-
-        updateProgressInDOM(element) {
-            const links = document.querySelectorAll('.navigation-list__item-link');
-            for (const link of links) {
-                if (link.textContent.trim().includes(element.name.split("/").join("").trim())) {
-                    const listItem = link.closest('.navigation-list__item');
-                    if (!listItem) continue;
-
-                    let progressSpan = listItem.querySelector('.translation-progress');
-
-                    if (element.progress !== null && element.progress >= 0) {
-                        const progressClass = element.progress >= 90 ? 'high' : (element.progress >= 50 ? 'medium' : 'low');
-                        const progressHTML = `<span class="translation-progress ${progressClass}" title="${element.progress}% translated (${element.translatedKeys}/${element.totalKeys})">
-                            <span class="progress-bar" style="width: ${element.progress}%"></span>
-                            <span class="progress-text">${element.progress}%</span>
-                        </span>`;
-
-                        if (progressSpan) {
-                            progressSpan.outerHTML = progressHTML;
-                        } else {
-                            link.insertAdjacentHTML('afterend', progressHTML);
-                        }
-                    }
-                    break;
-                }
-            }
         }
     };
 }
