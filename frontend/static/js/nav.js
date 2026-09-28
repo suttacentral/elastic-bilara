@@ -26,7 +26,10 @@ function tree() {
             ) {
                 return null;
             }
-            return state;
+            return {
+                ...state,
+                openDirectories: state.openDirectories.map(path => path.replace(/\/{2,}/g, '/')),
+            };
         },
         createHistoryState() {
             const openDirectories = [];
@@ -126,24 +129,23 @@ function tree() {
 
                             if (i === 0) {
                                 if (!rootElementsMap.has(pathPart)) {
-                                    const newElement = new Element(pathPart + "/", null, true, false);
+                                    const newElement = new Element(pathPart, null, true, false);
                                     rootElementsMap.set(pathPart, newElement);
                                     this.data.push(newElement);
                                 }
                                 currentElement = rootElementsMap.get(pathPart);
-                                currentBase = pathPart;
                             } else {
                                 let childElement = currentElement.children.find(child =>
-                                    child.name === pathPart + "/"
+                                    child.name === pathPart
                                 );
 
                                 if (!childElement) {
-                                    childElement = new Element(pathPart + "/", currentBase, i < 4, false);
+                                    childElement = new Element(pathPart, currentBase, i < 4, false);
                                     currentElement.add(childElement);
                                 }
                                 currentElement = childElement;
-                                currentBase = currentBase + "/" + pathPart;
                             }
+                            currentBase = currentElement.fullName;
                         }
                     }
 
@@ -407,7 +409,8 @@ function tree() {
                 </span>`;
             }
 
-            if (element.muid && (element.fullName.split('/').length >= 5 || element.isFile)) {
+            const depth = element.fullName.split('/').filter(Boolean).length;
+            if (element.muid && (depth >= 4 || element.isFile)) {
                 if (element.canPublish && !element.isVirtual) {
                     actionsHtml += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
                 }

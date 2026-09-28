@@ -32,7 +32,7 @@ def configured_translation(tmp_path, monkeypatch, request):
         }
     ]))
     monkeypatch.setattr(settings, "WORK_DIR", work_dir)
-    user = SimpleNamespace(github_id="1", username="tester", model_dump=lambda: {})
+    user = SimpleNamespace(github_id="1", username="tester", role="writer", model_dump=lambda: {})
     monkeypatch.setattr(project_utils, "get_user", lambda _: user)
     monkeypatch.setattr(projects, "can_edit_translation", lambda *_: True)
     monkeypatch.setattr(
@@ -49,10 +49,15 @@ def configured_translation(tmp_path, monkeypatch, request):
 
 
 def test_virtual_directory_read_and_first_save(configured_translation, monkeypatch):
+    from app.api.api_v1.endpoints import directories
     from app.api.api_v1.endpoints.directories import get_dir_content, get_root_content
+    from app.services.directories.index import DirectoryIndex
     from app.services.directories.utils import validate_dir_path
 
     virtual_file, user = configured_translation
+    monkeypatch.setattr(directories, "get_user", lambda _: user)
+    directory_index = DirectoryIndex()
+    assert directory_index.search('tester') == []
     monkeypatch.setattr(
         projects.search, "get_file_paths",
         lambda muid, **kwargs: {str(virtual_file.source_path)}
@@ -78,6 +83,7 @@ def test_virtual_directory_read_and_first_save(configured_translation, monkeypat
     assert json.loads(virtual_file.target_path.read_text()) == {
         "mn1:1": "New text", "mn1:2": "",
     }
+    assert settings.WORK_DIR / relative.parts[0] / 'en/tester' in directory_index.search('tester')
     from app.services.projects.virtual_projects import list_virtual_files
     assert list_virtual_files(directory) == []
 

@@ -325,7 +325,7 @@ def test_create_project_file_success(mocker):
     new_file_path = Path("/path/to/new/file.json")
 
     mocker.patch.object(Path, "exists", return_value=False)
-    mocker.patch.object(Path, "mkdir", return_value=None)
+    create_directory = mocker.patch("app.services.projects.utils.create_indexed_directory")
 
     mocker.patch("search.utils.get_json_data", return_value=mock_get_json_data())
     mocker.patch("json.dump", autospec=True, return_value=new_file_path.parent)
@@ -337,7 +337,7 @@ def test_create_project_file_success(mocker):
     assert create_project_file(segments_root_path, new_file_path)
 
     assert json.dump.call_args[0][0] == {"segment1": "", "segment2": ""}
-    Path.mkdir.assert_called_once()
+    create_directory.assert_called_once_with(new_file_path.parent)
     json.dump.assert_called_once_with(
         {"segment1": "", "segment2": ""}, mock_open_instance, indent=2, ensure_ascii=False
     )

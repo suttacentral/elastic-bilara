@@ -6,6 +6,7 @@ from typing import Annotated
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.auth import utils
+from app.services.directories.index import create_indexed_directory
 from app.services.users.permissions import is_admin_or_superuser, is_user_active
 from fastapi import APIRouter, Depends, HTTPException, status
 from search.search import Search
@@ -283,7 +284,7 @@ async def create_tag_data_file(
     tag_file_path = settings.WORK_DIR / "tag" / Path(*relative_parts[:-1]) / tag_filename
 
     # Create directory and file
-    tag_file_path.parent.mkdir(parents=True, exist_ok=True)
+    create_indexed_directory(tag_file_path.parent)
     tag_data = {key: "" for key in root_data.keys()}
     with open(tag_file_path, "w") as f:
         json.dump(tag_data, f, indent=2, ensure_ascii=False)

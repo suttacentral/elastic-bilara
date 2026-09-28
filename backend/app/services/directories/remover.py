@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.core.text_types import TextType
 from app.db.schemas.user import UserBase
 from app.services.directories.utils import get_matches
+from app.services.directories.index import DirectoryIndex
 from app.services.users.utils import get_user
 from search.search import Search
 from search.utils import is_root
@@ -47,8 +48,13 @@ class Remover:
         return main_task_id, related_task_id
 
     def _delete_elements(self, matches):
-        for match in matches:
-            shutil.rmtree(match) if self.is_dir else match.unlink()
+        if self.is_dir:
+            with DirectoryIndex().changes(matches, recursive=True):
+                for match in matches:
+                    shutil.rmtree(match)
+        else:
+            for match in matches:
+                match.unlink()
 
     def _get_matches(self) -> set[Path]:
         matches = get_matches(self.path, True)

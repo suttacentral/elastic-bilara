@@ -9,6 +9,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.text_types import TextType
 from app.db.schemas.user import User, UserBase
+from app.services.directories.index import create_indexed_directory
 from app.services.git import utils
 from app.services.projects.virtual_projects import VirtualProjectFile
 from app.services.projects.file_coordinator import project_file_lock
@@ -194,7 +195,7 @@ def _materialize_translation_file_locked(virtual_file, data, user, root_data):
 
             complete_data = {uid: "" for uid in root_data}
             complete_data.update(data)
-            target_path.parent.mkdir(parents=True, exist_ok=True)
+            create_indexed_directory(target_path.parent)
             with tempfile.NamedTemporaryFile(
                 mode="w",
                 encoding="utf-8",
@@ -356,7 +357,7 @@ def create_project_file(segments_root_path: Path, new_file_path: Path):
     segment_ids = get_json_data(segments_root_path).keys()
     data = {key: "" for key in segment_ids}
     if not new_file_path.parent.exists():
-        new_file_path.parent.mkdir(parents=True, exist_ok=True)
+        create_indexed_directory(new_file_path.parent)
     with open(new_file_path, "w+") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     return True

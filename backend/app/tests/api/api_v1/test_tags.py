@@ -244,7 +244,7 @@ class TestTagDataFile:
         mock_yield.return_value = []  # No existing tag file
 
         with patch("builtins.open", MagicMock()):
-            with patch("pathlib.Path.mkdir"):
+            with patch("app.api.api_v1.endpoints.tags.create_indexed_directory"):
                 response = await async_client.post("/tags/data/sn1.1/")
 
         assert response.status_code == status.HTTP_201_CREATED

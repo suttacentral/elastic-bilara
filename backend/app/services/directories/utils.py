@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.text_types import TextType
 from app.db.schemas.user import UserBase
 from app.services.directories.finder import Finder
+from app.services.directories.index import DirectoryIndex
 from app.services.projects.utils import write_json_data
 from app.services.users.utils import get_user
 from search.search import Search
@@ -59,7 +60,9 @@ def create_directory(path: Path) -> bool:
     if not can_create_root_dir(path):
         return False
     matches = get_matches(path)
-    [dir_path.mkdir(parents=True, exist_ok=True) for dir_path in matches]
+    with DirectoryIndex().changes(matches):
+        for dir_path in matches:
+            dir_path.mkdir(parents=True, exist_ok=True)
     return True
 
 
