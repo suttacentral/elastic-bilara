@@ -211,11 +211,10 @@ services:
       - ./logs/nginx/:/var/logs/nginx
       - ./frontend:/var/www/html
       - certs:/certs
-      - ./scripts/generate_nginx_certs.sh:/scripts/generate_nginx_certs.sh
+      - ./scripts/generate_nginx_certs.sh:/docker-entrypoint.d/generate_nginx_certs.sh
     ports:
       - 9080:80
       - ${DOCKER_BACKEND_PORT}:443
-    entrypoint: ["/bin/bash", "/scripts/generate_nginx_certs.sh"]
     healthcheck:
       test: ["CMD-SHELL", "test -f /certs/key.pem && test -f /certs/cert.pem"]
       interval: 1s
