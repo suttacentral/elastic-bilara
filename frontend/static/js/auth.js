@@ -2,11 +2,10 @@ const API_URL = param => new URL(`api/v1/${param}`, window.location.origin).href
 
 async function getToken() {
     const code = new URLSearchParams(window.location.search).get("code");
-    if (!code) {
-        return;
-    }
     try {
-        const res = await fetch(API_URL(`token/?code=${code}`));
+        const res = code
+            ? await fetch(API_URL(`token/?code=${code}`))
+            : await requestWithTokenRetry("users/me");
         if (res.ok) {
             window.location.href = "/nav";
         }

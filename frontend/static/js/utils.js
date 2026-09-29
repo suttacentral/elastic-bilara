@@ -36,6 +36,9 @@ function getCurrentUser() {
     if (!currentUserPromise) {
         currentUserPromise = requestWithTokenRetry("users/me")
             .then(async response => {
+                if (response.status === 401) {
+                    window.location.replace("/");
+                }
                 if (!response.ok) {
                     throw new Error(`Failed to load current user: ${response.status}`);
                 }
