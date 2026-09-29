@@ -17,3 +17,13 @@ test('Sutta publishing keeps collections and translation projects separate', () 
     expect(groups[0]).toEqual(paths.slice(0, 6));
     expect(groups.flat()).toEqual(paths);
 });
+
+
+test('site grouping combines nested files while separating language, type and blurb', () => {
+    const paths = cases.filter(([file]) => file.split('/')[2] === 'site' || file.split('/')[2] === 'blurb')
+        .map(([file]) => file);
+    const groups = sandbox.groupPublicationPathsByProject(paths);
+    expect(groups).toHaveLength(4);
+    expect(groups.map(group => group.length)).toEqual([5, 1, 1, 2]);
+    expect(groups.flat()).toEqual(paths);
+});

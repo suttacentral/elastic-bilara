@@ -1,6 +1,10 @@
 function getPublicationProjectHead(path) {
     const parts = path.split('/').filter(Boolean).slice(0, -1);
-    // Keep aligned with backend get_project_head: Sutta groups stop at the collection.
+    // Keep aligned with backend get_project_head.
+    if (parts.length >= 3 && parts[2] === 'site') {
+        return parts.slice(0, 3).join('_');
+    }
+    // Sutta groups stop at the collection.
     if (parts.length >= 5 && parts[3] === 'sutta') {
         return parts.slice(0, 5).join('_');
     }

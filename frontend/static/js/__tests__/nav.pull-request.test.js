@@ -227,3 +227,43 @@ test('publishing KN files across vaggas schedules exactly one PR', async () => {
     expect(submissions).toHaveLength(1);
     expect(JSON.parse(submissions[0][1].body)).toEqual({ paths });
 });
+
+
+test.each([
+    ['translation/de/site/', [
+        'translation/de/site/about_translation-de-site.json',
+        'translation/de/site/name/sutta/an-name_translation-de-site.json',
+        'translation/de/site/name/vinaya/pli-tv-name_translation-de-site.json',
+    ], ['translation/fr/site/about_translation-fr-site.json']],
+    ['translation/de/site/name', [
+        'translation/de/site/name/sutta/an-name_translation-de-site.json',
+        'translation/de/site/name/vinaya/pli-tv-name_translation-de-site.json',
+    ], [
+        'translation/de/site/names_translation-de-site.json',
+        'translation/de/site/about_translation-de-site.json',
+    ]],
+    ['translation/de/blurb', [
+        'translation/de/blurb/an-blurbs_translation-de.json',
+        'translation/de/blurb/dn-blurbs_translation-de.json',
+    ], ['translation/de/site/about_translation-de-site.json']],
+])('publishing %s submits only its modified files in one request', async (directory, included, excluded) => {
+    const request = jest.fn(async endpoint => ({
+        ok: true,
+        json: async () => endpoint === 'pr/'
+            ? { task_id: 'publish-task' }
+            : { status: 'SUCCESS', result: 'https://github.com/example/pull/1' },
+    }));
+    const toast = { show: jest.fn() };
+    const nav = loadNav(request, toast);
+    nav.publishingFile = directory;
+    nav.getElementByName = jest.fn(() => ({ isFile: false }));
+    nav.getModifiedFiles = jest.fn().mockResolvedValue([...included, ...excluded]);
+    await nav.confirmPublish();
+    await flushMicrotasks();
+    const submissions = request.mock.calls.filter(([endpoint]) => endpoint === 'pr/');
+    expect(submissions).toHaveLength(1);
+    expect(JSON.parse(submissions[0][1].body)).toEqual({ paths: included });
+    expect(toast.show).toHaveBeenLastCalledWith('Pull Request created.', 'success', 0, [
+        { label: 'View Pull Request ↗', href: 'https://github.com/example/pull/1' },
+    ]);
+});

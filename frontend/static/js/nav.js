@@ -409,8 +409,9 @@ function tree() {
                 </span>`;
             }
 
-            const depth = element.fullName.split('/').filter(Boolean).length;
-            if (element.muid && (depth >= 4 || element.isFile)) {
+            const parts = element.fullName.split('/').filter(Boolean);
+            const isSiteOrBlurb = parts.length >= 3 && ['site', 'blurb'].includes(parts[2]);
+            if (element.muid && (parts.length >= 4 || element.isFile || isSiteOrBlurb)) {
                 if (element.canPublish && !element.isVirtual) {
                     actionsHtml += `<button class="btn btn--publish" x-on:click="openPublishModal('${element.fullName}')">Publish</button>`;
                 }
@@ -522,7 +523,7 @@ function tree() {
                 }
             } else {
                 // If it's a directory, filter all modified files under this directory
-                const dirPrefix = this.publishingFile;
+                const dirPrefix = this.publishingFile.split('/').filter(Boolean).join('/') + '/';
                 pathsToPublish = modifiedFiles.filter(filePath => filePath.startsWith(dirPrefix));
             }
 
@@ -678,7 +679,8 @@ class Element {
         this.fullName = this.base === null ? this.name : this.base + this.name;
         this.isOpen = isOpen;
         this.isFile = isFile;
-        this.muid = this.fullName.split("/").length > 3 ? getMuid(this.fullName) : null;
+        const parts = this.fullName.split('/').filter(Boolean);
+        this.muid = parts.length >= 3 ? getMuid(parts.join('/')) : null;
         this.prefix = this.isFile ? getPrefix(this.name) : null;
         this.children = [];
         this.progress = null;  // null = loading, -1 = error, 0-100 = actual progress

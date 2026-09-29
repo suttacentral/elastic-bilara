@@ -224,3 +224,26 @@ def test_kn_publication_reuses_collection_pr_without_closing_vagga_prs():
     assert plan.target_branch == kn_branch
     assert plan.target_pull_request is kn_pr
     assert plan.pull_requests_to_close == ()
+
+
+@pytest.mark.parametrize("has_existing_pr", [False, True])
+def test_site_publication_groups_nested_files_and_reuses_site_pr(has_existing_pr):
+    paths = [
+        Path("translation/de/site/about_translation-de-site.json"),
+        Path("translation/de/site/name/sutta/an-name_translation-de-site.json"),
+        Path("translation/de/site/name/vinaya/pli-tv-name_translation-de-site.json"),
+    ]
+    site_pr = Mock() if has_existing_pr else None
+    open_prs = {"translation_de_site_name_sutta": Mock()}
+    if site_pr:
+        open_prs["translation_de_site"] = site_pr
+    plan = build_publication_plan(paths, open_prs)
+    assert plan.target_branch == "translation_de_site"
+    assert plan.target_pull_request is site_pr
+    assert plan.pull_requests_to_close == ()
+
+
+def test_single_site_file_keeps_file_publication_rule():
+    path = Path("translation/de/site/name/sutta/an-name_translation-de-site.json")
+    plan = build_publication_plan([path], {})
+    assert plan.target_branch == "translation_de_site_name_sutta_an-name_translation-de-site"

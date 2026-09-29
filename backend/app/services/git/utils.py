@@ -33,6 +33,9 @@ def get_project_head(path: Path) -> str:
     this function groups paths and does not normalize or validate them.
     """
     parts: tuple = path.parts[:-1]
+    # Site content is one publication project, including nested name files.
+    if len(parts) >= 3 and parts[2] == "site":
+        return "_".join(parts[:3])
     # Group Sutta publications by collection, regardless of nesting below it.
     if len(parts) >= 5 and parts[3] == "sutta":
         return "_".join(parts[:5])

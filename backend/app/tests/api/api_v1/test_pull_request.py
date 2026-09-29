@@ -81,3 +81,26 @@ class TestPullRequest:
         assert response.json() == expected_response
         if is_consistent:
             mock_pr.delay.assert_called_once_with(user.model_dump(), paths)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("other_path, expected_status", [
+    ("translation/de/site/name/sutta/an-name_translation-de-site.json", 201),
+    ("translation/de/site/name/vinaya/pli-tv-name_translation-de-site.json", 201),
+    ("translation/fr/site/name/sutta/an-name_translation-fr-site.json", 400),
+    ("root/misc/site/name/sutta/an-name_root-misc-site.json", 400),
+    ("translation/de/blurb/an-blurbs_translation-de.json", 400),
+])
+async def test_site_publication_project_boundary(other_path, expected_status, async_client, mock_get_current_user, user):
+    paths = ["translation/de/site/about_translation-de-site.json", other_path]
+    with patch("app.api.api_v1.endpoints.pull_request.get_user", return_value=user), patch(
+        "app.api.api_v1.endpoints.pull_request.pr"
+    ) as task:
+        task.delay.return_value.id = "site-task"
+        response = await async_client.post("/pr/", json={"paths": paths})
+        assert response.status_code == expected_status
+        if expected_status == 201:
+            task.delay.assert_called_once_with(user.model_dump(), paths)
+            assert response.json()["task_id"] == "site-task"
+        else:
+            task.delay.assert_not_called()

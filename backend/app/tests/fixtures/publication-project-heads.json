@@ -58,5 +58,41 @@
   [
     "translation/de/sabbamitta/abhidhamma/a/ab/c/file.json",
     "translation_de_sabbamitta_abhidhamma_a"
+  ],
+  [
+    "translation/de/site/about_translation-de-site.json",
+    "translation_de_site"
+  ],
+  [
+    "translation/de/site/name/super-name_translation-de-site.json",
+    "translation_de_site"
+  ],
+  [
+    "translation/de/site/name/sutta/an-name_translation-de-site.json",
+    "translation_de_site"
+  ],
+  [
+    "translation/de/site/name/vinaya/pli-tv-name_translation-de-site.json",
+    "translation_de_site"
+  ],
+  [
+    "translation/de/site/name/abhidhamma/ab-name_translation-de-site.json",
+    "translation_de_site"
+  ],
+  [
+    "translation/fr/site/name/sutta/an-name_translation-fr-site.json",
+    "translation_fr_site"
+  ],
+  [
+    "root/misc/site/name/sutta/an-name_root-misc-site.json",
+    "root_misc_site"
+  ],
+  [
+    "translation/de/blurb/an-blurbs_translation-de.json",
+    "translation_de_blurb"
+  ],
+  [
+    "translation/de/blurb/dn-blurbs_translation-de.json",
+    "translation_de_blurb"
   ]
 ]
