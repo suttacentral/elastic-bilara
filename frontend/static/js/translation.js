@@ -38,6 +38,7 @@ function fetchTranslation() {
     const REMARKS_PREFIX = "remarks:";
     return {
         translations: [],
+        sourceMuid: '',
         loading: true,
         loadError: '',
         relatedProjects: [],

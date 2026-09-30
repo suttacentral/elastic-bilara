@@ -1039,6 +1039,7 @@
 
                 <div class="project-container__detail-panel__search search active"
                     x-data="{...search(), optionsExpanded: true}"
+                    x-init="selectProject(sourceMuid); $watch('sourceMuid', source => selectProject(source))"
                     @double-click-search.window="await triggerSearch(null, { collapseOptions: $event.detail.collapseOptions })"
                     @toggle-search-field.window="if ($event.detail.selected && !fields[$event.detail.project]) toggleSelectedProjects($event.detail.project); else if (!$event.detail.selected && fields[$event.detail.project] !== undefined) toggleSelectedProjects($event.detail.project);">
                     <div class="search__container">

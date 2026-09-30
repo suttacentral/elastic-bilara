@@ -36,6 +36,11 @@ const search = () => {
         replacedItems: {},        // { "uid::muid": true } — replaced but not yet submitted
         submittedItems: {},       // { "uid::muid": true } — successfully submitted
         async init() {
+            // Seed URL defaults before loading the picker so a late response cannot
+            // toggle off the resolved source or overwrite the user's field choices.
+            const params = new URLSearchParams(window.location.search);
+            this.selectProject(params.get("muid"));
+            this.selectProject(params.get("source"));
             try {
                 const response = await requestWithTokenRetry(`projects/`);
                 const { projects } = await response.json();
@@ -43,18 +48,14 @@ const search = () => {
                     throw new Error("Invalid data format from the API");
                 }
                 this.projects = projects;
-                const params = new URLSearchParams(window.location.search);
-                const muid = params.get("muid");
-                const source = params.get("source");
-                if (muid) {
-                    this.toggleSelectedProjects(muid);
-                }
-                if (source) {
-                    this.toggleSelectedProjects(source);
-                }
             } catch (error) {
                 throw error;
             }
+        },
+        selectProject(project) {
+            if (!project) return;
+            if (!(project in this.fields)) this.fields[project] = "";
+            this.selectedProjects[project] = true;
         },
         updateSuggestions() {
             if (!this.projectQuery) {
