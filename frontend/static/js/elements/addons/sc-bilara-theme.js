@@ -481,6 +481,48 @@ export const themes = {
         --color-progress-low: #a84242;
         --color-progress-medium: #7a5500;
         --color-progress-high: #336633;
+    `,
+    /* Zhongguose - Canghai Liujin */
+    'canghai-liujin': css`
+        --color-primary: #e8c870;
+        --color-secondary: #3a6baa;
+        --color-background: #1a3550;
+        --color-background-secondary: #244366;
+        --color-background-tertiary: #2d5a7c;
+        --color-text: #e1ebf5;
+        --color-text-emphasized: #ffffff;
+        --color-text-secondary: #7c9cc0;
+        --color-text-on-strong: #ffffff;
+        --color-border: rgba(124, 156, 192, 0.22);
+        --color-warning: #e8c870;
+        --color-error: #e56868;
+        --color-success: #52b788;
+        --color-info: #3a6baa;
+        --color-unread-bg: #224263;
+        --color-progress-low: #e56868;
+        --color-progress-medium: #e8c870;
+        --color-progress-high: #52b788;
+    `,
+    /* Zhongguose - Cangsong Liujin */
+    'cangsong-liujin': css`
+        --color-primary: #e8c870;
+        --color-secondary: #4a8a6e;
+        --color-background: #163a2e;
+        --color-background-secondary: #224d3d;
+        --color-background-tertiary: #2e5e4a;
+        --color-text: #e5f0ea;
+        --color-text-emphasized: #ffffff;
+        --color-text-secondary: #9aba8e;
+        --color-text-on-strong: #ffffff;
+        --color-border: rgba(154, 186, 142, 0.22);
+        --color-warning: #e8c870;
+        --color-error: #e56868;
+        --color-success: #52b788;
+        --color-info: #4a8a6e;
+        --color-unread-bg: #204537;
+        --color-progress-low: #e56868;
+        --color-progress-medium: #e8c870;
+        --color-progress-high: #52b788;
     `
 }
 

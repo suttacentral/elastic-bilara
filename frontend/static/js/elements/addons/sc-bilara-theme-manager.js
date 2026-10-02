@@ -100,7 +100,9 @@ class ThemeManager {
           'kasaya': 'Kasaya',
           'pancavanna': 'Pancavanna',
           'chanlin': 'Chanlin',
-          'ruihe': 'Ruihe'
+          'ruihe': 'Ruihe',
+          'canghai-liujin': 'Canghai-liujin',
+          'cangsong-liujin': 'Cangsong-liujin'
         };
         return displayNames[themeName] || themeName;
     }
