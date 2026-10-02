@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { canEditSegment } = new Function(fs.readFileSync(require('path').join(__dirname, '../translation.js'), 'utf8') + '\nreturn fetchTranslation();')();
 const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '../../../translation.html'), 'utf8');
@@ -24,6 +25,7 @@ function createScope() {
     target.focus();
     return {
         translation: { canEdit: true, muid: 'translation-en-test', isSource: false },
+        canEditSegment,
         canEditStructureSegment: jest.fn(() => true),
         uid: 'dn1:1.1', muid: 'translation-en-test', sourceMuid: 'root-pli-test', sourceValue: 'source',
         getValue: () => 'text', getHints: jest.fn(async () => [{ uid: 'hint', translation_hints: 'hint' }]),

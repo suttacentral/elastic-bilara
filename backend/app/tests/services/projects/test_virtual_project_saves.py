@@ -180,3 +180,43 @@ def test_blank_save_waits_for_concurrent_materialization(configured_translation,
     assert waiting_on_lock, "Blank saves must check existence under the file lock"
     assert result == (True, None, "save-task", True)
     assert json.loads(virtual_file.target_path.read_text()) == {"mn1:1": "", "mn1:2": "Second"}
+
+
+@pytest.mark.parametrize("existing", [False, True])
+@pytest.mark.parametrize("role", ["writer", "administrator"])
+@pytest.mark.parametrize("value", ["manual change", ""])
+def test_zero_comment_save_is_rejected_before_any_write(configured_translation, monkeypatch, existing, role, value):
+    from fastapi import HTTPException
+    from unittest.mock import Mock
+
+    virtual, user = configured_translation
+    user.role = role
+    virtual.source_path.write_text(json.dumps({"mn1:0.1": "heading", "mn1:1": "source"}))
+    if existing:
+        virtual.target_path.parent.mkdir(parents=True)
+        virtual.target_path.write_text(json.dumps({"mn1:0.1": "existing", "mn1:1": "original"}))
+    original = virtual.target_path.read_bytes() if existing else None
+    resolve = Mock(return_value=virtual)
+    monkeypatch.setattr(projects, "resolve_virtual_file", resolve)
+    update_index = Mock(return_value=(True, None))
+    add_index = Mock(return_value=(True, None))
+    commit = Mock(return_value=SimpleNamespace(id="save-task"))
+    monkeypatch.setattr(project_utils.search, "update_segments", update_index)
+    monkeypatch.setattr(project_utils.search, "add_to_index", add_index)
+    monkeypatch.setattr(project_utils.commit, "delay", commit)
+    data = {"mn1:1": "allowed change", "mn1:0.1": value}
+    save = projects.update_json_data_for_prefix_in_project(user, virtual.target_muid, "mn1", data, x_structure_revision=None)
+    if virtual.target_muid.startswith("comment-"):
+        with pytest.raises(HTTPException) as caught:
+            asyncio.run(save)
+        assert caught.value.status_code == 403
+        assert "mn1:0.1" in caught.value.detail
+        assert (virtual.target_path.read_bytes() if existing else None) == original
+        assert virtual.target_path.exists() == existing
+        resolve.assert_not_called()
+        update_index.assert_not_called()
+        add_index.assert_not_called()
+        commit.assert_not_called()
+    else:
+        asyncio.run(save)
+        assert json.loads(virtual.target_path.read_text()) == data

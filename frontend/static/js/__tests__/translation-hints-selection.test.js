@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { canEditSegment } = new Function(fs.readFileSync(require('path').join(__dirname, '../translation.js'), 'utf8') + '\nreturn fetchTranslation();')();
 const path = require('path');
 
 const page = new DOMParser().parseFromString(
@@ -43,6 +44,7 @@ test.each(['dropdown', 'inline', 'keyboard'])(
         textarea.value = 'Previous translation';
         const translation = { canEdit: true, muid: 'translation-en-test', data: {} };
         const scope = { translation, uid: 'dn1:1.1', rowIndex: 0, colIndex: 1,
+            canEditSegment,
             canEditStructureSegment: () => true,
             translations: [],
             setValue: (target, uid, value) => { target.data[uid] = value; },

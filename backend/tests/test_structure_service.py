@@ -416,6 +416,24 @@ class StructureApiTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.patch('/projects/merge/', json={'muid': 'root-pli-ms', 'prefix': 'dn1', 'merger_uid': 'dn1:1.1', 'mergee_uid': 'dn1:1.2'})
         self.assertEqual(response.status_code, 422)
 
+    async def test_manual_zero_comment_edits_return_403_without_writes(self):
+        for path in [self.root, self.html, self.comment]:
+            contents = json.loads(path.read_text())
+            path.write_text(json.dumps({uid.replace(':1.', ':0.'): value for uid, value in contents.items()}))
+        before = {path: path.read_bytes() for path in [self.root, self.html, self.comment]}
+        preview = service.preview(self.root, 'merge', 'dn1:0.1')
+        payload = StructureCommitIn(muid='root-pli-ms', prefix='dn1', operation='merge',
+            uid='dn1:0.1', operation_id=uuid4(), revision=preview['revision'],
+            edits={'comment-en-u': {'dn1:0.1': 'manual'}}, reviewed=preview['manual_projects'])
+        response = await self.client.patch('/projects/merge/', json=payload.model_dump(mode='json'))
+        self.assertEqual(response.status_code, 403, response.text)
+        self.assertEqual(response.json()['detail']['code'], 'submission_rejected')
+        self.assertIn('dn1:0.1', response.json()['detail']['message'])
+        self.assertEqual({path: path.read_bytes() for path in before}, before)
+        self.assertIsNone(StructureStore(self.work, self.root).pending())
+        self.search.replace_structure_segments.assert_not_called()
+        self.publish.assert_not_called()
+
     async def test_stale_preview_is_an_explicit_submission_rejection(self):
         payload = self.payload()
         self.comment.write_text(self.comment.read_text().replace('a ', 'changed '))

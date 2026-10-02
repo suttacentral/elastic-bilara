@@ -24,6 +24,7 @@ from app.services.projects.models import (
 )
 from app.services.projects.html_validator import validate_bilara_html
 from app.services.projects import structure_service
+from app.services.projects.segment_permissions import ReadOnlyCommentError, validate_comment_edits
 from app.services.projects.structure_store import StructureConflict
 from app.services.projects.uid_reducer import UIDReducer
 from app.services.projects.utils import (
@@ -226,7 +227,7 @@ def _structure_http_error(error: ValueError | structure_service.StructureOperati
         })
     if isinstance(error, structure_service.SubmissionRejected):
         return HTTPException(
-            status_code={'invalid_input': 400, 'conflict': 409}[error.reason],
+            status_code={'invalid_input': 400, 'conflict': 409, 'forbidden': 403}[error.reason],
             detail={'code': 'submission_rejected', 'message': str(error)},
         )
     if isinstance(error, StructureConflict):
@@ -393,6 +394,11 @@ async def update_json_data_for_prefix_in_project(
 ) -> JSONDataOut:
     if not can_edit_translation(int(user.github_id), muid):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to edit this resource")
+
+    try:
+        validate_comment_edits(muid, data)
+    except ReadOnlyCommentError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
 
     # Validate tag values against _tags.json
     if muid.startswith("tag"):

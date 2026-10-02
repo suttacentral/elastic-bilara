@@ -109,6 +109,7 @@ function displayMessage(element, message, type) {
 }
 
 function ensureStatusBadge(textarea, muid, uid) {
+    if (textarea.readOnly) return;
     const badgeId = `translation-badge-${muid}-${uid}`;
     if (document.getElementById(badgeId)) {
         return;

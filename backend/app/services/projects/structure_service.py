@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 from app.core.config import settings
+from app.services.projects.segment_permissions import ReadOnlyCommentError
 from app.services.projects.structure_engine import build_preview, apply_edits, load_rules, digest
 from app.services.projects.structure_store import StructureStore, StructureConflict
 from app.services.projects.html_validator import validate_bilara_html
@@ -34,7 +35,7 @@ def read_project(project: Path | VirtualProjectFile) -> dict:
 class SubmissionRejected(StructureConflict):
     """Preflight rejection after checking that this operation has no journal."""
 
-    def __init__(self, message: str, reason: Literal['invalid_input', 'conflict']):
+    def __init__(self, message: str, reason: Literal['invalid_input', 'conflict', 'forbidden']):
         super().__init__(message)
         self.reason = reason
 
@@ -170,6 +171,8 @@ def _commit_structure(root, payload, search, user):
                     for value in data.values():
                         if {item.strip() for item in value.split(',') if item.strip()} - names:
                             raise ValueError(f'Unknown tag in {muid}')
+        except ReadOnlyCommentError as error:
+            raise SubmissionRejected(str(error), 'forbidden') from error
         except ValueError as error:
             raise SubmissionRejected(str(error), 'conflict' if isinstance(error, StructureConflict) else 'invalid_input') from error
         record = {'operation_id': operation_id, 'fingerprint': fingerprint,

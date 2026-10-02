@@ -16,6 +16,7 @@
 
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/utils.js"></script>
+    <script src="./static/js/segment-permissions.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.12/dist/purify.min.js"></script>
     <script src="./static/js/translation.js"></script>
     <script src="./static/js/search.js"></script>
@@ -576,7 +577,7 @@
                                             'translation-cell--root': translation.muid && translation.muid.startsWith('root'),
                                             'translation-cell--translation': translation.muid && translation.muid.startsWith('translation-'),
                                             'translation-cell--own-text': isCurrentUserMuid(translation.muid),
-                                            'translation-cell--editable': translation.canEdit
+                                            'translation-cell--editable': canEditSegment(translation, uid)
                                         }"
                                         x-data="{
                                             hints: [],
@@ -606,7 +607,7 @@
                                                 return this.hints.slice(0, this.hintCount);
                                             },
                                             applyHintToTextarea(value) {
-                                                if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
+                                                if (!canEditSegment(translation, uid)) return;
                                                 const textarea = this.$el.closest('.translation-cell').querySelector('textarea');
                                                 if (!textarea) return;
                                                 textarea.focus();
@@ -643,7 +644,7 @@
                                                 this.selectedTagIndex = -1;
                                             },
                                             selectTag(index) {
-                                                if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
+                                                if (!canEditSegment(translation, uid)) return;
                                                 const tag = this.tagSuggestions[index];
                                                 if (!tag) return;
                                                 const textarea = this.$el.querySelector('textarea');
@@ -663,7 +664,7 @@
                                             }
                                         }"
                                         x-effect="
-                                            if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) {
+                                            if (!canEditSegment(translation, uid)) {
                                                 showHints = false;
                                                 selectedHintIndex = -1;
                                                 hintSelectionViaKeyboard = false;
@@ -734,13 +735,17 @@
                                             </template>
                                             <textarea
                                                 class="translation-cell__textarea"
+                                                :title="isCommentReadOnly(translation.muid, uid) ? 'No comments on headings' : ''"
                                                 :aria-label="translation.muid + ' · ' + (structureResultLabel(translation.muid, uid) || uid)"
-                                                :placeholder="isStructureResult(translation.muid, uid) && translation.canEdit ? 'Enter segment content…' : ''"
+                                                :placeholder="isCommentReadOnly(translation.muid, uid) ? 'No comments on headings' : (isStructureResult(translation.muid, uid) && canEditSegment(translation, uid) ? 'Enter segment content…' : '')"
                                                 x-show="!shouldRenderHtmlPreview(translation.muid, htmlPreviewEnabled)"
-                                                :class="{ 'translation-cell__textarea--readonly': !translation.canEdit || !canEditStructureSegment(translation.muid, uid) }"
+                                                :class="{
+                                                    'translation-cell__textarea--readonly': !canEditSegment(translation, uid),
+                                                    'translation-cell__textarea--heading-comment': isCommentReadOnly(translation.muid, uid)
+                                                }"
                                                 x-bind:id="isSource ? `root-textarea-${muid}-${uid}` : `translation-textarea-${muid}-${uid}`"
                                                 x-bind:value="getValue(translation, uid)"
-                                                x-bind:readonly="!translation.canEdit || !canEditStructureSegment(translation.muid, uid)"
+                                                x-bind:readonly="!canEditSegment(translation, uid)"
                                                 x-on:dblclick="
                                                     if (window.userSettings && window.userSettings.dblclick_search === false) return;
                                                     setTimeout(() => {
@@ -777,13 +782,13 @@
                                                     hintClicked = false;
                                                     selectedHintIndex = -1;
                                                     hintSelectionViaKeyboard = false;
-                                                    if (!translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
+                                                    if (!canEditSegment(translation, uid)) return;
                                                     if (isTag) {
                                                         filterTagSuggestions(getValue(translation, uid) || '');
                                                     } else if (hints.length === 0 && muid.startsWith('translation')) {
                                                         hints = await getHints(uid, muid, sourceMuid, sourceValue);
                                                     }
-                                                    if (document.activeElement !== $event.target || !translation.canEdit || !canEditStructureSegment(translation.muid, uid)) return;
+                                                    if (document.activeElement !== $event.target || !canEditSegment(translation, uid)) return;
                                                     showHints = true;
                                                 "
                                                 x-on:blur="
@@ -1194,7 +1199,7 @@
                             id="resultsContainer">
                             <template x-for="entry in resultEntries" :key="entry.uid">
                                 <div class="search__results-item"
-                                    x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditMuid(s.muid, isAdmin) && !s.muid.startsWith('root-')); } }">
+                                    x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditSearchSegment(s.muid, entry.uid, isAdmin) && !s.muid.startsWith('root-')); } }">
                                     <h3 class="search__results-title">
                                         <a :href="'translation.html?prefix=' + entry.uid.split(':')[0] + '&source=' + new URLSearchParams(window.location.search).get('source') + '&muid=' + new URLSearchParams(window.location.search).get('muid')"
                                            x-text="entry.uid"
@@ -1206,14 +1211,14 @@
                                             <span>
                                                 <!-- REPLACE button -->
                                                 <button class="btn search__replace-btn"
-                                                    x-show="replacementText && canEditMuid(seg.muid, isAdmin) && !seg.muid.startsWith('root-') && !replacedItems[entry.uid + '::' + seg.muid] && hasReplaceTerm(seg.muid, seg.segment)"
+                                                    x-show="replacementText && canEditSearchSegment(seg.muid, entry.uid, isAdmin) && !seg.muid.startsWith('root-') && !replacedItems[entry.uid + '::' + seg.muid] && hasReplaceTerm(seg.muid, seg.segment)"
                                                     x-cloak
                                                     @click="await replaceSegment(entry.uid, seg.muid, seg)"
                                                     :disabled="!!editLoads[entry.uid + '::' + seg.muid]"
                                                 >REPLACE</button>
                                                 <!-- SUBMIT button -->
                                                 <button class="btn search__submit-btn"
-                                                    x-show="replacedItems[entry.uid + '::' + seg.muid] && !submittedItems[entry.uid + '::' + seg.muid]"
+                                                    x-show="canEditSearchSegment(seg.muid, entry.uid, isAdmin) && replacedItems[entry.uid + '::' + seg.muid] && !submittedItems[entry.uid + '::' + seg.muid]"
                                                     x-cloak
                                                     @click="await submitReplacement(entry.uid, seg.muid, seg.segment)"
                                                 >SUBMIT</button>
@@ -1223,15 +1228,16 @@
                                     <ul class="search__results-list">
                                         <template x-for="seg in entry.segments" :key="seg.muid">
                                             <li class="search__results-list-item"
+                                                :title="isCommentReadOnly(seg.muid, entry.uid) ? 'No comments on headings' : ''"
                                                 :class="{
-                                                    'search__results-list-item--editable': canEditMuid(seg.muid, isAdmin),
+                                                    'search__results-list-item--editable': canEditSearchSegment(seg.muid, entry.uid, isAdmin),
                                                     'search__results-list-item--root': seg.muid.startsWith('root-'),
                                                     'search__results-list-item--translation': seg.muid.startsWith('translation-'),
                                                     'search__results-list-item--own-text': isCurrentUserMuid(seg.muid)
                                                 }">
                                                 <span class="search__results-key" x-text="seg.muid"></span>
                                                 <!-- Editable textarea for muids user can edit (admin only) -->
-                                                <template x-if="canEditMuid(seg.muid, isAdmin)">
+                                                <template x-if="canEditSearchSegment(seg.muid, entry.uid, isAdmin)">
                                                     <div class="search__results-textarea-wrapper">
                                                         <div class="search__results-highlight-backdrop"
                                                             aria-hidden="true"
@@ -1249,8 +1255,13 @@
                                                     </div>
                                                 </template>
                                                 <!-- Read-only text for non-editable muids -->
-                                                <template x-if="!canEditMuid(seg.muid, isAdmin)">
-                                                    <span class="search__results-text" x-html="getHighlightedSegment(seg.segment, entry.uid, seg.muid)"></span>
+                                                <template x-if="!canEditSearchSegment(seg.muid, entry.uid, isAdmin)">
+                                                    <span>
+                                                        <span class="comment-heading-notice"
+                                                            x-show="isCommentReadOnly(seg.muid, entry.uid) && !seg.segment"
+                                                        >No comments on headings</span>
+                                                        <span class="search__results-text" x-html="getHighlightedSegment(seg.segment, entry.uid, seg.muid)"></span>
+                                                    </span>
                                                 </template>
                                             </li>
                                         </template>

@@ -1816,6 +1816,14 @@ sl-dialog::part(title) {
     cursor: default;
 }
 
+.translation-cell__textarea--heading-comment::placeholder,
+.comment-heading-notice {
+    color: var(--color-text-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    opacity: 1;
+}
+
 .translation-cell__textarea--readonly:focus {
     border-color: transparent;
     box-shadow: none;

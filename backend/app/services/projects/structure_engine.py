@@ -5,6 +5,8 @@ import re
 from copy import deepcopy
 from pathlib import Path
 
+from app.services.projects.segment_permissions import validate_comment_edits
+
 
 def load_rules(operation):
     if operation not in ('split', 'merge'):
@@ -104,6 +106,7 @@ def apply_edits(preview, edits, reviewed):
     for muid, project in projects.items():
         data = deepcopy(project['data'])
         changes = edits.get(muid, {})
+        validate_comment_edits(muid, changes)
         if set(changes) - set(data) or not all(isinstance(v, str) for v in changes.values()):
             raise ValueError(f'Invalid edited segments: {muid}')
         data.update(changes)

@@ -511,7 +511,7 @@ function fetchTranslation() {
             return translation.data[uid] || "";
         },
         setValue(translation, uid, value) {
-            if (!this.canEditStructureSegment(translation.muid, uid)) return;
+            if (!this.canEditSegment(translation, uid)) return;
             if (!translation.data) {
                 translation.data = {};
             }
@@ -704,6 +704,10 @@ function fetchTranslation() {
                 this.structurePreviewLoading = false;
             }
         },
+        canEditSegment(translation, uid) {
+            return !!translation?.canEdit && !isCommentReadOnly(translation.muid, uid) &&
+                this.canEditStructureSegment(translation.muid, uid);
+        },
         canEditStructureSegment(muid, uid) {
             if (this.structurePreviewLoading) return false;
             if (!this.structureDraft) return true;
@@ -725,7 +729,7 @@ function fetchTranslation() {
             const preview = this.structureDraft.preview;
             const role = preview.operation === 'merge' ? 'Merged segment' : uid === preview.splitter_uid ? 'New segment' : 'Retained segment';
             const column = this.translations.find(project => project.muid === muid);
-            return role + ' · ' + uid + (column?.canEdit && !this.structureDraft.submission ? ' · Editable' : ' · Read-only');
+            return role + ' · ' + uid + (this.canEditSegment(column, uid) ? ' · Editable' : ' · Read-only');
         },
         async submitStructureDraftFromReview() {
             if (this.splitMergeProcessing || !this.structureDraft) return;
@@ -977,7 +981,7 @@ function fetchTranslation() {
         },
         async handleEnter(event, uid, segment, translation, originalValue = '') {
             if (this.structurePreviewLoading || this.structureDraft) return;
-            if (translation.canEdit) {
+            if (this.canEditSegment(translation, uid)) {
                 if (event.shiftKey) {
                     event.target.value += "\n";
                     return;
@@ -1067,6 +1071,7 @@ function fetchTranslation() {
         },
         async updateHandler(muid, data, element, btnId='btn-translation-commit') {
             if (this.structureDraft) throw new Error('Confirm or cancel the structure draft before saving.');
+            assertCommentSegmentsEditable(muid, Object.keys(data));
             const badgeId = `translation-badge-${muid}-${Object.keys(data)[0]}`;
             if (Object.keys(data).length === 1) {
                 hideBadge(badgeId);
@@ -1139,6 +1144,7 @@ function fetchTranslation() {
                     for (const [uid, value] of Object.entries(column.data)) {
                         if (value !== original.data[uid]) changes[uid] = value;
                     }
+                    assertCommentSegmentsEditable(column.muid, Object.keys(changes));
                     if (Object.keys(changes).length) edits[column.muid] = changes;
                 }
                 draft.submission = {muid, prefix: this.prefix, operation: preview.operation,

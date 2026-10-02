@@ -160,6 +160,9 @@ const search = () => {
         canEditMuid(muid, isAdmin) {
             return !!isAdmin && !!this.editableMusids[muid];
         },
+        canEditSearchSegment(muid, uid, isAdmin) {
+            return this.canEditMuid(muid, isAdmin) && !isCommentReadOnly(muid, uid);
+        },
         /** Fetch can_edit for all unique muids in results that haven't been checked yet */
         async _fetchEditPermissions(results) {
             const muids = new Set();
@@ -198,7 +201,7 @@ const search = () => {
         },
         /** Load content and its structure version together before allowing edits. */
         async searchResultFocus(uid, muid) {
-            if (muid.startsWith('root-')) return;
+            if (muid.startsWith('root-') || isCommentReadOnly(muid, uid)) return;
             const key = uid + '::' + muid;
             if (this.editStructureRevisions[key]) return;
             if (this.editLoads[key]) return this.editLoads[key];
@@ -228,6 +231,7 @@ const search = () => {
         },
         /** Called on textarea input to update in-memory data */
         searchResultInput(uid, muid, value) {
+            if (isCommentReadOnly(muid, uid)) return;
             if (this.results[uid]) {
                 this.results[uid][muid] = value;
             }
@@ -273,6 +277,7 @@ const search = () => {
             await this._saveSegment(uid, muid, currentValue);
         },
         async _saveSegment(uid, muid, currentValue) {
+            assertCommentSegmentsEditable(muid, [uid]);
             const key = uid + '::' + muid;
             const prefix = this.getPrefixFromUid(uid);
             const badgeId = `search-badge-${muid}-${uid}`;
@@ -327,6 +332,7 @@ const search = () => {
         },
         /** Replace search keyword in a single segment with replacementText */
         async replaceSegment(uid, muid, seg) {
+            if (isCommentReadOnly(muid, uid)) return;
             // Find the search term for this muid
             let searchTerm = this.fields[muid];
             if (!searchTerm) {

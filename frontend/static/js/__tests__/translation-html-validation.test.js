@@ -54,6 +54,7 @@ describe('whole-file Bilara HTML validation', () => {
         const context = fetchTranslation();
         const htmlProject = {
             muid: 'html-pli-ms',
+            canEdit: true,
             data: { 'mn1:1.1': '<p>{}</p>' },
         };
         context.htmlValidation.status = 'valid';
