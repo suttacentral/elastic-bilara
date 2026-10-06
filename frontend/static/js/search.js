@@ -13,6 +13,7 @@ const search = () => {
             uid: "",
         },
         results: {},
+        resultPrefixes: {},
         editStructureRevisions: {},
         editLoads: {},
         // Editable search results support
@@ -85,12 +86,13 @@ const search = () => {
             try {
                 const params = this.constructQueryParams();
                 const response = await requestWithTokenRetry(`search/?${params.toString()}`);
-                const { results, detail } = await response.json();
+                const { results, prefixes, detail } = await response.json();
                 if (!response.ok) throw new Error(detail || "Search failed");
                 if (!results) {
                     throw new Error("Invalid data format from the API");
                 }
                 this.results = results;
+                this.resultPrefixes = prefixes;
                 this._buildResultEntries();
                 await this._fetchEditPermissions(results);
                 this.currentPage = this.page;
@@ -112,17 +114,18 @@ const search = () => {
             const nextPageParams = new URLSearchParams(this.constructQueryParams());
             nextPageParams.set("page", this.page);
             const response = await requestWithTokenRetry(`search/?${nextPageParams.toString()}`);
-            const { results, detail } = await response.json();
+            const { results, prefixes, detail } = await response.json();
             if (!response.ok) throw new Error(detail || "Search failed");
             if (!results) {
                 throw new Error("Invalid data format from the API");
             }
-            this.prefetchedData = results;
-            this.isNextPage = Object.keys(this.prefetchedData).length !== 0;
+            this.prefetchedData = { results, prefixes };
+            this.isNextPage = Object.keys(results).length !== 0;
         },
         async nextHandler() {
             if (this.prefetchedData) {
-                this.results = this.prefetchedData;
+                this.results = this.prefetchedData.results;
+                this.resultPrefixes = this.prefetchedData.prefixes;
                 this.prefetchedData = null;
                 this.currentPage = this.page;
                 this.page++;
@@ -152,9 +155,21 @@ const search = () => {
             return params;
         },
         // ---- Editable search results helpers ----
-        /** Extract prefix from uid, e.g. "mn1:1.1" → "mn1", "an1.1:0.1" → "an1.1" */
-        getPrefixFromUid(uid) {
-            return uid.split(':')[0];
+        /** Each project can store the same UID in a differently grouped file. */
+        getResultPrefix(uid, muid) {
+            const prefix = this.resultPrefixes[uid]?.[muid];
+            if (!prefix) throw new Error('The file for this search result is unavailable. Search again.');
+            return prefix;
+        },
+        getResultUrl(entry) {
+            const params = new URLSearchParams(window.location.search);
+            const target = params.get('muid');
+            const muid = this.resultPrefixes[entry.uid]?.[target] ? target : entry.segments[0].muid;
+            const prefix = this.resultPrefixes[entry.uid]?.[muid];
+            if (!prefix) return null;
+            const query = new URLSearchParams({ prefix, muid, uid: entry.uid });
+            if (params.get('source')) query.set('source', params.get('source'));
+            return `translation.html?${query.toString()}`;
         },
         /** Check if a muid is editable (from cache). Requires admin role. */
         canEditMuid(muid, isAdmin) {
@@ -215,7 +230,7 @@ const search = () => {
         },
         async _loadEditSnapshot(uid, muid) {
             const results = this.results;
-            const prefix = this.getPrefixFromUid(uid);
+            const prefix = this.getResultPrefix(uid, muid);
             const response = await requestWithTokenRetry(`projects/${muid}/${prefix}/`);
             const snapshot = await response.json();
             if (!response.ok) throw new Error(snapshot.detail || 'Could not load the text for editing.');
@@ -279,7 +294,7 @@ const search = () => {
         async _saveSegment(uid, muid, currentValue) {
             assertCommentSegmentsEditable(muid, [uid]);
             const key = uid + '::' + muid;
-            const prefix = this.getPrefixFromUid(uid);
+            const prefix = this.getResultPrefix(uid, muid);
             const badgeId = `search-badge-${muid}-${uid}`;
 
             try {

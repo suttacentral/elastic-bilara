@@ -325,6 +325,37 @@ class Search:
             return self._muids_lookup(size, from_, muids)
         return {}
 
+    def get_segment_prefixes(self, results: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+        """Resolve result locations through indexed file IDs, never by parsing a UID."""
+        if not results:
+            return {}
+        muids = {muid for segments in results.values() for muid in segments}
+        query = {
+            "query": {"bool": {"filter": [
+                {"terms": {"uid": list(results)}},
+                {"terms": {"muid": sorted(muids)}},
+            ]}},
+            "_source": ["uid", "muid", "main_doc_id"],
+        }
+        locations = [
+            hit["_source"]
+            for hit in self._scroll_search(query, index=settings.ES_SEGMENTS_INDEX)
+            if hit["_source"]["muid"] in results[hit["_source"]["uid"]]
+        ]
+        if not locations:
+            return {}
+        documents = self._search.mget(
+            index=settings.ES_INDEX,
+            body={"ids": sorted({item["main_doc_id"] for item in locations})},
+            _source_includes=["prefix"],
+        )["docs"]
+        file_prefixes = {doc["_id"]: doc["_source"]["prefix"] for doc in documents if doc["found"]}
+        prefixes: dict[str, dict[str, str]] = {}
+        for item in locations:
+            if item["main_doc_id"] in file_prefixes:
+                prefixes.setdefault(item["uid"], {})[item["muid"]] = file_prefixes[item["main_doc_id"]]
+        return prefixes
+
     def _uid_lookup(self, size: int, from_: int, uid: str | None, muids: dict[str, str]) -> dict[str, dict[str, str]]:
         body: dict[str, Any] = self._build_search_body(size, from_, muids, uid)
         es_results: dict[str, Any] = self._search.search(

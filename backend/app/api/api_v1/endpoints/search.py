@@ -39,7 +39,8 @@ async def search(
             detail="No query parameters provided",
         )
     params["uid"] = uid
-    return SearchSegmentOut(results=es.get_segments(size, page, params))
+    results = es.get_segments(size, page, params)
+    return SearchSegmentOut(results=results, prefixes=es.get_segment_prefixes(results))
 
 
 @router.get("/hints/", response_model=list[TranslationHintsOut], dependencies=[Depends(is_user_active)])

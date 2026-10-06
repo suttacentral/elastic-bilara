@@ -12,6 +12,7 @@ beforeEach(() => {
     global.BadgeStatus = { PENDING: 'pending', COMMITTED: 'committed', ERROR: 'error' };
     s = createSearch();
     s.results = { [uid]: { [muid]: 'stale term' } };
+    s.resultPrefixes = { [uid]: { [muid]: 'dn1' }, 'dn1:1.2': { [muid]: 'dn1' } };
     s._buildResultEntries();
 });
 const snapshot = (revision = 'v1') => response({ can_edit: true, data: { [uid]: 'current term', 'dn1:1.2': 'second term' }, structure_revision: revision });
@@ -126,7 +127,7 @@ test('repeated focus shares a pending request; failed loads can be retried', asy
 test('search and prefetch do not load editing snapshots', async () => {
     s.fields[muid] = 'term';
     s.editableMusids[muid] = true;
-    requestWithTokenRetry.mockResolvedValue(response({ results: s.results }));
+    requestWithTokenRetry.mockResolvedValue(response({ results: s.results, prefixes: s.resultPrefixes }));
     await s.searchHandler();
     expect(requestWithTokenRetry).toHaveBeenCalledTimes(2);
     expect(requestWithTokenRetry.mock.calls.every(([url]) => url.startsWith('search/?'))).toBe(true);

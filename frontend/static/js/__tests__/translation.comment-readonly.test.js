@@ -85,6 +85,7 @@ test('normal comment search edits still save with an authoritative snapshot', as
     const uid = 'an1.1:10.1';
     s.editableMusids[muid] = true;
     s.results = { [uid]: { [muid]: 'old' } };
+    s.resultPrefixes = { [uid]: { [muid]: 'an1.1' } };
     s._buildResultEntries();
     expect(s.canEditSearchSegment(muid, uid, true)).toBe(true);
     expect(s.canEditSearchSegment(muid, uid, false)).toBe(false);

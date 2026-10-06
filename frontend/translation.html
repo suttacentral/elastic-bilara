@@ -1202,7 +1202,7 @@
                                 <div class="search__results-item"
                                     x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditSearchSegment(s.muid, entry.uid, isAdmin) && !s.muid.startsWith('root-')); } }">
                                     <h3 class="search__results-title">
-                                        <a :href="'translation.html?prefix=' + entry.uid.split(':')[0] + '&source=' + new URLSearchParams(window.location.search).get('source') + '&muid=' + new URLSearchParams(window.location.search).get('muid') + '&uid=' + encodeURIComponent(entry.uid)"
+                                        <a :href="getResultUrl(entry)"
                                            x-text="entry.uid"
                                            class="search__results-title-link"
                                            target="_blank"></a>

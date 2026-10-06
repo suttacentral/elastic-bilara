@@ -130,6 +130,10 @@ class TestSearch:
     @patch("app.api.api_v1.endpoints.search.es.get_segments")
     async def test_search(self, mock_get_segments, async_client, mock_get_current_user, params, results, mocker) -> None:
         mock_get_segments.return_value = results
+        prefixes = {uid: {muid: "test-file" for muid in segments} for uid, segments in results.items()}
+        resolve_prefixes = mocker.patch(
+            'app.api.api_v1.endpoints.search.es.get_segment_prefixes', return_value=prefixes,
+        )
         paths = mocker.patch(
             'app.api.api_v1.endpoints.search.es.get_file_paths',
             side_effect=AssertionError('Search must not resolve project files'),
@@ -137,5 +141,6 @@ class TestSearch:
         response = await async_client.get(f"/search/{params}")
         assert response.status_code == 200
         assert "results" in response.json()
-        assert response.json() == {"results": results}
+        assert response.json() == {"results": results, "prefixes": prefixes}
+        resolve_prefixes.assert_called_once_with(results)
         paths.assert_not_called()

@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class SearchSegmentOut(BaseModel):
     results: dict[str, dict[str, str]]
+    prefixes: dict[str, dict[str, str]]
 
 
 class TranslationHintsOut(BaseModel):
