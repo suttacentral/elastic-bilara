@@ -204,6 +204,14 @@ function fetchTranslation() {
                 textarea.setSelectionRange(offset, offset);
             });
         },
+        scrollToUrlSegment(gridBody) {
+            const uid = new URLSearchParams(window.location.search).get('uid');
+            if (!uid) return;
+
+            const row = Array.from(gridBody.querySelectorAll('.translation-row'))
+                .find(element => element.dataset.uid === uid);
+            row?.scrollIntoView({ block: 'center', inline: 'nearest' });
+        },
         async init() {
             this.loading = true;
             this.loadError = '';

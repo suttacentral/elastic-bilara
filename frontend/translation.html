@@ -540,7 +540,8 @@
                 </div>
 
                 <!-- Grid Body: Row-based layout for synchronized heights -->
-                <div class="translation-grid__body" x-ref="gridBody">
+                <div class="translation-grid__body" x-ref="gridBody"
+                     x-init="$nextTick(() => scrollToUrlSegment($el))">
                     <template
                         x-for="(uid, rowIndex) in Object.keys((translations.find(t => t.isSource) || {}).data || {})"
                         :key="uid">
@@ -1201,7 +1202,7 @@
                                 <div class="search__results-item"
                                     x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditSearchSegment(s.muid, entry.uid, isAdmin) && !s.muid.startsWith('root-')); } }">
                                     <h3 class="search__results-title">
-                                        <a :href="'translation.html?prefix=' + entry.uid.split(':')[0] + '&source=' + new URLSearchParams(window.location.search).get('source') + '&muid=' + new URLSearchParams(window.location.search).get('muid')"
+                                        <a :href="'translation.html?prefix=' + entry.uid.split(':')[0] + '&source=' + new URLSearchParams(window.location.search).get('source') + '&muid=' + new URLSearchParams(window.location.search).get('muid') + '&uid=' + encodeURIComponent(entry.uid)"
                                            x-text="entry.uid"
                                            class="search__results-title-link"
                                            target="_blank"></a>
