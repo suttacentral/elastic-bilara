@@ -171,12 +171,13 @@ const search = () => {
             if (params.get('source')) query.set('source', params.get('source'));
             return `translation.html?${query.toString()}`;
         },
-        /** Check if a muid is editable (from cache). Requires admin role. */
-        canEditMuid(muid, isAdmin) {
-            return !!isAdmin && !!this.editableMusids[muid];
+        /** Writers may edit translation results when the server grants project access. */
+        canEditMuid(muid, isAdmin, role) {
+            const allowedRole = !!isAdmin || (role === 'writer' && muid.startsWith('translation-'));
+            return allowedRole && !!this.editableMusids[muid];
         },
-        canEditSearchSegment(muid, uid, isAdmin) {
-            return this.canEditMuid(muid, isAdmin) && !isCommentReadOnly(muid, uid);
+        canEditSearchSegment(muid, uid, isAdmin, role) {
+            return this.canEditMuid(muid, isAdmin, role) && !isCommentReadOnly(muid, uid);
         },
         /** Fetch can_edit for all unique muids in results that haven't been checked yet */
         async _fetchEditPermissions(results) {

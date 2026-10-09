@@ -1200,7 +1200,7 @@
                             id="resultsContainer">
                             <template x-for="entry in resultEntries" :key="entry.uid">
                                 <div class="search__results-item"
-                                    x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditSearchSegment(s.muid, entry.uid, isAdmin) && !s.muid.startsWith('root-')); } }">
+                                    x-data="{ get _firstEditableSeg() { return entry.segments.find(s => canEditSearchSegment(s.muid, entry.uid, isAdmin, role) && !s.muid.startsWith('root-')); } }">
                                     <h3 class="search__results-title">
                                         <a :href="getResultUrl(entry)"
                                            x-text="entry.uid"
@@ -1212,14 +1212,14 @@
                                             <span>
                                                 <!-- REPLACE button -->
                                                 <button class="btn search__replace-btn"
-                                                    x-show="replacementText && canEditSearchSegment(seg.muid, entry.uid, isAdmin) && !seg.muid.startsWith('root-') && !replacedItems[entry.uid + '::' + seg.muid] && hasReplaceTerm(seg.muid, seg.segment)"
+                                                    x-show="replacementText && canEditSearchSegment(seg.muid, entry.uid, isAdmin, role) && !seg.muid.startsWith('root-') && !replacedItems[entry.uid + '::' + seg.muid] && hasReplaceTerm(seg.muid, seg.segment)"
                                                     x-cloak
                                                     @click="await replaceSegment(entry.uid, seg.muid, seg)"
                                                     :disabled="!!editLoads[entry.uid + '::' + seg.muid]"
                                                 >REPLACE</button>
                                                 <!-- SUBMIT button -->
                                                 <button class="btn search__submit-btn"
-                                                    x-show="canEditSearchSegment(seg.muid, entry.uid, isAdmin) && replacedItems[entry.uid + '::' + seg.muid] && !submittedItems[entry.uid + '::' + seg.muid]"
+                                                    x-show="canEditSearchSegment(seg.muid, entry.uid, isAdmin, role) && replacedItems[entry.uid + '::' + seg.muid] && !submittedItems[entry.uid + '::' + seg.muid]"
                                                     x-cloak
                                                     @click="await submitReplacement(entry.uid, seg.muid, seg.segment)"
                                                 >SUBMIT</button>
@@ -1231,14 +1231,14 @@
                                             <li class="search__results-list-item"
                                                 :title="isCommentReadOnly(seg.muid, entry.uid) ? 'No comments on headings' : ''"
                                                 :class="{
-                                                    'search__results-list-item--editable': canEditSearchSegment(seg.muid, entry.uid, isAdmin),
+                                                    'search__results-list-item--editable': canEditSearchSegment(seg.muid, entry.uid, isAdmin, role),
                                                     'search__results-list-item--root': seg.muid.startsWith('root-'),
                                                     'search__results-list-item--translation': seg.muid.startsWith('translation-'),
                                                     'search__results-list-item--own-text': isCurrentUserMuid(seg.muid)
                                                 }">
                                                 <span class="search__results-key" x-text="seg.muid"></span>
-                                                <!-- Editable textarea for muids user can edit (admin only) -->
-                                                <template x-if="canEditSearchSegment(seg.muid, entry.uid, isAdmin)">
+                                                <!-- Editable textarea for permitted roles and projects -->
+                                                <template x-if="canEditSearchSegment(seg.muid, entry.uid, isAdmin, role)">
                                                     <div class="search__results-textarea-wrapper">
                                                         <div class="search__results-highlight-backdrop"
                                                             aria-hidden="true"
@@ -1256,7 +1256,7 @@
                                                     </div>
                                                 </template>
                                                 <!-- Read-only text for non-editable muids -->
-                                                <template x-if="!canEditSearchSegment(seg.muid, entry.uid, isAdmin)">
+                                                <template x-if="!canEditSearchSegment(seg.muid, entry.uid, isAdmin, role)">
                                                     <span>
                                                         <span class="comment-heading-notice"
                                                             x-show="isCommentReadOnly(seg.muid, entry.uid) && !seg.segment"

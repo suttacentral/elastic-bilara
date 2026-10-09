@@ -14,7 +14,7 @@ function find(root, selector) {
 }
 const textarea = find(page, '.translation-cell__textarea');
 const readonlyBinding = new Function('scope', `with (scope) { return ${textarea.getAttribute('x-bind:readonly')}; }`);
-const searchEditable = find(page, 'template[x-if="canEditSearchSegment(seg.muid, entry.uid, isAdmin)"]');
+const searchEditable = find(page, 'template[x-if="canEditSearchSegment(seg.muid, entry.uid, isAdmin, role)"]');
 const searchBinding = new Function('scope', `with (scope) { return ${searchEditable.getAttribute('x-if')}; }`);
 const muid = 'comment-en-tester';
 const lockedUids = ['an1.1:0.1', 'an1.1:0.2', 'an1.1:0.3', 'an1.1:1.0', 'an1.1:2.0', 'an1.1:1.0.2', 'an1.1:0', 'an1.1:00.1'];
@@ -65,7 +65,7 @@ test.each(lockedUids)('search cannot edit, replace or submit %s even with admin 
     s.results = { [uid]: { [muid]: 'term' } };
     s._buildResultEntries();
     const seg = s.resultEntries[0].segments[0];
-    expect(searchBinding({ ...s, seg, entry: { uid }, isAdmin: true })).toBe(false);
+    expect(searchBinding({ ...s, seg, entry: { uid }, isAdmin: true, role: 'administrator' })).toBe(false);
     await s.searchResultFocus(uid, muid);
     s.searchResultInput(uid, muid, 'changed');
     s.fields[muid] = 'term';
