@@ -19,6 +19,7 @@ from app.services.directories.index import DirectoryIndex
 from app.services.git.github_pull_requests import GithubPullRequests
 from app.services.git.publication import (PublicationPlan,
                                           build_publication_plan)
+from app.services.publications.store import PublicationStore
 
 
 class GitManager:
@@ -45,66 +46,74 @@ class GitManager:
     def pull(
         self, branch: Repository = "published", force: bool = False, remote_name: str = "origin"
     ) -> list[Path] | None:
-        branch.state_cleanup()
         if not branch:
             raise GitError(f"Branch {branch} not found")
-        branch_name = branch.head.shorthand
         for remote in branch.remotes:
             if remote.name == remote_name:
                 remote.fetch()
-                remote_hash_id = branch.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
-                modified_files = self.get_filenames_from_diff(
-                    str(branch.revparse_single("HEAD").id), remote_hash_id, branch
+                # Fetch only updates remote refs/objects. Recover the local pair and
+                # read HEAD under the checkout lock before deciding how to merge.
+                lock = (
+                    PublicationStore(Path(branch.workdir)).locked()
+                    if Path(branch.workdir).resolve() == Path(self.unpublished.workdir).resolve()
+                    else nullcontext()
                 )
-                merge_result = 0 if force else branch.merge_analysis(remote_hash_id)[0]
-                if not force and merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                with lock:
                     branch.state_cleanup()
-                    return modified_files
-
-                changes = nullcontext()
-                if branch == self.unpublished:
-                    directory_index = DirectoryIndex(Path(branch.workdir))
-                    affected = (
-                        {directory_index.root} if force else
-                        {directory_index.root / path.parent for path in modified_files}
+                    branch_name = branch.head.shorthand
+                    remote_hash_id = branch.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
+                    modified_files = self.get_filenames_from_diff(
+                        str(branch.revparse_single("HEAD").id), remote_hash_id, branch
                     )
-                    changes = directory_index.changes(affected, recursive=True)
-                with changes:
-                    if force:
-                        branch.checkout_tree(branch.get(remote_hash_id), strategy=GIT_CHECKOUT_FORCE)
-                        branch.head.set_target(remote_hash_id)
+                    merge_result = 0 if force else branch.merge_analysis(remote_hash_id)[0]
+                    if not force and merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
                         branch.state_cleanup()
                         return modified_files
-                    if merge_result & GIT_MERGE_ANALYSIS_FASTFORWARD:
-                        try:
-                            branch.checkout_tree(branch.get(remote_hash_id))
-                            head_ref = branch.lookup_reference(f"refs/heads/{branch_name}")
-                            head_ref.set_target(remote_hash_id)
-                        except KeyError:
-                            branch.create_branch(branch_name, branch.get(remote_hash_id))
-                        branch.head.set_target(remote_hash_id)
-                        branch.state_cleanup()
-                        return modified_files
-                    elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
-                        branch.merge(remote_hash_id, favor=MergeFavor.OURS)
-                        if branch.index.conflicts:
-                            conflicts = [conflict for conflict in branch.index.conflicts]
-                            branch.state_cleanup()
-                            raise GitError(
-                                f"'origin/{branch_name}' has local conflict and should be resolved first."
-                                f" Use force=True to ignore this error and override all local changes with remote."
-                                f" Conflicts in {conflicts}"
-                            )
-                        tree = branch.index.write_tree()
-                        commit_message = f"Merged origin/{branch_name} into {branch.head.shorthand}"
-                        branch.create_commit(
-                            "HEAD", self.author, self.committer, commit_message, tree, [branch.head.target, remote_hash_id]
+
+                    changes = nullcontext()
+                    if branch == self.unpublished:
+                        directory_index = DirectoryIndex(Path(branch.workdir))
+                        affected = (
+                            {directory_index.root} if force else
+                            {directory_index.root / path.parent for path in modified_files}
                         )
-                        branch.state_cleanup()
-                        return modified_files
-                    else:
-                        branch.state_cleanup()
-                        raise GitError(f"Unexpected merge behaviour")
+                        changes = directory_index.changes(affected, recursive=True)
+                    with changes:
+                        if force:
+                            branch.checkout_tree(branch.get(remote_hash_id), strategy=GIT_CHECKOUT_FORCE)
+                            branch.head.set_target(remote_hash_id)
+                            branch.state_cleanup()
+                            return modified_files
+                        if merge_result & GIT_MERGE_ANALYSIS_FASTFORWARD:
+                            try:
+                                branch.checkout_tree(branch.get(remote_hash_id))
+                                head_ref = branch.lookup_reference(f"refs/heads/{branch_name}")
+                                head_ref.set_target(remote_hash_id)
+                            except KeyError:
+                                branch.create_branch(branch_name, branch.get(remote_hash_id))
+                            branch.head.set_target(remote_hash_id)
+                            branch.state_cleanup()
+                            return modified_files
+                        elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
+                            branch.merge(remote_hash_id, favor=MergeFavor.OURS)
+                            if branch.index.conflicts:
+                                conflicts = [conflict for conflict in branch.index.conflicts]
+                                branch.state_cleanup()
+                                raise GitError(
+                                    f"'origin/{branch_name}' has local conflict and should be resolved first."
+                                    f" Use force=True to ignore this error and override all local changes with remote."
+                                    f" Conflicts in {conflicts}"
+                                )
+                            tree = branch.index.write_tree()
+                            commit_message = f"Merged origin/{branch_name} into {branch.head.shorthand}"
+                            branch.create_commit(
+                                "HEAD", self.author, self.committer, commit_message, tree, [branch.head.target, remote_hash_id]
+                            )
+                            branch.state_cleanup()
+                            return modified_files
+                        else:
+                            branch.state_cleanup()
+                            raise GitError(f"Unexpected merge behaviour")
 
     def checkout(self, name: str = "published", force: bool = False) -> None:
         self.published.remotes["origin"].fetch(prune=True)

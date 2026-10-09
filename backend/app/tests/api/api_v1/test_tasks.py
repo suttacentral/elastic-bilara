@@ -49,7 +49,7 @@ class TestTaskStatus:
 
 
 @patch("app.tasks.GitManager")
-def test_pull_request_task_delegates_all_paths_to_bounded_publication(mock_git_manager, user):
+def test_pull_request_task_delegates_all_paths_to_bounded_publication(mock_git_manager, user, tmp_path):
     from app.tasks import pr
 
     paths = [
@@ -57,6 +57,7 @@ def test_pull_request_task_delegates_all_paths_to_bounded_publication(mock_git_m
         "/app/checkouts/unpublished/translations/en/test/sutta/an/an1/an1.2.json",
     ]
     manager = mock_git_manager.return_value
+    manager.unpublished.workdir = str(tmp_path)
     mock_git_manager.add.return_value = False
     manager.publish_files.return_value = "https://github.com/example/pull/1"
 

@@ -1,0 +1,286 @@
+[
+  {
+    "v2": {
+      "publication_number": "scpub1",
+      "creator_uid": "sujato",
+      "creator_name": "Bhikkhu Sujato",
+      "creator_github_handle": "sujato",
+      "translation_title": "Verses of the Senior Monks",
+      "first_published": "2014",
+      "editions_url": "https://suttacentral.net/thag"
+    },
+    "legacy": {
+      "publication_number": "scpub1",
+      "author_uid": "sujato-walton",
+      "collaborator": [
+        {
+          "collaborator_uid": "sujato",
+          "author_name": "Bhikkhu Sujato",
+          "author_github_handle": "sujato"
+        },
+        {
+          "collaborator_uid": "walton",
+          "author_name": "Jessica Walton",
+          "author_github_handle": ""
+        }
+      ],
+      "edition": [
+        {
+          "edition_number": "2",
+          "publication_date": "2014",
+          "publisher": "SuttaCentral",
+          "publication_type": "website",
+          "edition_url": "https://suttacentral.net/thag"
+        },
+        {
+          "edition_number": "1",
+          "publication_date": "2014",
+          "publisher": "SuttaCentral",
+          "publication_type": "book",
+          "number_of_volumes": "1",
+          "edition_url": [
+            "http://www.lulu.com/shop/bhikkhu-sujato/verses-of-the-senior-monks/hardcover/product-22152079.html",
+            "http://www.lulu.com/shop/bhikkhu-sujato/verses-of-the-senior-monks/paperback/product-22136852.html"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "v2": {
+      "publication_number": "scpub6",
+      "creator_uid": "sujato",
+      "creator_name": "Bhikkhu Sujato",
+      "creator_github_handle": "sujato",
+      "translation_title": "Verses of the Senior Nuns",
+      "first_published": "2019",
+      "editions_url": "https://suttacentral.net/thig"
+    },
+    "legacy": {
+      "publication_number": "scpub6",
+      "author_uid": "sujato-walton",
+      "collaborator": [
+        {
+          "collaborator_uid": "sujato",
+          "author_name": "Bhikkhu Sujato",
+          "author_github_handle": "sujato"
+        },
+        {
+          "collaborator_uid": "walton",
+          "author_name": "Jessica Walton",
+          "author_github_handle": ""
+        }
+      ],
+      "edition": [
+        {
+          "edition_number": "1",
+          "publication_date": "2019",
+          "publisher": "SuttaCentral",
+          "publication_type": "website",
+          "edition_url": "https://suttacentral.net/thig"
+        }
+      ]
+    }
+  },
+  {
+    "v2": {
+      "publication_number": "scpub22",
+      "creator_uid": [
+        "weerakoon",
+        "medagoda",
+        "sujato",
+        "allon"
+      ],
+      "creator_name": [
+        "Deepika Weerakoon",
+        "Roshini Medagoda",
+        "Bhikkhu Sujato",
+        "Mark Allon"
+      ],
+      "creator_github_handle": "sujato",
+      "translation_title": "The Small Division, sponsored by King Parakkamabāhu the Second",
+      "first_published": "",
+      "editions_url": ""
+    },
+    "legacy": {
+      "publication_number": "scpub22",
+      "author_uid": "dpcv",
+      "collaborator": [
+        {
+          "collaborator_uid": "",
+          "author_name": "Deepika Weerakoon",
+          "author_github_handle": ""
+        },
+        {
+          "collaborator_uid": "",
+          "author_name": "Roshini Medagoda",
+          "author_github_handle": ""
+        },
+        {
+          "collaborator_uid": "sujato",
+          "author_name": "Bhikkhu Sujato",
+          "author_github_handle": "sujato"
+        }
+      ],
+      "edition": [
+        {
+          "edition_number": "",
+          "publication_date": "",
+          "publisher": "",
+          "publication_type": "",
+          "edition_url": ""
+        }
+      ]
+    }
+  },
+  {
+    "v2": {
+      "publication_number": "scpub23",
+      "creator_uid": [
+        "weerakoon",
+        "medagoda"
+      ],
+      "creator_name": [
+        "Deepika Weerakoon",
+        "Roshini Medagoda"
+      ],
+      "creator_github_handle": "sujato",
+      "translation_title": "Buddha Jayanti Tipiṭaka",
+      "first_published": "",
+      "editions_url": ""
+    },
+    "legacy": {
+      "publication_number": "scpub23",
+      "author_uid": "bj",
+      "collaborator": [
+        {
+          "collaborator_uid": "",
+          "author_name": "Deepika Weerakoon",
+          "author_github_handle": ""
+        },
+        {
+          "collaborator_uid": "",
+          "author_name": "Roshini Medagoda",
+          "author_github_handle": ""
+        },
+        {
+          "collaborator_uid": "sujato",
+          "author_name": "Bhikkhu Sujato",
+          "author_github_handle": "sujato"
+        }
+      ],
+      "edition": [
+        {
+          "edition_number": "",
+          "publication_date": "",
+          "publisher": "",
+          "publication_type": "",
+          "edition_url": ""
+        }
+      ]
+    }
+  },
+  {
+    "v2": {
+      "publication_number": "scpub24",
+      "creator_uid": "sujato",
+      "creator_name": "Bhikkhu Sujato",
+      "creator_github_handle": "sujato",
+      "translation_title": "Sumaṅgalavilāsinī",
+      "first_published": "",
+      "editions_url": ""
+    },
+    "legacy": {
+      "publication_number": "scpub24",
+      "author_uid": "comm-team",
+      "collaborator": [
+        {
+          "collaborator_uid": "sujato",
+          "author_name": "Bhikkhu Sujato",
+          "author_github_handle": "sujato"
+        },
+        {
+          "collaborator_uid": "wynne",
+          "author_name": "Alexander Wynne",
+          "author_github_handle": "alexwynne"
+        },
+        {
+          "collaborator_uid": "kovilo",
+          "author_name": "Kovilo Bhikkhu",
+          "author_github_handle": "kovilo"
+        }
+      ],
+      "edition": [
+        {
+          "edition_number": "",
+          "publication_date": "",
+          "publisher": "",
+          "publication_type": "",
+          "edition_url": ""
+        }
+      ]
+    }
+  },
+  {
+    "v2": {
+      "publication_number": "scpub26",
+      "creator_uid": "nyeinchanaye",
+      "creator_name": "Nyein Chan Aye",
+      "creator_github_handle": "NyeinChanAye",
+      "translation_title": "ဒီဃနိကာယ်",
+      "first_published": "",
+      "editions_url": ""
+    },
+    "legacy": {
+      "publication_number": "scpub26",
+      "author_uid": "myteam",
+      "collaborator": [
+        {
+          "collaborator_uid": "nyeinchanaye",
+          "author_name": "Nyein Chan Aye",
+          "author_github_handle": "NyeinChanAye"
+        },
+        {
+          "collaborator_uid": "ashinsarana",
+          "author_name": "Ashin Sarana",
+          "author_github_handle": "ashinsarana"
+        }
+      ],
+      "edition": [
+        {
+          "edition_number": "1",
+          "publication_date": "2021",
+          "publisher": "SuttaCentral",
+          "publication_type": "website",
+          "edition_url": "https://suttacentral.net/dn"
+        }
+      ]
+    }
+  },
+  {
+    "v2": {
+      "publication_number": "scpub64",
+      "creator_uid": false,
+      "creator_name": "The M.L. Maniratana Bunnag Dhamma Society Fund",
+      "creator_github_handle": false,
+      "translation_title": "The Buddhist Era 2500 Great International Council Pāḷi Tipiṭaka",
+      "first_published": "2005",
+      "editions_url": ""
+    },
+    "legacy": {
+      "publication_number": "scpub64",
+      "author_uid": "ms",
+      "author_name": "Mahāsaṅgīti Tipiṭaka Buddhavasse 2500",
+      "author_github_handle": false,
+      "edition": [
+        {
+          "edition_number": "1",
+          "publication_date": "2005",
+          "publisher": "Dhamma Society",
+          "publication_type": "website",
+          "edition_url": "https://suttacentral.net/ms"
+        }
+      ]
+    }
+  }
+]

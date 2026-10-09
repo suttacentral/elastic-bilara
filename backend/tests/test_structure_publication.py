@@ -64,8 +64,9 @@ def test_push_retry_sends_all_files_after_local_commit(tmp_path):
 
 @pytest.mark.parametrize('failure_point', ['write_tree', 'create_commit'])
 @pytest.mark.parametrize('error_type', [pygit2.GitError, OSError])
-def test_commit_failure_stops_before_pull_and_push(failure_point, error_type):
+def test_commit_failure_stops_before_pull_and_push(tmp_path, failure_point, error_type):
     manager = Mock()
+    manager.unpublished.workdir = str(tmp_path)
     error = error_type('commit write failed')
     if failure_point == 'write_tree':
         manager.unpublished.index.write_tree.side_effect = error

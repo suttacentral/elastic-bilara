@@ -13,6 +13,7 @@ class TestManager:
     def test_pull_uses_merge_favor_enum_for_normal_merge(self, git_manager):
         remote_hash_id = Oid(hex="1" * 40)
         branch = Mock()
+        branch.workdir = git_manager.unpublished.workdir
         remote = Mock(name="origin")
         remote.name = "origin"
         branch.remotes = [remote]

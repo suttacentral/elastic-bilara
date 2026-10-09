@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import elasticsearch.exceptions
 from elasticsearch.exceptions import ConnectionError as ElasticConnectionError
@@ -13,6 +14,7 @@ from app.db.schemas.user import UserBase
 from app.services.git import utils
 from app.services.git.manager import GitManager
 from app.services.git.task import GitTask
+from app.services.publications.store import PublicationStore
 from search.search import Search
 
 es = Search()
@@ -50,12 +52,13 @@ def commit(user: dict, file_paths: list[str], message: str, add: bool = True) ->
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
     git_operation = GitManager.add if add else GitManager.remove
 
-    if not git_operation(manager.unpublished, paths):
-        return False
-    # A retry after a failed push may already have committed these files.
-    # No new commit is needed in that case, but the existing commit must be pushed.
-    # commit() returns False only for no changes; write failures raise and stop here.
-    GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
+    with PublicationStore(Path(manager.unpublished.workdir)).locked():
+        if not git_operation(manager.unpublished, paths):
+            return False
+        # A retry after a failed push may already have committed these files.
+        # No new commit is needed in that case, but the existing commit must be pushed.
+        # commit() returns False only for no changes; write failures raise and stop here.
+        GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
 
     changed_files = manager.pull(manager.unpublished)
     GitManager.push(manager.unpublished, "origin", "unpublished")
@@ -79,10 +82,13 @@ def pr(user, file_paths) -> str:
     # Step 1: commit any uncommitted working-tree changes to the unpublished branch first,
     # so that process_files / has_changes can detect the latest content.
     commit_msg = f"Translations by {user_data.username}"
-    if GitManager.add(manager.unpublished, paths):
-        if GitManager.commit(manager.unpublished, manager.author, manager.committer, commit_msg, paths):
-            manager.pull(manager.unpublished)
-            GitManager.push(manager.unpublished, "origin", "unpublished")
+    committed = False
+    with PublicationStore(Path(manager.unpublished.workdir)).locked():
+        if GitManager.add(manager.unpublished, paths):
+            committed = GitManager.commit(manager.unpublished, manager.author, manager.committer, commit_msg, paths)
+    if committed:
+        manager.pull(manager.unpublished)
+        GitManager.push(manager.unpublished, "origin", "unpublished")
 
     # Step 2: create PR from unpublished → published
     logger.info("Publishing %d files for GitHub user %s", len(paths), user_data.github_id)

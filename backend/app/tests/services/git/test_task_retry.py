@@ -6,6 +6,7 @@ from github import GithubException
 from github.GithubException import RateLimitExceededException
 
 from app.services.git.task import GitTask
+from app.services.publications.errors import PublicationStorageError
 
 
 class FailingGitTask(GitTask):
@@ -17,6 +18,17 @@ class FailingGitTask(GitTask):
 
 
 FailingGitTask.bind(Celery("git-task-test"))
+
+
+@pytest.mark.parametrize('error_type', [OSError, PublicationStorageError])
+def test_storage_failures_keep_the_existing_retry_behavior(error_type):
+    exception = error_type('storage unavailable')
+    task = FailingGitTask(exception)
+    task.retry = Mock()
+
+    task()
+
+    task.retry.assert_called_once_with(exc=exception, countdown=task.initial_backoff, max_retries=task.max_retries)
 
 
 def test_rate_limit_exception_retries_after_reset(monkeypatch):
