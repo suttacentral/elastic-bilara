@@ -152,6 +152,13 @@ const search = () => {
             for (const [key, value] of Object.entries(this.fields)) {
                 params.set(key, value);
             }
+            // Project roles come from the page, never from field order or author name.
+            // sourceMuid is also available while asynchronous source resolution finishes.
+            const pageParams = new URLSearchParams(window.location.search);
+            const source = this.sourceMuid || pageParams.get("source");
+            const target = pageParams.get("muid");
+            if (source && Object.hasOwn(this.fields, source)) params.set("source_muid", source);
+            if (target && target !== source && Object.hasOwn(this.fields, target)) params.set("target_muid", target);
             return params;
         },
         // ---- Editable search results helpers ----

@@ -40,17 +40,17 @@ def uid_search(monkeypatch):
 )
 def test_query_applies_uid_globally(text, uid, clause):
     search = object.__new__(Search)
-    query = search._build_search_body(10, 0, {"translation-en-test": "", "root-pli-test": text}, uid)["query"]["bool"]
+    query = search._build_search_body({"translation-en-test": "", "root-pli-test": text}, uid)["query"]["bool"]
     assert query["filter"] == [clause]
     if text:
         assert query["minimum_should_match"] == 1
-        assert len(query["should"]) == 2
+        assert len(query["should"]) == 1
 
 
 @pytest.mark.parametrize("uid", [None, "", "   "])
 def test_query_blank_uid_has_no_filter(uid):
     search = object.__new__(Search)
-    query = search._build_search_body(10, 0, {"root-pli-test": "needle"}, uid)["query"]["bool"]
+    query = search._build_search_body({"root-pli-test": "needle"}, uid)["query"]["bool"]
     assert "filter" not in query
 
 
@@ -87,6 +87,142 @@ def test_uid_pattern_supports_internal_percent(uid_search):
 def test_uid_and_text_are_both_required(uid_search):
     results = uid_search.get_segments(100, 0, {"uid": "sn", "root-pli-test": "absent"})
     assert results == {}
+
+
+@pytest.fixture
+def partial_projects(uid_search, monkeypatch):
+    # Force transport boundaries, including a batch with no eligible UID.
+    monkeypatch.setattr(uid_search, "_search_uid_batch_size", 2)
+    root, target, extra = "root-pli-partial", "translation-en-partial", "translation-de-partial"
+    rows = {
+        "sn10:1": {root: "needle"},
+        "sn10:2": {target: "translation"},
+        "sn10:3": {root: "needle", target: ""},
+        "sn10:4": {root: "needle", target: "translation", extra: "extra"},
+        "sn10:5": {root: "needle", target: "translation"},
+        "mn10:1": {root: "needle", target: "translation", extra: "extra"},
+    }
+    for uid, segments in rows.items():
+        for muid, segment in segments.items():
+            uid_search._search.index(index=settings.ES_SEGMENTS_INDEX, document={
+                "uid": uid, "muid": muid, "segment": segment,
+            })
+    # Duplicate source documents must never substitute for a missing target.
+    uid_search._search.index(index=settings.ES_SEGMENTS_INDEX, document={
+        "uid": "sn10:1", "muid": root, "segment": "needle",
+    })
+    uid_search._search.indices.refresh(index=settings.ES_SEGMENTS_INDEX)
+    return uid_search, root, target, extra
+
+
+@pytest.mark.parametrize("text", ["", "needle"])
+@pytest.mark.parametrize("uid", ["sn10:", "SN10:%", "sn%:3"])
+def test_required_projects_and_optional_display_are_consistent(partial_projects, text, uid):
+    search, root, target, extra = partial_projects
+    fields = {"uid": uid, root: text, target: "", extra: ""}
+    roles = {"source_muid": root, "target_muid": target}
+    expected = {"sn10:3", "sn10:4", "sn10:5"} if uid != "sn%:3" else {"sn10:3"}
+    results = search.get_segments(100, 0, fields, **roles)
+    assert set(results) == expected
+    assert results["sn10:3"] == {root: "needle", target: ""}
+    if "sn10:4" in results:
+        assert results["sn10:4"][extra] == "extra"
+        assert extra not in results["sn10:5"]
+    # Missing optional records must not consume pages or cause early termination.
+    pages = [search.get_segments(1, page, fields, **roles) for page in range(len(expected) + 1)]
+    assert all(len(page) == 1 for page in pages[:-1])
+    assert pages[-1] == {}
+    assert {key for page in pages for key in page} == expected
+    assert fields["uid"] == uid
+
+
+def test_extra_keyword_is_required_and_all_keywords_must_match(partial_projects):
+    search, root, target, extra = partial_projects
+    fields = {"uid": "sn10:", root: "needle", target: "translation", extra: "extra"}
+    roles = {"source_muid": root, "target_muid": target}
+    assert set(search.get_segments(100, 0, fields, **roles)) == {"sn10:4"}
+    assert search.get_segments(100, 0, {**fields, extra: "absent"}, **roles) == {}
+
+
+def test_text_search_without_uid_still_requires_current_translation(partial_projects):
+    search, root, target, extra = partial_projects
+    results = search.get_segments(100, 0, {root: "needle", target: "", extra: ""},
+                                  source_muid=root, target_muid=target)
+    assert set(results) == {"sn10:3", "sn10:4", "sn10:5", "mn10:1"}
+
+
+def test_absent_keyword_does_not_scan_required_projects(partial_projects, mocker):
+    search, root, target, _ = partial_projects
+    requests = mocker.patch.object(search._search, "search", wraps=search._search.search)
+    results = search.get_segments(100, 0, {root: "absent", target: ""},
+                                  source_muid=root, target_muid=target)
+    assert results == {}
+    assert requests.call_count == 1
+
+
+@pytest.mark.parametrize("keyword_project", ["root", "target", "extra"])
+def test_sparse_keyword_only_checks_matching_uids(partial_projects, mocker, keyword_project):
+    search, root, target, extra = partial_projects
+    keyword_muid = {"root": root, "target": target, "extra": extra}[keyword_project]
+    # Many unrelated records in the required projects must not add search pages.
+    for number in range(20):
+        for muid in (root, target):
+            search._search.index(index=settings.ES_SEGMENTS_INDEX, document={
+                "uid": f"sn20:{number}", "muid": muid, "segment": "unrelated",
+            })
+    for uid, segments in {
+        "sn20:90": {keyword_muid: "rareword"},
+        "sn20:91": {root: "", target: "", extra: ""},
+    }.items():
+        segments[keyword_muid] = "rareword"
+        for muid, segment in segments.items():
+            search._search.index(index=settings.ES_SEGMENTS_INDEX, document={
+                "uid": uid, "muid": muid, "segment": segment,
+            })
+    if keyword_project == "extra":
+        # Multiple source records cannot substitute for the missing target.
+        for _ in range(2):
+            search._search.index(index=settings.ES_SEGMENTS_INDEX, document={
+                "uid": "sn20:90", "muid": root, "segment": "",
+            })
+    search._search.indices.refresh(index=settings.ES_SEGMENTS_INDEX)
+    fields = {root: "", target: "", extra: "", keyword_muid: "rareword"}
+    requests = mocker.patch.object(search._search, "search", wraps=search._search.search)
+    results = search.get_segments(1, 0, fields, source_muid=root, target_muid=target)
+    assert set(results) == {"sn20:91"}
+    assert results["sn20:91"][keyword_muid] == "rareword"
+    # One candidate query, one bounded presence check, and one content fetch.
+    assert requests.call_count == 3
+    requests.reset_mock()
+    assert search.get_segments(1, 1, fields, source_muid=root, target_muid=target) == {}
+    # The terminal page has no content fetch; a final candidate query detects EOF.
+    assert requests.call_count == 3
+
+
+def test_presence_join_skips_rejected_batches_and_preserves_uid_order(partial_projects):
+    search, root, target, _ = partial_projects
+    for number in range(1, 5):
+        search._search.index(index=settings.ES_SEGMENTS_INDEX, document={
+            "uid": f"sn30:{number}", "muid": root, "segment": "batchword",
+        })
+        # The first candidate batch has no target. Duplicate target records make
+        # presence aggregation order differ from the candidate UID order.
+        for _ in range(number if number >= 3 else 0):
+            search._search.index(index=settings.ES_SEGMENTS_INDEX, document={
+                "uid": f"sn30:{number}", "muid": target, "segment": "",
+            })
+    search._search.indices.refresh(index=settings.ES_SEGMENTS_INDEX)
+    fields = {root: "batchword", target: ""}
+    roles = {"source_muid": root, "target_muid": target}
+    assert list(search.get_segments(1, 0, fields, **roles)) == ["sn30:3"]
+    assert list(search.get_segments(1, 1, fields, **roles)) == ["sn30:4"]
+    assert search.get_segments(1, 2, fields, **roles) == {}
+
+
+def test_source_only_page_does_not_require_a_target(partial_projects):
+    search, root, _, extra = partial_projects
+    results = search.get_segments(100, 0, {"uid": "sn10:", root: "", extra: ""}, source_muid=root)
+    assert set(results) == {"sn10:1", "sn10:3", "sn10:4", "sn10:5"}
 
 
 def test_range_file_prefixes_from_real_indexes(uid_search, monkeypatch):

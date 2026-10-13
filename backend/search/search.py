@@ -16,6 +16,7 @@ class Search:
     _instance = None
     # A transport page size, not a candidate limit. All pages are consumed.
     _hints_batch_size = 10000
+    _search_uid_batch_size = 1000
 
     def __new__(cls):
         if cls._instance is None:
@@ -313,17 +314,75 @@ class Search:
             doc["segment"] = data[uid]
             self._search.index(index=settings.ES_SEGMENTS_INDEX, id=doc_id, body=doc)
 
-    def get_segments(self, size: int, page: int, muids: dict[str, str]) -> dict[str, dict[str, str]] | dict:
-        from_: int = page * size
-        uid: str = (muids.pop("uid", None) or "").strip().lower()
-        if uid:
-            if any(muids.values()):
-                return self._uid_muids_lookup(size, from_, uid, muids)
-            else:
-                return self._uid_lookup(size, from_, uid, muids)
-        if any(muids.values()):
-            return self._muids_lookup(size, from_, muids)
-        return {}
+    def get_segments(
+        self, size: int, page: int, muids: dict[str, str],
+        *, source_muid: str | None = None, target_muid: str | None = None,
+    ) -> dict[str, dict[str, str]]:
+        fields = dict(muids)
+        uid = (fields.pop("uid", None) or "").strip().lower()
+        if not uid and not any(fields.values()):
+            return {}
+        body = self._build_search_body(fields, uid, source_muid=source_muid, target_muid=target_muid)
+        presence_muids = [
+            muid for muid, text in fields.items()
+            if muid in (source_muid, target_muid) and not text
+        ] if any(fields.values()) else []
+        offset = page * size
+        uids = []
+        # Stream the UID join in key order. Apply its predicates before counting
+        # offsets so missing projects cannot produce short pages or hide matches.
+        while len(uids) < size:
+            response = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=body)
+            group = response["aggregations"]["uids"]
+            candidates = [
+                bucket["key"]["uid"] for bucket in group["buckets"]
+                if all(bucket[name]["doc_count"] for name in body["aggs"]["uids"]["aggs"])
+            ]
+            for candidate in self._filter_uids_by_projects(candidates, presence_muids):
+                if offset:
+                    offset -= 1
+                else:
+                    uids.append(candidate)
+                    if len(uids) == size:
+                        break
+            if not group["buckets"] or "after_key" not in group:
+                break
+            body["aggs"]["uids"]["composite"]["after"] = group["after_key"]
+        if not uids:
+            return {}
+        # Optional projects only supply display content after qualifying UIDs
+        # have been selected. Read all documents, including duplicates across files.
+        results = {uid: {} for uid in uids}
+        query = {"query": {"bool": {"filter": [
+            {"terms": {"uid": uids}}, {"terms": {"muid": list(fields)}},
+        ]}}, "_source": ["uid", "muid", "segment"]}
+        for hit in self._scroll_search(query, index=settings.ES_SEGMENTS_INDEX):
+            source = hit["_source"]
+            results[source["uid"]][source["muid"]] = source["segment"]
+        return results
+
+    def _filter_uids_by_projects(self, uids: list[str], muids: list[str]) -> list[str]:
+        """Check project presence only for this batch of keyword-matching UIDs."""
+        if not uids or not muids:
+            return uids
+        body = {
+            "size": 0,
+            "query": {"bool": {"filter": [
+                {"terms": {"uid": uids}}, {"terms": {"muid": muids}},
+            ]}},
+            "aggs": {"uids": {
+                # The query bounds the distinct keys, so these terms cannot truncate.
+                "terms": {"field": "uid", "size": len(uids)},
+                "aggs": {"projects": {"terms": {"field": "muid", "size": len(muids)}}},
+            }},
+        }
+        response = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=body)
+        required = set(muids)
+        eligible = {
+            bucket["key"] for bucket in response["aggregations"]["uids"]["buckets"]
+            if {project["key"] for project in bucket["projects"]["buckets"]} == required
+        }
+        return [uid for uid in uids if uid in eligible]
 
     def get_segment_prefixes(self, results: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
         """Resolve result locations through indexed file IDs, never by parsing a UID."""
@@ -356,74 +415,44 @@ class Search:
                 prefixes.setdefault(item["uid"], {})[item["muid"]] = file_prefixes[item["main_doc_id"]]
         return prefixes
 
-    def _uid_lookup(self, size: int, from_: int, uid: str | None, muids: dict[str, str]) -> dict[str, dict[str, str]]:
-        body: dict[str, Any] = self._build_search_body(size, from_, muids, uid)
-        es_results: dict[str, Any] = self._search.search(
-            index=settings.ES_SEGMENTS_INDEX,
-            body=body,
-        )
-        return self._get_results(es_results)
-
-    def _muids_lookup(self, size: int, from_: int, muids: dict[str, str]) -> dict[str, dict[str, str]]:
-        body: dict[str, Any] = self._build_search_body(size, from_, muids)
-        es_results: dict[str, Any] = self._search.search(
-            index=settings.ES_SEGMENTS_INDEX,
-            body=body,
-        )
-        return self._sort_segments(self._get_segments_for_remaining_muids(self._get_results(es_results), muids))
-
-    def _uid_muids_lookup(
-        self, size: int, from_: int, uid: str | None, muids: dict[str, str]
-    ) -> dict[str, dict[str, str]]:
-        body: dict[str, Any] = self._build_search_body(size, from_, muids, uid)
-        es_results: dict[str, Any] = self._search.search(
-            index=settings.ES_SEGMENTS_INDEX,
-            body=body,
-        )
-        return self._sort_segments(self._get_segments_for_remaining_muids(self._get_results(es_results), muids))
-
     def _build_search_body(
-        self,
-        size: int,
-        from_: int,
-        muids: dict[str, str],
-        uid: str | None = None,
+        self, muids: dict[str, str], uid: str | None = None,
+        *, source_muid: str | None = None, target_muid: str | None = None,
     ) -> dict[str, Any]:
         uid = (uid or "").strip().lower()
-        if uid and not any(muids.values()):
-            doc_count = hits_size = len(muids)
-            body: dict[str, Any] = {
-                "query": {
-                    "bool": {
-                        "must": [
-                            {"bool": {"should": [{"terms": {"muid": [*muids.keys()]}}]}},
-                        ]
-                    }
-                }
-            }
-        else:
-            doc_count, hits_size = self._get_min_doc_count_and_hot_hits_size(muids)
-            body: dict[str, Any] = {
-                "query": {
-                    "bool": {"should": [], "minimum_should_match": 1},
-                }
-            }
-            for muid, lookup in muids.items():
-                body["query"]["bool"]["should"].append(
-                    {
-                        "bool": {
-                            "must": [
-                                {"term": {"muid": {"value": muid}}},
-                                {"match_phrase_prefix": {"segment": lookup}},
-                            ]
-                        }
-                    }
-                )
+        has_keywords = any(muids.values())
+        required = []
+        for muid, text in muids.items():
+            # Presence-only roles are joined against matching UID batches later;
+            # including them here would enumerate whole projects for rare keywords.
+            if text or (not has_keywords and muid in (source_muid, target_muid)):
+                clauses = [{"term": {"muid": muid}}]
+                if text:
+                    clauses.append({"match_phrase_prefix": {"segment": text}})
+                required.append({"bool": {"must": clauses}})
+
+        query = ({"should": required, "minimum_should_match": 1} if required
+                 else {"must": [{"terms": {"muid": list(muids)}}]})
         if uid:
-            body["query"]["bool"]["filter"] = [self._build_uid_filter(uid)]
-        body["aggs"] = self._build_aggs(doc_count, hits_size, size, from_)
-        body["size"] = 0
-        return body
+            query["filter"] = [self._build_uid_filter(uid)]
+
+        # Count each required project's own matching documents. A duplicate in
+        # one project must not satisfy the presence or text condition of another.
+        aggregations = {
+            f"required_{index}": {"filter": clause}
+            for index, clause in enumerate(required)
+        }
+        return {
+            "size": 0,
+            "query": {"bool": query},
+            "aggs": {"uids": {
+                "composite": {
+                    "size": self._search_uid_batch_size,
+                    "sources": [{"uid": {"terms": {"field": "uid", "order": "asc"}}}],
+                },
+                "aggs": aggregations,
+            }},
+        }
 
     def _build_uid_filter(self, uid: str) -> dict[str, Any]:
         if "%" not in uid:
@@ -431,102 +460,6 @@ class Search:
         # Only % is a user wildcard; preserve literal Elasticsearch metacharacters.
         pattern = "".join("*" if char == "%" else "\\" + char if char in "\\*?" else char for char in uid)
         return {"wildcard": {"uid": {"value": pattern}}}
-
-    def _get_min_doc_count_and_hot_hits_size(self, muids: dict[str, str]) -> tuple[int, int]:
-        doc_count: int = sum(1 for v in muids.values() if v != "")
-        hits_size: int = len(muids)
-        return doc_count, hits_size
-
-    def _build_aggs(self, doc_count: int, hits_size: int, size: int, from_: int) -> dict[str, Any]:
-        return {
-            "uids": {
-                "terms": {
-                    "field": "uid",
-                    "min_doc_count": doc_count,
-                    "size": 10000,
-                },
-                "aggs": {
-                    "top_uid_hits": {
-                        "top_hits": {
-                            "_source": {"includes": ["muid", "segment"]},
-                            "size": hits_size,
-                        }
-                    },
-                    "uids_bucket_sort": {"bucket_sort": {"sort": [], "from": from_, "size": size}},
-                },
-            }
-        }
-
-    def _get_results(self, es_results: dict[str, Any]) -> dict[str, dict[str, str]]:
-        results: dict[str, dict[str, str]] = {}
-        for data in es_results["aggregations"]["uids"]["buckets"]:
-            uid: str = data["key"]
-            results[uid]: dict[str, str] = {}
-            for hit in data["top_uid_hits"]["hits"]["hits"]:
-                source: dict[str, str] = hit["_source"]
-                results[uid][source["muid"]] = source["segment"]
-        return results
-
-    def _sort_segments(self, results: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
-        return dict(sorted(results.items(), key=lambda item: len(item[1]), reverse=True))
-
-    def _get_segments_for_remaining_muids(self, results, muids) -> dict[str, dict[str, str]]:
-        if not results:
-            return {}
-        uids: list[str] = list(results.keys())
-        muids_to_remove: list[str] = results[uids[0]].keys()
-        for muid in muids_to_remove:
-            del muids[muid]
-        missing_data: dict[str, dict[str, str]] = self._get_missing_data(uids, muids.keys())
-        data: dict[str, dict[str, str]] = {
-            uid: {**results.get(uid, {}), **missing_data.get(uid, {})} for uid in set(results) | set(missing_data)
-        }
-        return data
-
-    def _get_missing_data(self, uids, muids) -> dict[str, dict[str, str]]:
-        size: int = len(uids) * len(muids)
-        if size > 10000:
-            return self._get_missing_data_by_chunks(uids, muids)
-        body: dict[str, Any] = self._build_missing_data_body(uids, muids, size)
-        es_results: dict[str, Any] = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=body)
-        results: dict[str, dict[str, str]] = {uid: {} for uid in uids}
-        if hits := es_results.get("hits").get("hits"):
-            for hit in hits:
-                if source := hit.get("_source"):
-                    results[source.get("uid")][source.get("muid")] = source.get("segment")
-        return results
-
-    def _get_missing_data_by_chunks(self, uids, muids) -> dict[str, dict[str, str]]:
-        chunk_size: int = 10000
-        results: dict[str, dict[str, str]] = {uid: {} for uid in uids}
-        body: dict[str, Any] = self._build_missing_data_body(uids, muids, chunk_size)
-        body["sort"] = [{"uid": "asc"}, {"muid": "asc"}]
-        while True:
-            es_results: dict[str, Any] = self._search.search(index=settings.ES_SEGMENTS_INDEX, body=body)
-
-            if not es_results.get("hits").get("hits"):
-                break
-
-            for hit in es_results.get("hits").get("hits"):
-                if source := hit.get("_source"):
-                    results[source.get("uid")][source.get("muid")] = source.get("segment")
-
-            last_hit: dict[str, Any] = es_results.get("hits").get("hits")[-1]
-            body["search_after"] = last_hit.get("sort")
-        return results
-
-    def _build_missing_data_body(self, uids, muids, size) -> dict[str, Any]:
-        return {
-            "size": size,
-            "query": {
-                "bool": {
-                    "must": [
-                        {"terms": {"uid": [*uids]}},
-                        {"bool": {"should": [{"terms": {"muid": [*muids]}}]}},
-                    ]
-                }
-            },
-        }
 
     def _process_data(
         self, index: str, segments_index: str, paths: list[Path] | Generator = None, delete: bool = False

@@ -5,6 +5,30 @@ import pytest
 
 class TestSearch:
     @pytest.mark.asyncio
+    async def test_search_passes_project_roles_separately(self, async_client, mock_get_current_user, mocker):
+        search = mocker.patch('app.api.api_v1.endpoints.search.es.get_segments', return_value={})
+        mocker.patch('app.api.api_v1.endpoints.search.es.get_segment_prefixes', return_value={})
+        response = await async_client.get('/search/', params={
+            'uid': 'sn%', 'source_muid': 'root-pli-test', 'target_muid': 'translation-en-test',
+            'root-pli-test': '', 'translation-en-test': '', 'translation-de-extra': '',
+        })
+        assert response.status_code == 200
+        search.assert_called_once_with(10, 0, {
+            'uid': 'sn%', 'root-pli-test': '', 'translation-en-test': '', 'translation-de-extra': '',
+        }, source_muid='root-pli-test', target_muid='translation-en-test')
+
+    @pytest.mark.parametrize('role', ['source_muid', 'target_muid'])
+    @pytest.mark.asyncio
+    async def test_search_rejects_roles_outside_selected_projects(self, role, async_client, mock_get_current_user, mocker):
+        search = mocker.patch('app.api.api_v1.endpoints.search.es.get_segments')
+        response = await async_client.get('/search/', params={
+            'uid': 'sn%', 'root-pli-test': '', role: 'translation-en-unselected',
+        })
+        assert response.status_code == 400
+        assert response.json()['detail'] == f'{role} must identify a selected project'
+        search.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_search_unauthenticated(self, async_client) -> None:
         response = await async_client.get("/search/")
         assert response.status_code == 401

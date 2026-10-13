@@ -88,6 +88,9 @@ test.each(['projects', 'source'])('includes the resolved source when %s finishes
     expect(translation.sourceMuid).toBe(SOURCE);
     expect(panel.fields).toEqual({ uid: '', [TARGET]: '', [SOURCE]: '' });
     expect(panel.selectedProjects[SOURCE]).toBe(true);
+    const query = panel.constructQueryParams();
+    expect(query.get('source_muid')).toBe(SOURCE);
+    expect(query.get('target_muid')).toBe(TARGET);
 });
 
 test('includes a source resolved before the search panel mounts', async () => {
@@ -137,6 +140,38 @@ test('preserves manual removal while the project picker is loading', async () =>
     await initialized;
     expect(panel.fields).not.toHaveProperty(SOURCE);
     expect(panel.selectedProjects[SOURCE]).toBe(false);
+    expect(panel.constructQueryParams().has('source_muid')).toBe(false);
+});
+
+test('requests and prefetched pages retain primary roles while extras remain display fields', async () => {
+    window.history.replaceState({}, '', `/translation.html?muid=${TARGET}&source=${SOURCE}`);
+    const panel = createSearch();
+    panel.fields = { uid: 'sn%', [SOURCE]: '', [TARGET]: '', 'translation-de-extra': '' };
+    panel._fetchEditPermissions = jest.fn().mockResolvedValue();
+    const pages = [
+        { results: { 'sn1:1': { [SOURCE]: 'pali', [TARGET]: '' } }, prefixes: {} },
+        { results: { 'sn2:1': { [SOURCE]: 'pali', [TARGET]: 'translation' } }, prefixes: {} },
+        { results: {}, prefixes: {} },
+    ];
+    requestWithTokenRetry.mockImplementation(async () => response(pages.shift()));
+    await panel.searchHandler({});
+    await panel.nextHandler();
+    const queries = requestWithTokenRetry.mock.calls.map(([url]) => new URLSearchParams(url.split('?')[1]));
+    expect(queries.map(query => query.get('page'))).toEqual(['0', '1', '2']);
+    for (const query of queries) {
+        expect(query.get('source_muid')).toBe(SOURCE);
+        expect(query.get('target_muid')).toBe(TARGET);
+        expect(query.get('translation-de-extra')).toBe('');
+        expect(query.get('uid')).toBe('sn%');
+    }
+});
+
+test('a root-only page sends only the source role', () => {
+    window.history.replaceState({}, '', `/translation.html?muid=${SOURCE}&source=${SOURCE}`);
+    const panel = createSearch();
+    panel.fields[SOURCE] = '';
+    expect(panel.constructQueryParams().get('source_muid')).toBe(SOURCE);
+    expect(panel.constructQueryParams().has('target_muid')).toBe(false);
 });
 
 test('keeps the resolved source field when the project picker request fails', async () => {

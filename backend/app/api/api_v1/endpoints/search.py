@@ -23,11 +23,15 @@ async def search(
     uid: str | None = None,
     size: int = 10,
     page: int = 0,
+    source_muid: str | None = None,
+    target_muid: str | None = None,
 ) -> SearchSegmentOut:
     params: dict[str, str] = {**request.query_params}
     size = int(params.pop("size", size))
     page = int(params.pop("page", page))
     uid = params.pop("uid", uid)
+    params.pop("source_muid", None)
+    params.pop("target_muid", None)
     if uid and not params:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -38,8 +42,11 @@ async def search(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No query parameters provided",
         )
+    for role, muid in (("source_muid", source_muid), ("target_muid", target_muid)):
+        if muid is not None and muid not in params:
+            raise HTTPException(status_code=400, detail=f"{role} must identify a selected project")
     params["uid"] = uid
-    results = es.get_segments(size, page, params)
+    results = es.get_segments(size, page, params, source_muid=source_muid, target_muid=target_muid)
     return SearchSegmentOut(results=results, prefixes=es.get_segment_prefixes(results))
 
 
