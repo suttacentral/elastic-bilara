@@ -44,7 +44,8 @@ class GitManager:
         self.repo_owner: str = settings.GITHUB_REPO.split("/")[0]
 
     def pull(
-        self, branch: Repository = "published", force: bool = False, remote_name: str = "origin"
+        self, branch: Repository = "published", force: bool = False, remote_name: str = "origin",
+        fail_on_conflict: bool = False,
     ) -> list[Path] | None:
         if not branch:
             raise GitError(f"Branch {branch} not found")
@@ -95,7 +96,13 @@ class GitManager:
                             branch.state_cleanup()
                             return modified_files
                         elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
-                            branch.merge(remote_hash_id, favor=MergeFavor.OURS)
+                            if fail_on_conflict:
+                                base = branch.merge_base(branch.head.target, remote_hash_id)
+                                merged = branch.merge_trees(base, branch.head.target, remote_hash_id)
+                                if merged.conflicts:
+                                    # Check before modifying the index or working files.
+                                    raise ValueError("Publication sync conflicts with origin/unpublished. Resolve the Git conflict before retrying sync.")
+                            branch.merge(remote_hash_id, favor=MergeFavor.NORMAL if fail_on_conflict else MergeFavor.OURS)
                             if branch.index.conflicts:
                                 conflicts = [conflict for conflict in branch.index.conflicts]
                                 branch.state_cleanup()
@@ -320,11 +327,17 @@ class GitManager:
         return repo.create_commit("HEAD", author, committer, message, repo.index.write_tree(), [repo.head.target])
 
     @staticmethod
-    def push(repo, remote_name="origin", branch="unpublished"):
+    def push(repo, remote_name="origin", branch="unpublished", force=True):
         remote = repo.remotes[remote_name]
+        callbacks = RemoteCallbacks(UserPass(settings.GITHUB_USERNAME, settings.GITHUB_TOKEN))
+        if not force:
+            def check_update(refname, message):
+                if message:
+                    raise GitError(f"Push rejected for {refname}: {message}")
+            callbacks.push_update_reference = check_update
         remote.push(
-            ["+refs/heads/%s:refs/heads/%s" % (branch, branch)],
-            callbacks=RemoteCallbacks(UserPass(settings.GITHUB_USERNAME, settings.GITHUB_TOKEN)),
+            [("+" if force else "") + "refs/heads/%s:refs/heads/%s" % (branch, branch)],
+            callbacks=callbacks,
         )
 
     @staticmethod

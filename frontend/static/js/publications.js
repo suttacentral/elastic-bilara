@@ -40,8 +40,12 @@ function publicationsManager(adminPage = false) {
         authorRows: [],
         singleAuthorIndex: '',
         revision: '',
-        publishTaskId: '',
-        publishStatus: '',
+        syncStatus: '',
+        syncState: 'idle',
+        canRetrySync: false,
+        syncTimer: null,
+        syncVersion: 0,
+        destroyed: false,
         loadingDetail: false,
         formTrigger: null,
         loading: false,
@@ -52,7 +56,7 @@ function publicationsManager(adminPage = false) {
         filterPublished: '',
         sortField: 'publication_number',
         sortAsc: true,
-        publishing: false,
+        retryingSync: false,
 
         form: publicationDefaults(),
         formErrors: {},
@@ -70,6 +74,7 @@ function publicationsManager(adminPage = false) {
                     return;
                 }
                 await this.loadPublications();
+                await this.checkSyncStatus();
             } catch (error) {
                 this.loadError = error.message;
             }
@@ -336,8 +341,9 @@ function publicationsManager(adminPage = false) {
                     throw new Error(this.errorMessage(data));
                 }
 
+                this.setSyncStatus(data._sync);
                 this.showToast(
-                    isEdit ? 'Publication saved in both metadata files' : 'Publication created in both metadata files',
+                    isEdit ? 'Publication saved. Syncing to GitHub.' : 'Publication created. Syncing to GitHub.',
                     'success'
                 );
                 await this.loadPublications();
@@ -361,7 +367,8 @@ function publicationsManager(adminPage = false) {
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(this.errorMessage(data));
-                this.showToast(`${pubNumber} deleted`, 'success');
+                this.setSyncStatus(data._sync);
+                this.showToast(`${pubNumber} deleted. Syncing to GitHub.`, 'success');
                 await this.loadPublications();
             } catch (e) {
                 this.showToast('Error: ' + e.message, 'error');
@@ -399,43 +406,75 @@ function publicationsManager(adminPage = false) {
             }
         },
 
-        async publishToGitHub() {
-            if (!this.isAdmin || this.publishing) return;
-            if (!confirm('Commit and push publication metadata to GitHub?')) return;
-            this.publishing = true;
+        destroy() {
+            this.destroyed = true;
+            clearTimeout(this.syncTimer);
+        },
+
+        setSyncStatus(data) {
+            if (this.destroyed) return;
+            this.syncVersion++;
+            clearTimeout(this.syncTimer);
+            this.syncState = data?.status || 'pending';
+            this.canRetrySync = Boolean(data?.can_retry);
+            const messages = {
+                idle: '',
+                pending: 'Saved. Waiting to sync to GitHub.',
+                queued: 'Saved. GitHub sync queued.',
+                syncing: 'Saved. Syncing to GitHub.',
+                retrying: 'Saved. GitHub sync interrupted; retrying automatically.',
+                synced: 'Saved and synced to the unpublished branch on GitHub.',
+                failed: 'Saved, but GitHub sync failed.',
+            };
+            this.syncStatus = messages[this.syncState] || 'Saved. Waiting for GitHub sync status.';
+            if (data?.error && ['pending', 'retrying', 'failed'].includes(this.syncState)) {
+                this.syncStatus += ' ' + data.error;
+            }
+            if (!['idle', 'synced', 'failed'].includes(this.syncState)) this.scheduleSyncCheck();
+        },
+
+        scheduleSyncCheck() {
+            clearTimeout(this.syncTimer);
+            if (!this.destroyed) this.syncTimer = setTimeout(() => this.checkSyncStatus(), 3000);
+        },
+
+        async checkSyncStatus() {
+            const version = this.syncVersion;
             try {
-                const res = await requestWithTokenRetry('publications/publish/', {
-                    method: 'POST',
-                    credentials: 'include',
-                });
+                const res = await requestWithTokenRetry('publications/sync/');
                 const data = await res.json();
-                if (!res.ok) throw new Error(this.errorMessage(data));
-                this.publishTaskId = data.task_id;
-                this.publishStatus = 'GitHub submission queued. Check its status below.';
-            } catch (e) {
-                this.showToast('Publish error: ' + e.message, 'error');
-            } finally {
-                this.publishing = false;
+                if (this.destroyed || version !== this.syncVersion) return;
+                if (!res.ok) {
+                    if ([401, 403].includes(res.status)) {
+                        clearTimeout(this.syncTimer);
+                        this.syncStatus = 'Sign in with an active account to view GitHub sync status.';
+                        this.canRetrySync = false;
+                        return;
+                    }
+                    throw new Error(this.errorMessage(data));
+                }
+                this.setSyncStatus(data);
+            } catch (error) {
+                if (this.destroyed || version !== this.syncVersion) return;
+                this.syncStatus = 'Unable to check GitHub sync status. ' + error.message;
+                this.scheduleSyncCheck();
             }
         },
 
-        async checkPublishStatus() {
-            if (!this.publishTaskId) return;
+        async retrySync() {
+            if (!this.canRetrySync || this.retryingSync) return;
+            this.retryingSync = true;
             try {
-                const res = await requestWithTokenRetry(`tasks/${encodeURIComponent(this.publishTaskId)}/`);
+                const res = await requestWithTokenRetry('publications/sync/retry/', {
+                    method: 'POST', credentials: 'include',
+                });
                 const data = await res.json();
                 if (!res.ok) throw new Error(this.errorMessage(data));
-                if (data.status === 'SUCCESS' && data.result === true) {
-                    this.publishStatus = 'Both metadata files were submitted to the unpublished branch on GitHub.';
-                    return;
-                }
-                if (data.status === 'FAILURE' || data.status === 'SUCCESS') {
-                    this.publishStatus = 'GitHub submission failed: ' + (data.error || 'No files were submitted.');
-                    return;
-                }
-                this.publishStatus = 'GitHub submission: ' + data.status;
+                this.setSyncStatus(data);
             } catch (error) {
-                this.publishStatus = error.message;
+                this.showToast('Sync retry failed: ' + error.message, 'error');
+            } finally {
+                this.retryingSync = false;
             }
         },
     };

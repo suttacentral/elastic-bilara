@@ -1,4 +1,5 @@
 // Run: node scripts/test_publications_ui.cjs /path/to/chrome
+// Add "admin sync" after the browser path to exercise only automatic-sync CRUD.
 // Uses the real Lit/Alpine components with fixture API responses; no live data writes.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -9,6 +10,7 @@ const { execFileSync } = require('node:child_process');
 const browser = process.argv[2];
 assert.ok(browser, 'Pass a Chrome/Chromium executable');
 const adminMode = process.argv[3] === 'admin';
+const syncOnly = process.argv[4] === 'sync';
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'bilara-publications-'));
 const root = path.resolve(__dirname, '../frontend');
 const fileUrl = name => pathToFileURL(path.join(root, name)).href;
@@ -37,7 +39,8 @@ const runChecks = async () => {
         await Alpine.nextTick();
         check(window.requests.filter(item => item.url === 'publications/').length === 1, 'List must load exactly once');
         check(state.isAdmin === window.adminMode, 'Incorrect publication permissions');
-        check([...document.querySelectorAll('button')].filter(el => /New Publication|Publish to GitHub/.test(el.textContent)).every(el => Boolean(el.getClientRects().length) === window.adminMode), 'Incorrect admin action visibility: ' + JSON.stringify([...document.querySelectorAll('button')].filter(el => /New Publication|Publish to GitHub/.test(el.textContent)).map(el => ({ text: el.textContent.trim(), display: getComputedStyle(el).display, visible: Boolean(el.getClientRects().length) }))));
+        check(![...document.querySelectorAll('button')].some(el => /Publish to GitHub|Check status/.test(el.textContent)), 'Manual publication controls must be removed');
+        check([...document.querySelectorAll('button')].filter(el => /New Publication/.test(el.textContent)).every(el => Boolean(el.getClientRects().length) === window.adminMode), 'Incorrect create action visibility');
         document.querySelector('button[aria-label="Edit publication"]').click();
         await waitFor(() => state.view === 'form' && document.querySelector('input[aria-label="Creator name 2"]'));
         check(document.querySelector('#pub-source_url').readOnly === !window.adminMode, 'Source path must be read only');
@@ -58,7 +61,23 @@ const runChecks = async () => {
         check(body.changes.translation_title === 'Updated in browser', 'Title change missing');
         check(JSON.stringify(body.changes.creator_name) === '["Alice","Bob Updated"]', 'Array type was not preserved');
         check(!Object.hasOwn(body.changes, 'creator_github_handle'), 'Ownership must not be submitted');
-        if (window.adminMode) {
+        await waitFor(() => state.syncState === 'synced');
+        check(document.querySelector('.pub-publish-status').textContent.includes('synced to the unpublished branch'), 'Automatic sync result missing');
+        check(!window.requests.some(item => item.url === 'publications/publish/'), 'Save must not invoke manual publishing');
+        if (window.adminMode && window.syncOnly) {
+            [...document.querySelectorAll('button')].find(el => el.textContent.includes('New Publication')).click();
+            await waitFor(() => state.view === 'form' && !state.editingPub && document.querySelector('input[aria-label="Creator UID"]'));
+            const uid = document.querySelector('input[aria-label="Creator UID"]');
+            uid.value = 'alice';
+            uid.dispatchEvent(new Event('input', { bubbles: true }));
+            document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            await waitFor(() => state.view === 'list' && !state.saving && state.syncState === 'synced');
+            check(window.requests.some(item => item.url === 'publications/' && item.options?.method === 'POST'), 'Create was not saved');
+            document.querySelector('button[aria-label="Delete publication"]').click();
+            await waitFor(() => state.publications.length === 0 && state.syncState === 'synced');
+            check(window.requests.some(item => item.options?.method === 'DELETE'), 'Delete was not saved');
+        }
+        if (window.adminMode && !window.syncOnly) {
             const button = text => [...document.querySelectorAll('button')].find(el => el.textContent.trim() === text);
             const enter = (selector, value, event = 'input') => {
                 const input = document.querySelector(selector);
@@ -148,13 +167,22 @@ try {
             window.requests = [];
             window.fixture = ${JSON.stringify(fixture)};
             window.adminMode = ${adminMode};
+            window.syncOnly = ${syncOnly};
+            window.confirm = () => true;
+            window.syncState = { status: "idle" };
             window.getCurrentUser = async () => ({ role: window.adminMode ? 'administrator' : 'writer', is_active: true, username: 'alice' });
             window.requestWithTokenRetry = async (url, options) => {
                 requests.push({url, options});
+                if (url === 'publications/sync/') return { ok: true, status: 200, json: async () => window.syncState };
                 if (url === 'publications/next-number/') return { ok: true, status: 200, json: async () => ({ next_number: 'scpub2' }) };
                 if (options?.method === 'POST') window.fixture = { ...JSON.parse(options.body), _revision: 'new-revision' };
                 if (options?.method === 'PATCH') Object.assign(fixture, JSON.parse(options.body).changes);
-                return { ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(url === 'publications/' ? [fixture] : fixture)) };
+                if (options?.method === 'DELETE') window.fixture = null;
+                if (['POST', 'PATCH', 'DELETE'].includes(options?.method)) {
+                    window.syncState = { status: 'synced' };
+                    return { ok: true, status: 200, json: async () => ({ ...fixture, _sync: { status: 'pending' } }) };
+                }
+                return { ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(url === 'publications/' ? (fixture ? [fixture] : []) : fixture)) };
             };
         </script>
         <script src="${fileUrl('static/js/publications.js')}"></script>
@@ -173,7 +201,7 @@ try {
     assert.notEqual(match[1], 'pending', 'Browser scripts did not finish');
     const result = JSON.parse(match[1].replaceAll('&quot;', '"').replaceAll('&amp;', '&').replaceAll('&gt;', '>').replaceAll('&lt;', '<'));
     assert.equal(result.passed, true, JSON.stringify(result));
-    console.log(`PASS: real Lit/Alpine ${adminMode ? 'administrator' : 'writer'} page, array fields, permissions and submission.`);
+    console.log(`PASS: real Lit/Alpine ${adminMode ? 'administrator' : 'writer'} page${syncOnly ? ' (automatic-sync CRUD)' : ''}, array fields, permissions, saving and automatic GitHub sync status.`);
 } finally {
     fs.rmSync(directory, { recursive: true, force: true });
 }

@@ -7,6 +7,7 @@ from app.services.publications.conversion import to_legacy
 from app.services.publications.errors import PublicationError
 from app.services.publications.schema import WRITER_FIELDS
 from app.services.publications.store import PublicationStore
+from app.services.publications.sync import public_status
 from app.services.users.utils import creator_github_handle_matches
 
 
@@ -62,11 +63,6 @@ class PublicationService:
         if not is_admin(self.user):
             raise PublicationError(403, "Administrator permission is required.")
 
-    def check_publish(self):
-        self.require_admin()
-        with self.store.locked():
-            self.store.read()
-
     def owns(self, entry):
         return bool(self.user.username) and creator_github_handle_matches(self.user.username, entry.get("creator_github_handle"))
 
@@ -118,8 +114,8 @@ class PublicationService:
                 raise PublicationError(409, "The target number has compatibility history. Choose another publication number.")
             legacy[number] = to_legacy(entry)
             entries.append(entry)
-            self.store.save(entries, legacy)
-            return present(entry)
+            state = self.store.save(entries, legacy, self.user.model_dump())
+            return {**present(entry), "_sync": public_status(state, self.user)}
 
     def update(self, number, body):
         changes = body.changes.model_dump(exclude_unset=True)
@@ -145,8 +141,8 @@ class PublicationService:
             if new_number != number:
                 legacy.pop(number, None)
             legacy[new_number] = converted
-            self.store.save(entries, legacy)
-            return present(entry)
+            state = self.store.save(entries, legacy, self.user.model_dump())
+            return {**present(entry), "_sync": public_status(state, self.user)}
 
     def delete(self, number, expected_revision):
         self.require_admin()
@@ -158,4 +154,5 @@ class PublicationService:
             legacy = self.store.read_legacy()
             entries.remove(entry)
             legacy.pop(number, None)
-            self.store.save(entries, legacy)
+            state = self.store.save(entries, legacy, self.user.model_dump())
+            return {"detail": f"{number} deleted", "_sync": public_status(state, self.user)}

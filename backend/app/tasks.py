@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 
 import elasticsearch.exceptions
@@ -15,6 +16,7 @@ from app.services.git import utils
 from app.services.git.manager import GitManager
 from app.services.git.task import GitTask
 from app.services.publications.store import PublicationStore
+from app.services.publications.sync import DELIVERY_LEASE, execute_sync, update_task_state
 from search.search import Search
 
 es = Search()
@@ -23,6 +25,23 @@ logger = logging.getLogger(__name__)
 
 class PrTask(GitTask):
     pass
+
+
+class PublicationSyncTask(GitTask):
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        update_task_state(settings.WORK_DIR, args[0], task_id, status="retrying", error=str(exc),
+                          dispatch_after=time.time() + DELIVERY_LEASE)
+        super().on_retry(exc, task_id, args, kwargs, einfo)
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        update_task_state(settings.WORK_DIR, args[0], task_id, status="failed", error=str(exc))
+        super().on_failure(exc, task_id, args, kwargs, einfo)
+
+
+@app.task(name="sync_publications", base=PublicationSyncTask, bind=True, queue="commit_queue",
+          acks_late=True, reject_on_worker_lost=True)
+def sync_publications(self, generation):
+    return execute_sync(settings.WORK_DIR, generation, self.request.id)
 
 
 class SyncTask(GitTask):
@@ -42,7 +61,7 @@ class SyncTask(GitTask):
 
 
 @app.task(name="commit", base=GitTask, queue="commit_queue")
-def commit(user: dict, file_paths: list[str], message: str, add: bool = True) -> bool:
+def commit(user: dict, file_paths: list[str], message: str, add: bool = True, safe_push: bool = False) -> bool:
     file_paths = [file_paths] if isinstance(file_paths, str) else file_paths
     paths = [utils.clean_path(path) for path in file_paths if path]
     if not paths:
@@ -60,8 +79,12 @@ def commit(user: dict, file_paths: list[str], message: str, add: bool = True) ->
         # commit() returns False only for no changes; write failures raise and stop here.
         GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
 
-    changed_files = manager.pull(manager.unpublished)
-    GitManager.push(manager.unpublished, "origin", "unpublished")
+    if safe_push:
+        changed_files = manager.pull(manager.unpublished, fail_on_conflict=True)
+        GitManager.push(manager.unpublished, "origin", "unpublished", force=False)
+    else:
+        changed_files = manager.pull(manager.unpublished)
+        GitManager.push(manager.unpublished, "origin", "unpublished")
 
     existing_paths, not_existing_paths = manager.separate_existing_files(changed_files)
     if existing_paths:

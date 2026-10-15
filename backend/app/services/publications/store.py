@@ -11,6 +11,7 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from threading import local
+from uuid import uuid4
 
 from app.services.publications.errors import PublicationError, PublicationStorageError
 
@@ -56,6 +57,7 @@ class PublicationStore:
             self.work = Path(work).resolve()
         self.directory = self.work.parent / ".publication-operations" / self.work.name
         self.journal = self.directory / "pending.json"
+        self.sync_path = self.directory / "sync.json"
 
     @contextmanager
     def locked(self):
@@ -121,12 +123,30 @@ class PublicationStore:
     def read(self):
         return self.read_v2(), self.read_legacy()
 
-    def save(self, v2, legacy):
+    def read_sync(self):
+        with _storage_errors():
+            return json.loads(self.sync_path.read_text()) if self.sync_path.exists() else None
+
+    def write_sync(self, state):
+        write_json(self.sync_path, state)
+
+    def save(self, v2, legacy, user=None):
         pending = dict(zip(PUBLICATION_FILES, (v2, legacy)))
+        if user is not None:
+            pending["sync"] = {
+                "generation": str(uuid4()),
+                "user": {key: value for key, value in user.items()
+                         if key in ("github_id", "username", "email", "avatar_url", "role")},
+                "status": "pending",
+                "task_id": None, "dispatch_after": 0, "error": "",
+            }
         write_json(self.journal, pending)
         self._apply(pending)
+        return pending.get("sync")
 
     def _apply(self, pending):
         for name in PUBLICATION_FILES:
             write_json(self.work / name, pending[name])
+        if "sync" in pending:
+            self.write_sync(pending["sync"])
         write_json(self.journal, None)

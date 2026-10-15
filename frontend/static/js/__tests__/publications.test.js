@@ -33,7 +33,7 @@ test('inactive users and reviewers cannot load publication records', async () =>
 
 test('writer loads the server-filtered list and uses a fresh detail revision', async () => {
     const { manager, request } = setup();
-    request.mockResolvedValueOnce(response([record()])).mockResolvedValueOnce(response(record()));
+    request.mockResolvedValueOnce(response([record()])).mockResolvedValueOnce(response({ status: "idle" })).mockResolvedValueOnce(response(record()));
     await manager.init();
     await manager.showEditForm(manager.publications[0]);
     expect(manager.isAdmin).toBe(false);
@@ -96,24 +96,64 @@ test('successful edit uses PATCH then refreshes the list', async () => {
     expect(manager.view).toBe('list');
 });
 
-test('writer cannot start create, delete or GitHub submission actions', async () => {
+test('writer cannot start create, delete or retry without a failure', async () => {
     const { manager, request } = setup();
     await manager.showCreateForm();
     await manager.deletePub('scpub1');
-    await manager.publishToGitHub();
+    await manager.retrySync();
     expect(request).not.toHaveBeenCalled();
 });
 
-test('queued GitHub submission is not reported as completed', async () => {
-    const { manager, request } = setup(true);
-    manager.isAdmin = true;
-    window.confirm = jest.fn(() => true);
-    request.mockResolvedValueOnce(response({ task_id: 'task' }, 202))
-        .mockResolvedValueOnce(response({ status: 'SUCCESS', result: true }));
-    await manager.publishToGitHub();
-    expect(manager.publishStatus).toMatch(/queued/);
-    await manager.checkPublishStatus();
-    expect(manager.publishStatus).toMatch(/submitted to the unpublished branch/);
+test('save status automatically polls and only confirms a completed push', async () => {
+    const { manager, request } = setup();
+    manager.setSyncStatus({ status: 'pending' });
+    expect(manager.syncStatus).toMatch(/Waiting to sync/);
+    request.mockResolvedValueOnce(response({ status: 'synced' }));
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(request).toHaveBeenCalledWith('publications/sync/');
+    expect(manager.syncStatus).toMatch(/synced to the unpublished branch/);
+    expect(jest.getTimerCount()).toBe(0);
+});
+
+test('reload restores in-flight sync and failure permits retry', async () => {
+    const { manager, request } = setup();
+    request.mockResolvedValueOnce(response([record()]))
+        .mockResolvedValueOnce(response({ status: 'retrying', error: 'offline' }))
+        .mockResolvedValueOnce(response({ status: 'failed', error: 'offline', can_retry: true }))
+        .mockResolvedValueOnce(response({ status: 'pending' }, 202));
+    await manager.init();
+    expect(manager.syncStatus).toMatch(/retrying automatically/);
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(manager.canRetrySync).toBe(true);
+    expect(manager.syncStatus).toMatch(/Saved, but GitHub sync failed/);
+    await manager.retrySync();
+    expect(request).toHaveBeenLastCalledWith('publications/sync/retry/', expect.objectContaining({ method: 'POST' }));
+    expect(manager.canRetrySync).toBe(false);
+    manager.destroy();
+    expect(jest.getTimerCount()).toBe(0);
+});
+
+test('a stale poll cannot clear the pending state of a newer save', async () => {
+    const { manager, request } = setup();
+    let complete;
+    request.mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
+    const check = manager.checkSyncStatus();
+    manager.setSyncStatus({ status: 'pending' });
+    complete(response({ status: 'synced' }));
+    await check;
+    expect(manager.syncState).toBe('pending');
+});
+
+test('poll network errors retry without changing saved data and authorization errors stop polling', async () => {
+    const { manager, request } = setup();
+    manager.publications = [record()];
+    request.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(response({}, 403));
+    await manager.checkSyncStatus();
+    expect(manager.syncStatus).toMatch(/Unable to check/);
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(manager.syncStatus).toMatch(/Sign in/);
+    expect(manager.publications).toEqual([record()]);
+    expect(jest.getTimerCount()).toBe(0);
 });
 
 test('validation details produce readable field errors', () => {

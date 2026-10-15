@@ -16,6 +16,15 @@ from app.services.publications.errors import PublicationError, PublicationStorag
 from app.services.publications.schema import PublicationUpdate
 from app.services.publications.service import PublicationService
 from app.services.publications import store as storage
+from app.services.publications import sync
+from app import tasks
+
+
+@pytest.fixture(autouse=True)
+def queued_sync(monkeypatch):
+    task = Mock()
+    monkeypatch.setattr(tasks.sync_publications, "apply_async", task)
+    return task
 
 
 @pytest.fixture
@@ -120,7 +129,7 @@ async def test_writer_cannot_forge_ownership_or_call_admin_operations(async_clie
         assert response.status_code == 403
     for method, path, kwargs in (
         ("post", "/publications/", {"json": {"publication_number": "scpub10"}}),
-        ("post", "/publications/publish/", {}),
+
         ("get", "/publications/next-number/", {}),
         ("delete", "/publications/scpub1", {"headers": {"If-Match": "old"}}),
     ):
@@ -143,48 +152,6 @@ async def test_put_is_removed_without_changing_files(async_client, publication_f
     assert read_files(publication_files) == before
 
 
-def test_publish_service_rejects_writer_before_storage_access(publication_files, requester, monkeypatch):
-    service = PublicationService(publication_files, requester)
-    locked = Mock()
-    monkeypatch.setattr(service.store, "locked", locked)
-    with pytest.raises(PublicationError) as raised:
-        service.check_publish()
-    assert raised.value.status == 403
-    locked.assert_not_called()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("failure,status", [("invalid_json", 409), ("invalid_structure", 409), ("missing_file", 503)])
-async def test_publish_storage_failure_never_queues_task(async_client, publication_files, requester, monkeypatch, failure, status):
-    requester.role = "administrator"
-    task = Mock()
-    monkeypatch.setattr(api.commit_task, "delay", task)
-    path = publication_files / storage.PUBLICATION_FILES[0]
-    if failure == "missing_file":
-        path.unlink()
-    else:
-        path.write_text("{" if failure == "invalid_json" else "{}")
-    response = await async_client.post("/publications/publish/")
-    assert response.status_code == status
-    if status == 503:
-        assert 'storage is unavailable' in response.json()['detail']
-    task.assert_not_called()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize('error_type', [OSError, OperationalError])
-async def test_publish_queue_failure_is_not_reported_as_storage_failure(async_client, publication_files, requester, monkeypatch, error_type):
-    requester.role = 'administrator'
-    before = read_files(publication_files)
-    task = Mock(side_effect=error_type('broker unavailable'))
-    monkeypatch.setattr(api.commit_task, 'delay', task)
-    response = await async_client.post('/publications/publish/')
-    assert response.status_code == 503
-    assert response.json()['detail'] == 'Publication task submission failed. Please retry publishing later.'
-    task.assert_called_once()
-    assert read_files(publication_files) == before
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize('failure_site', ['user_lookup', 'locked_service_body'])
 async def test_non_storage_oserror_is_not_reclassified(async_client, publication_files, requester, monkeypatch, failure_site):
@@ -197,33 +164,6 @@ async def test_non_storage_oserror_is_not_reclassified(async_client, publication
     with pytest.raises(OSError) as raised:
         await async_client.get('/publications/')
     assert raised.value is error
-
-
-@pytest.mark.asyncio
-async def test_publish_recovers_both_files_and_releases_lock_before_queueing(async_client, publication_files, requester, monkeypatch):
-    requester.role = "administrator"
-    v2, legacy = read_files(publication_files)
-    v2[0]["translation_title"] = legacy["scpub1"]["translation_title"] = "Recovered"
-    store = storage.PublicationStore(publication_files)
-    store.directory.mkdir(parents=True)
-    storage.write_json(store.journal, dict(zip(storage.PUBLICATION_FILES, (v2, legacy))))
-    # Simulate a crash after only the first file was replaced.
-    storage.write_json(publication_files / storage.PUBLICATION_FILES[0], v2)
-
-    def queue(*args, **kwargs):
-        assert read_files(publication_files) == (v2, legacy)
-        assert json.loads(store.journal.read_text()) is None
-        with (store.directory / "lock").open("a+") as handle:
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            fcntl.flock(handle, fcntl.LOCK_UN)
-        return SimpleNamespace(id="recovered-task")
-
-    task = Mock(side_effect=queue)
-    monkeypatch.setattr(api.commit_task, "delay", task)
-    response = await async_client.post("/publications/publish/")
-    assert response.status_code == 202
-    assert response.json()["task_id"] == "recovered-task"
-    task.assert_called_once_with(requester.model_dump(), list(storage.PUBLICATION_FILES), "Update publication metadata", add=True)
 
 
 @pytest.mark.asyncio
@@ -319,7 +259,7 @@ async def test_missing_legacy_record_is_generated(async_client, publication_file
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("role", ["administrator", "superuser"])
-async def test_admin_create_rename_delete_and_publish_both_files(async_client, publication_files, requester, monkeypatch, role):
+async def test_admin_create_rename_delete_and_sync_both_files(async_client, publication_files, requester, queued_sync, role):
     requester.role = role
     assert len((await async_client.get("/publications/")).json()) == 5
     assert (await async_client.get("/publications/next-number/")).json()["next_number"] == "scpub6"
@@ -332,11 +272,10 @@ async def test_admin_create_rename_delete_and_publish_both_files(async_client, p
     assert "scpub6" not in read_files(publication_files)[1]
     assert (await async_client.delete("/publications/scpub7", headers={"If-Match": renamed.json()["_revision"]})).status_code == 200
     assert "scpub7" not in read_files(publication_files)[1]
-    task = Mock(return_value=SimpleNamespace(id="queued-task"))
-    monkeypatch.setattr(api.commit_task, "delay", task)
-    response = await async_client.post("/publications/publish/")
-    assert response.status_code == 202
-    assert task.call_args.args[1] == list(storage.PUBLICATION_FILES)
+    assert queued_sync.call_count == 3
+    state = (await async_client.get("/publications/sync/")).json()
+    assert state["status"] == "queued"
+    assert "user" not in state
 
 
 @pytest.mark.asyncio
@@ -463,7 +402,7 @@ async def test_v2_dates_and_urls_save_without_legacy_selectors(async_client, pub
     assert v2[0]['first_published'] == '2013'
     assert v2[0]['editions_url'] == 'https://example.test/new'
     assert legacy['scpub1']['edition'] == before['scpub1']['edition']
-    assert set(response.json()) == set(v2[0]) | {'_revision'}
+    assert set(response.json()) == set(v2[0]) | {'_revision', '_sync'}
 
 
 @pytest.mark.asyncio
@@ -672,3 +611,80 @@ async def test_real_author_shapes_save_all_v2_names_without_granting_legacy_acce
     requester.username = 'sujato'
     for number in ['scpub22', 'scpub23']:
         assert (await async_client.get(f'/publications/{number}')).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_writer_save_automatically_dispatches_after_releasing_lock(async_client, publication_files, requester, queued_sync):
+    def queue(*args, **kwargs):
+        store = storage.PublicationStore(publication_files)
+        with (store.directory / "lock").open("a+") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(handle, fcntl.LOCK_UN)
+        assert all(values["translation_title"] == "Auto sync" for values in
+                   (read_files(publication_files)[0][0], read_files(publication_files)[1]["scpub1"]))
+    queued_sync.side_effect = queue
+    response = await update(async_client, {"translation_title": "Auto sync"})
+    assert response.status_code == 200
+    assert response.json()["_sync"]["status"] == "pending"
+    queued_sync.assert_called_once()
+    state = (await async_client.get("/publications/sync/")).json()
+    assert state["status"] == "queued"
+    assert state["generation"] == response.json()["_sync"]["generation"]
+    assert state["task_id"] == queued_sync.call_args.kwargs["task_id"]
+    # GET responses and persisted metadata never contain transport state.
+    assert "_sync" not in (await async_client.get("/publications/scpub1")).json()
+    assert "_sync" not in read_files(publication_files)[0][0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error_type", [OSError, OperationalError])
+async def test_broker_failure_preserves_save_and_pending_sync(async_client, publication_files, requester, queued_sync, error_type, monkeypatch):
+    queued_sync.side_effect = error_type("broker unavailable")
+    response = await update(async_client, {"translation_title": "Durable"})
+    assert response.status_code == 200
+    assert read_files(publication_files)[0][0]["translation_title"] == "Durable"
+    state = (await async_client.get("/publications/sync/")).json()
+    assert state["status"] == "pending"
+    assert "broker unavailable" in state["error"]
+    queued_sync.side_effect = None
+    monkeypatch.setattr(sync.time, "time", lambda: 10**12)
+    sync.dispatch_pending(publication_files)
+    assert queued_sync.call_count == 2
+    assert (await async_client.get("/publications/sync/")).json()["status"] == "queued"
+
+
+@pytest.mark.asyncio
+async def test_failed_validation_permissions_and_conflict_do_not_dispatch(async_client, publication_files, requester, queued_sync):
+    assert (await update(async_client, {"creator_uid": "forged"})).status_code == 403
+    assert (await update(async_client, {"translation_title": None})).status_code == 422
+    assert (await async_client.patch("/publications/scpub1", json={"revision": "stale", "changes": {}})).status_code == 409
+    queued_sync.assert_not_called()
+    assert (await async_client.get("/publications/sync/")).json()["status"] == "idle"
+
+
+@pytest.mark.asyncio
+async def test_failed_sync_retry_is_limited_to_saving_writer_or_admin(async_client, publication_files, requester, queued_sync):
+    await update(async_client, {"translation_title": "Saved"})
+    store = storage.PublicationStore(publication_files)
+    with store.locked():
+        state = store.read_sync()
+        state.update(status="failed", error="rejected")
+        store.write_sync(state)
+    queued_sync.reset_mock()
+    requester.github_id = 456
+    assert (await async_client.get("/publications/sync/")).json()["can_retry"] is False
+    assert (await async_client.post("/publications/sync/retry/")).status_code == 409
+    requester.github_id = 123
+    assert (await async_client.get("/publications/sync/")).json()["can_retry"] is True
+    assert (await async_client.post("/publications/sync/retry/")).status_code == 202
+    queued_sync.assert_called_once()
+    assert (await async_client.post("/publications/sync/retry/")).status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_sync_routes_require_active_authorized_account(async_client, publication_files, requester, queued_sync):
+    for role, active in [("reviewer", True), ("writer", False)]:
+        requester.role, requester.is_active = role, active
+        assert (await async_client.get("/publications/sync/")).status_code == 403
+        assert (await async_client.post("/publications/sync/retry/")).status_code == 403
+    queued_sync.assert_not_called()

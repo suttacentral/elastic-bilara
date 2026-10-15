@@ -1,5 +1,5 @@
-from asyncio import to_thread
-from contextlib import asynccontextmanager
+from asyncio import CancelledError, create_task, to_thread
+from contextlib import asynccontextmanager, suppress
 
 from app.api.api_v1.api import api_router
 from app.core.config import settings
@@ -12,6 +12,7 @@ from app.db.models.dictionary_note import DictionaryNote
 from app.db.models.dictionary_hidden_word import DictionaryHiddenWord
 from app.db.models.directory_index import DirectoryIndexEntry, DirectoryIndexState
 from app.services.directories.index import DirectoryIndex
+from app.services.publications.sync import dispatch_loop
 from fastapi import FastAPI
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
@@ -40,7 +41,13 @@ with engine.connect() as conn:
 async def lifespan(app: FastAPI):
     # The entrypoint may have pulled the checkout before starting the workers.
     await to_thread(DirectoryIndex().rebuild)
-    yield
+    publication_sync = create_task(dispatch_loop(settings.WORK_DIR))
+    try:
+        yield
+    finally:
+        publication_sync.cancel()
+        with suppress(CancelledError):
+            await publication_sync
 
 
 app = FastAPI(

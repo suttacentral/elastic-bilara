@@ -26,17 +26,13 @@ export class ScBilaraPublications extends LitElement {
                           <button class="pub-btn pub-btn-primary" @click="await showCreateForm()" x-show="isAdmin">
                               <i class="bi-plus-lg"></i> New Publication
                           </button>
-                          <button class="pub-btn" @click="await publishToGitHub()" x-show="isAdmin" :disabled="publishing">
-                              <i class="bi-github"></i>
-                              <span x-text="publishing ? 'Publishing\u2026' : 'Publish to GitHub'"></span>
-                          </button>
                       </div>
                   </div>
 
                   <p x-cloak x-show="loadError" x-text="loadError" role="alert" class="pub-form-error-text"></p>
-                  <div x-cloak x-show="publishTaskId" class="pub-publish-status" role="status">
-                      <span x-text="publishStatus"></span>
-                      <button class="pub-btn pub-btn-sm" @click="await checkPublishStatus()">Check status</button>
+                  <div x-cloak x-show="syncStatus" class="pub-publish-status" role="status">
+                      <span x-text="syncStatus"></span>
+                      <button class="pub-btn pub-btn-sm" x-show="canRetrySync" :disabled="retryingSync" @click="await retrySync()">Retry sync</button>
                   </div>
                   <div class="pub-stats" x-show="authorized">
                       <span>Total: <span class="pub-stat-value" x-text="publications.length"></span></span>
