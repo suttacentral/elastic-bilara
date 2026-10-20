@@ -118,6 +118,7 @@ function tagsManager() {
             if (!confirm(`Delete tag "${tagName}"? This cannot be undone.`)) return;
             this.beginSave();
             this.deletingTag = tagName;
+            void this.showToast('Deleting tag and removing references…', 'info', 0);
             try {
                 const response = await requestWithTokenRetry(`tags/${encodeURIComponent(tagName)}/`, {
                     method: 'DELETE',
@@ -126,17 +127,26 @@ function tagsManager() {
                     const result = await response.json();
                     this.setSyncStatus(result._sync);
                     this.tags = this.tags.filter(t => t.tag !== tagName);
+                    void this.showToast(`Tag "${tagName}" deleted.`, 'success');
                 } else {
                     const err = await response.json();
-                    alert(err.detail || 'Failed to delete tag');
+                    void this.showToast(err.detail || 'Failed to delete tag', 'error', 0);
                 }
             } catch (error) {
-                alert('Failed to delete tag: ' + error.message);
+                void this.showToast('Failed to delete tag: ' + error.message, 'error', 0);
             } finally {
                 this.deletingTag = null;
                 this.finishSave();
             }
         },
+
+        async showToast(message, type = 'success', duration = 3000) {
+            const toast = document.querySelector('sc-bilara-toast');
+            if (!toast) return;
+            await customElements.whenDefined('sc-bilara-toast');
+            if (!this.destroyed) toast.show(message, type, duration);
+        },
+
         beginSave() {
             this.saving = true;
             this.canRetrySync = false;
