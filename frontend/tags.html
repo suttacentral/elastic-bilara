@@ -201,7 +201,8 @@
             all: revert;
         }
 
-        .tags-sync {
+        .tags-sync,
+        .tags-delete-status {
             margin-bottom: 1rem;
             padding: 0.75rem 1rem;
             border: 1px solid var(--color-border);
@@ -228,6 +229,11 @@
             </div>
 
             <p x-show="loadError" x-text="loadError" role="alert" x-cloak></p>
+            <div role="status" aria-live="polite" aria-atomic="true">
+                <p class="tags-delete-status" x-show="deletingTag" x-cloak>
+                    Deleting tag and removing references…
+                </p>
+            </div>
             <div class="tags-sync" x-show="syncStatus" x-cloak>
                 <p role="status" aria-live="polite" x-text="syncStatus"></p>
                 <button class="btn-save" type="button" x-show="canRetrySync"
@@ -278,7 +284,7 @@
                 </thead>
                 <tbody>
                     <template x-for="tag in tags" :key="tag.tag">
-                        <tr>
+                        <tr :aria-busy="deletingTag === tag.tag">
                             <!-- View mode -->
                             <template x-if="!editingTag || editingTag._original !== tag.tag">
                                 <td><span class="tag-badge" x-text="tag.tag"></span></td>

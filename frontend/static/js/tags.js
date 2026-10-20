@@ -6,6 +6,7 @@ function tagsManager() {
         newTag: { tag: '', expansion: '', definition: '' },
         showAddForm: false,
         saving: false,
+        deletingTag: null,
         loadError: '',
         syncStatus: '',
         syncState: 'idle',
@@ -116,6 +117,7 @@ function tagsManager() {
             if (this.saving || this.retryingSync) return;
             if (!confirm(`Delete tag "${tagName}"? This cannot be undone.`)) return;
             this.beginSave();
+            this.deletingTag = tagName;
             try {
                 const response = await requestWithTokenRetry(`tags/${encodeURIComponent(tagName)}/`, {
                     method: 'DELETE',
@@ -131,6 +133,7 @@ function tagsManager() {
             } catch (error) {
                 alert('Failed to delete tag: ' + error.message);
             } finally {
+                this.deletingTag = null;
                 this.finishSave();
             }
         },
