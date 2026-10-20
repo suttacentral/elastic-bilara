@@ -68,6 +68,20 @@ class StructureStore:
         path = self.directory / 'pending.json'
         return json.loads(path.read_text()) if path.exists() else None
 
+    @staticmethod
+    def pending_paths(work):
+        """Yield affected paths from pending journals; caller holds checkout_lock(work)."""
+        directory = Path(work).resolve().parent / '.structure-operations'
+        for path in directory.glob('*/pending.json'):
+            try:
+                pending = json.loads(path.read_text(encoding='utf-8')) if path.exists() else None
+            except (ValueError, UnicodeError) as error:
+                raise StructureConflict(
+                    'Invalid JSON in structure operation journal. Repair it before editing.'
+                ) from error
+            if pending:
+                yield from pending.get('files', {})
+
     def check_ready(self):
         pending = self.pending()
         if pending:

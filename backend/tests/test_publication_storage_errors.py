@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from app.services import storage as file_storage
 from app.services.publications import store as storage
 from app.services.publications.errors import PublicationStorageError
 
@@ -48,7 +49,7 @@ def test_storage_io_errors_preserve_their_cause(tmp_path, monkeypatch, failure_s
         def fail_replace(*args):
             raise error
 
-        monkeypatch.setattr(storage.os, 'replace', fail_replace)
+        monkeypatch.setattr(file_storage.os, 'replace', fail_replace)
 
     with pytest.raises(PublicationStorageError) as raised:
         with store.locked():

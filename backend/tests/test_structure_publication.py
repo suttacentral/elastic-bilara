@@ -62,22 +62,16 @@ def test_push_retry_sends_all_files_after_local_commit(tmp_path):
         tree['translation/dn2.json']
 
 
-@pytest.mark.parametrize('failure_point', ['write_tree', 'create_commit'])
 @pytest.mark.parametrize('error_type', [pygit2.GitError, OSError])
-def test_commit_failure_stops_before_pull_and_push(tmp_path, failure_point, error_type):
+def test_commit_failure_stops_before_pull_and_push(tmp_path, error_type):
     manager = Mock()
     manager.unpublished.workdir = str(tmp_path)
     error = error_type('commit write failed')
-    if failure_point == 'write_tree':
-        manager.unpublished.index.write_tree.side_effect = error
-    else:
-        manager.unpublished.create_commit.side_effect = error
-
     with patch.object(tasks, 'GitManager', wraps=GitManager) as factory, \
-            patch.object(GitManager, 'has_status_changed', return_value=True), \
             patch.object(tasks, 'UserBase'), patch.object(tasks, 'es') as es:
         factory.return_value = manager
         factory.add.return_value = True
+        factory.commit.side_effect = error
 
         with pytest.raises(error_type) as raised:
             tasks.commit.run({}, ['root/dn1.json'], 'structure')

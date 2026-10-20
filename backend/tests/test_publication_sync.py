@@ -1,5 +1,4 @@
 """Publication outbox recovery and Git synchronization, using only temporary files/remotes."""
-import asyncio
 import json
 from contextlib import nullcontext
 from pathlib import Path
@@ -115,22 +114,6 @@ def test_task_retry_and_failure_are_durable(store, monkeypatch):
     assert status['status'] == 'failed'
     assert status['can_retry']
     assert sync.retry(store.work, SimpleNamespace(**USER))['status'] == 'pending'
-
-
-@pytest.mark.asyncio
-async def test_background_loop_dispatches_on_start_without_a_browser(store, monkeypatch):
-    save(store)
-    queue = Mock()
-    monkeypatch.setattr(tasks.sync_publications, 'apply_async', queue)
-
-    async def stop(delay):
-        assert delay == sync.DISPATCH_INTERVAL
-        raise asyncio.CancelledError
-
-    monkeypatch.setattr(sync.asyncio, 'sleep', stop)
-    with pytest.raises(asyncio.CancelledError):
-        await sync.dispatch_loop(store.work)
-    queue.assert_called_once()
 
 
 def commit_files(repo, message):

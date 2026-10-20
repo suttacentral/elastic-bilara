@@ -13,10 +13,14 @@ from app.celery import celery_app as app
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.git import utils
+from app.services.git.checkout import checkout_lock
 from app.services.git.manager import GitManager
 from app.services.git.task import GitTask
-from app.services.publications.store import PublicationStore
-from app.services.publications.sync import DELIVERY_LEASE, execute_sync, update_task_state
+from app.services.publications.store import PUBLICATION_FILES, PublicationStore
+from app.services.publications.sync import execute_sync, update_task_state
+from app.services.sync_dispatch import DELIVERY_LEASE
+from app.services.tags import sync as tag_sync
+from app.services.tags.store import TagStore, is_tag_path
 from search.search import Search
 
 es = Search()
@@ -60,6 +64,36 @@ class SyncTask(GitTask):
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
+class TagSyncTask(GitTask):
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        tag_sync.update_task_state(settings.WORK_DIR, args[0], task_id, status="retrying", error=str(exc),
+                                   dispatch_after=time.time() + DELIVERY_LEASE)
+        super().on_retry(exc, task_id, args, kwargs, einfo)
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        tag_sync.update_task_state(settings.WORK_DIR, args[0], task_id, status="failed", error=str(exc))
+        super().on_failure(exc, task_id, args, kwargs, einfo)
+
+
+@app.task(name="sync_tags", base=TagSyncTask, bind=True, queue="commit_queue",
+          acks_late=True, reject_on_worker_lost=True)
+def sync_tags(self, generation):
+    return tag_sync.execute_sync(settings.WORK_DIR, generation, self.request.id)
+
+
+def _prepare_commit(manager, paths, *, add=True):
+    """Recover selected data and commit overlapping tag work under checkout_lock."""
+    work = Path(manager.unpublished.workdir)
+    if any(path.as_posix() in PUBLICATION_FILES for path in paths):
+        PublicationStore(work).recover()
+    if any(is_tag_path(path) for path in paths):
+        store = TagStore(work)
+        store.recover()
+        if add:
+            return tag_sync.commit_pending_batch(manager.unpublished, paths, manager.committer)
+    return False
+
+
 @app.task(name="commit", base=GitTask, queue="commit_queue")
 def commit(user: dict, file_paths: list[str], message: str, add: bool = True, safe_push: bool = False) -> bool:
     file_paths = [file_paths] if isinstance(file_paths, str) else file_paths
@@ -71,7 +105,11 @@ def commit(user: dict, file_paths: list[str], message: str, add: bool = True, sa
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
     git_operation = GitManager.add if add else GitManager.remove
 
-    with PublicationStore(Path(manager.unpublished.workdir)).locked():
+    work = Path(manager.unpublished.workdir)
+    with checkout_lock(work):
+        _prepare_commit(manager, paths, add=add)
+        if add:
+            safe_push = safe_push or any(is_tag_path(path) for path in paths)
         if not git_operation(manager.unpublished, paths):
             return False
         # A retry after a failed push may already have committed these files.
@@ -106,12 +144,19 @@ def pr(user, file_paths) -> str:
     # so that process_files / has_changes can detect the latest content.
     commit_msg = f"Translations by {user_data.username}"
     committed = False
-    with PublicationStore(Path(manager.unpublished.workdir)).locked():
+    work = Path(manager.unpublished.workdir)
+    with checkout_lock(work):
+        tag_batch_pending = _prepare_commit(manager, paths)
         if GitManager.add(manager.unpublished, paths):
             committed = GitManager.commit(manager.unpublished, manager.author, manager.committer, commit_msg, paths)
-    if committed:
-        manager.pull(manager.unpublished)
-        GitManager.push(manager.unpublished, "origin", "unpublished")
+    # A tag batch may be the only new commit, or may await a failed push retry.
+    if committed or tag_batch_pending:
+        if any(is_tag_path(path) for path in paths):
+            manager.pull(manager.unpublished, fail_on_conflict=True)
+            GitManager.push(manager.unpublished, "origin", "unpublished", force=False)
+        else:
+            manager.pull(manager.unpublished)
+            GitManager.push(manager.unpublished, "origin", "unpublished")
 
     # Step 2: create PR from unpublished → published
     logger.info("Publishing %d files for GitHub user %s", len(paths), user_data.github_id)

@@ -290,7 +290,8 @@ async def test_invalid_payload_never_writes(async_client, publication_files, req
 def test_interrupted_two_file_save_is_recovered_before_next_read(publication_files, requester, monkeypatch):
     service = PublicationService(publication_files, requester)
     initial = service.get("scpub1")
-    original_replace = storage.os.replace
+    from app.services import storage as file_storage
+    original_replace = file_storage.os.replace
     failed = False
 
     def fail_once(source, path):
@@ -300,7 +301,7 @@ def test_interrupted_two_file_save_is_recovered_before_next_read(publication_fil
             raise OSError("simulated disk failure")
         original_replace(source, path)
 
-    monkeypatch.setattr(storage.os, "replace", fail_once)
+    monkeypatch.setattr(file_storage.os, "replace", fail_once)
     with pytest.raises(PublicationStorageError) as raised:
         service.update("scpub1", PublicationUpdate(revision=initial["_revision"], changes={"translation_title": "Durable change"}))
     assert isinstance(raised.value.__cause__, OSError)

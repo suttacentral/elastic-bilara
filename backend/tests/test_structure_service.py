@@ -18,6 +18,10 @@ from app.services.projects.models import StructureCommitIn
 from app.services.projects.utils import SplitMergePublishResult
 from app.services.projects.structure_store import StructureStore, StructureConflict
 from app.services.projects.virtual_projects import VirtualProjectFile
+from app.services.tags import store as tag_storage
+from app.services.tags.store import TagError, TagStore
+from app.services.tags.service import TagService
+from app.db.schemas.user import UserBase
 
 
 class StructureServiceTests(unittest.TestCase):
@@ -54,6 +58,92 @@ class StructureServiceTests(unittest.TestCase):
         return StructureCommitIn(muid='root-pli-ms', prefix='dn1', operation=operation,
                                  uid=uid, operation_id=uuid4(), revision=preview['revision'],
                                  edits=edits, reviewed=preview['manual_projects'])
+
+    def interrupt_tag_definition(self):
+        store = TagStore(self.work)
+        original = tag_storage.write_json
+
+        def fail_definition(path, value):
+            if path == self.work / '_tags.json':
+                raise OSError('tag storage unavailable')
+            original(path, value)
+
+        failure = patch.object(tag_storage, 'write_json', side_effect=fail_definition)
+        failure.start()
+        self.addCleanup(failure.stop)
+        user = dict(github_id=1, username='admin', email='admin@example.org',
+                    avatar_url=None, role='administrator')
+        with store.locked():
+            with self.assertRaisesRegex(OSError, 'tag storage unavailable'):
+                store.save({'_tags.json': [{'tag': 'new'}]}, user, 'Create tag new')
+        self.assertEqual(store.read_json(store.journal)['files'], {'_tags.json': [{'tag': 'new'}]})
+        return store, failure
+
+    def test_non_tag_structure_ignores_unrelated_recovery_failure(self):
+        store, _ = self.interrupt_tag_definition()
+        pending = store.read_json(store.journal)
+        self.assertEqual(service.read_project(self.comment)['data']['dn1:1.1'], 'a ')
+        payload = self.payload()
+        result = service.commit_operation(self.root, payload, self.search, self.user)
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual(service.operation_status(self.root, payload.operation_id, self.search, self.user), result)
+        self.assertEqual(json.loads(self.root.read_text())['dn1:1.1'], 'A B ')
+        self.assertEqual(store.read_json(store.journal), pending)
+
+    def test_tag_recovery_failure_blocks_tag_reads_and_structure_preview(self):
+        tag = self.work / 'tag/pli/ms/sutta/dn1_tag.json'
+        tag.parent.mkdir(parents=True)
+        tag.write_text(json.dumps({'dn1:1.1': '', 'dn1:1.2': '', 'dn1:1.3': ''}))
+        store, failure = self.interrupt_tag_definition()
+        with self.assertRaisesRegex(OSError, 'tag storage unavailable'):
+            service.read_project(tag)
+        with self.assertRaisesRegex(OSError, 'tag storage unavailable'):
+            service.preview(self.root, 'merge', 'dn1:1.1')
+        self.assertEqual(json.loads(self.root.read_text())['dn1:1.1'], 'A ')
+        failure.stop()
+        self.assertEqual(service.read_project(tag)['data']['dn1:1.1'], '')
+        self.assertIsNone(store.read_json(store.journal))
+        self.assertEqual(store.read_tags(), [{'tag': 'new'}])
+
+    def test_new_structure_recovers_pending_tag_definition_once(self):
+        tag = self.work / 'tag/pli/ms/sutta/dn1_tag.json'
+        tag.parent.mkdir(parents=True)
+        tag.write_text(json.dumps({'dn1:1.1': '', 'dn1:1.2': '', 'dn1:1.3': ''}))
+        payload = self.payload()
+        payload.edits['tag-pli-ms'] = {'dn1:1.1': 'new'}
+        store, failure = self.interrupt_tag_definition()
+        failure.stop()
+        with patch.object(TagStore, 'recover', autospec=True, side_effect=TagStore.recover) as recover:
+            result = service.commit_operation(self.root, payload, self.search, self.user)
+        self.assertEqual(recover.call_count, 1)
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual(json.loads(tag.read_text())['dn1:1.1'], 'new')
+        self.assertIsNone(store.read_json(store.journal))
+
+    def test_resuming_structure_with_tags_requires_tag_recovery(self):
+        tag = self.work / 'tag/pli/ms/sutta/dn1_tag.json'
+        tag.parent.mkdir(parents=True)
+        tag.write_text(json.dumps({'dn1:1.1': '', 'dn1:1.2': '', 'dn1:1.3': ''}))
+        (self.work / '_tags.json').write_text('[]')
+        payload = self.payload()
+        with patch.object(StructureStore, 'apply', side_effect=OSError('interrupted')):
+            with self.assertRaises(service.StructureOperationIncomplete):
+                service.commit_operation(self.root, payload, self.search, self.user)
+        structure = StructureStore(self.work, self.root)
+        pending = structure.pending()
+        store, failure = self.interrupt_tag_definition()
+        with self.assertRaisesRegex(OSError, 'tag storage unavailable'):
+            service.operation_status(self.root, payload.operation_id, self.search, self.user)
+        with self.assertRaisesRegex(OSError, 'tag storage unavailable'):
+            service.commit_operation(self.root, payload, self.search, self.user)
+        self.assertEqual(structure.pending(), pending)
+        self.assertEqual(json.loads(self.root.read_text())['dn1:1.1'], 'A ')
+        failure.stop()
+        result = service.operation_status(self.root, payload.operation_id, self.search, self.user)
+        self.assertEqual(result['status'], 'complete')
+        self.assertIsNone(structure.pending())
+        self.assertIsNone(store.read_json(store.journal))
+        self.assertEqual(store.read_tags(), [{'tag': 'new'}])
 
     def test_read_project_returns_data_and_revision_under_shared_lock(self):
         virtual = VirtualProjectFile(self.root, 'root-pli-ms',
@@ -204,6 +294,44 @@ class StructureServiceTests(unittest.TestCase):
         result = service.operation_status(self.root, payload.operation_id, self.search, self.user)
         self.assertEqual(result['status'], 'complete')
         self.assertEqual(json.loads(self.root.read_text())['dn1:1.1'], 'A B ')
+
+    def test_pending_structure_blocks_tag_changes_until_index_recovers(self):
+        tag = self.work / 'tag/pli/ms/sutta/dn1_tag.json'
+        tag.parent.mkdir(parents=True)
+        tag.write_text(json.dumps({'dn1:1.1': 'old', 'dn1:1.2': '', 'dn1:1.3': ''}))
+        (self.work / '_tags.json').write_text(json.dumps([{'tag': 'old'}]))
+        tags = TagService(self.work)
+        user = UserBase(github_id=1, username='admin', email='admin@example.org',
+                        avatar_url=None, role='administrator')
+        payload = self.payload()
+        self.search.replace_structure_segments.return_value = (False, RuntimeError('offline'))
+        with self.assertRaises(service.StructureOperationIncomplete):
+            service.commit_operation(self.root, payload, self.search, self.user)
+        for operation, data in [('update', {'tag': 'new'}), ('delete', None)]:
+            with self.subTest(operation=operation):
+                with self.assertRaises(TagError) as caught:
+                    tags.mutate(operation, user, 'old', data)
+                self.assertEqual(caught.exception.status, 409)
+        self.assertEqual(tags.list(), [{'tag': 'old'}])
+        self.assertIsNone(tags.store.read_sync())
+        self.search.replace_structure_segments.return_value = (True, None)
+        service.operation_status(self.root, payload.operation_id, self.search, self.user)
+        tags.mutate('update', user, 'old', {'tag': 'new'})
+        self.assertEqual(json.loads(tag.read_text())['dn1:1.1'], 'new')
+        tags.mutate('delete', user, 'new')
+        self.assertEqual(json.loads(tag.read_text())['dn1:1.1'], '')
+
+    def test_non_tag_pending_structure_allows_tag_rename(self):
+        (self.work / '_tags.json').write_text(json.dumps([{'tag': 'old'}]))
+        payload = self.payload()
+        self.search.replace_structure_segments.return_value = (False, RuntimeError('offline'))
+        with self.assertRaises(service.StructureOperationIncomplete):
+            service.commit_operation(self.root, payload, self.search, self.user)
+        tags = TagService(self.work)
+        user = UserBase(github_id=1, username='admin', email='admin@example.org',
+                        avatar_url=None, role='administrator')
+        result = tags.mutate('update', user, 'old', {'tag': 'new'})
+        self.assertEqual(result['tag'], 'new')
 
     def test_publication_runs_after_commit_without_holding_text_lock(self):
         def enqueue(*args):

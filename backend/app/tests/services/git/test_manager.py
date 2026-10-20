@@ -3,8 +3,10 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from app.services.git.manager import GitManager
 from app.services.projects.utils import write_json_data
-from pygit2 import Blob, GIT_MERGE_ANALYSIS_NORMAL, Oid, Signature
+from pygit2 import (Blob, GIT_MERGE_ANALYSIS_NORMAL, GitError, Index, Oid,
+                    Repository, Signature, init_repository)
 from pygit2.enums import MergeFavor
 from search.utils import get_json_data
 
@@ -166,6 +168,32 @@ class TestManager:
             assert last_commit.message == message
             assert last_commit.author == author
             assert last_commit.committer == committer
+
+    @pytest.mark.parametrize("failure_point", ["write_tree", "create_commit"])
+    @pytest.mark.parametrize("error_type", [GitError, OSError])
+    def test_commit_propagates_write_failures(self, tmp_path, monkeypatch, failure_point, error_type):
+        repo = init_repository(str(tmp_path / "work"), initial_head="unpublished")
+        author = Signature("Test", "test@example.com")
+        initial = repo.create_commit("HEAD", author, author, "initial", repo.index.write_tree(), [])
+        path = Path("root/dn1.json")
+        target = Path(repo.workdir) / path
+        target.parent.mkdir(parents=True)
+        target.write_text('{"dn1:1": "new text"}')
+        repo.index.add(str(path))
+        repo.index.write()
+        staged_id = repo.index[str(path)].id
+        error = error_type("commit write failed")
+        failure = Mock(side_effect=error)
+        owner = Index if failure_point == "write_tree" else Repository
+        monkeypatch.setattr(owner, failure_point, failure)
+
+        with pytest.raises(error_type) as raised:
+            GitManager.commit(repo, author, author, "structure", [path])
+
+        assert raised.value is error
+        failure.assert_called_once()
+        assert repo.head.target == initial
+        assert repo.index[str(path)].id == staged_id
 
     @pytest.mark.parametrize(
         "repo_attr, paths, expected_result",

@@ -1,6 +1,5 @@
 """Directory index integration tests, isolated in a disposable PostgreSQL schema."""
 
-import asyncio
 import json
 import shutil
 import subprocess
@@ -335,7 +334,7 @@ with patch.object(Search, '_create_index'), patch.object(Search, '_populate_inde
         with patch.object(tags.search, 'get_file_paths', return_value={str(source)}), patch.object(
             tags.search, 'add_to_index', return_value=(True, None),
         ):
-            asyncio.run(tags.create_tag_data_file(SimpleNamespace(), 'mn1'))
+            tags.create_tag_data_file(SimpleNamespace(), 'mn1')
         self.assertEqual(self.search('new'), {'root/pli/ms/sutta/new', 'tag/pli/ms/sutta/new'})
 
     def git_repositories(self):

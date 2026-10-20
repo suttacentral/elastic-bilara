@@ -3,52 +3,16 @@
 A durable redo journal is completed before readers or Git operations proceed.
 Replacing two files is not a filesystem-wide atomic operation.
 """
-import fcntl
 import json
-import os
-import stat
-import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from threading import local
 from uuid import uuid4
 
-from app.services.publications.errors import PublicationError, PublicationStorageError
+from app.services.publications.errors import PublicationError
+from app.services.storage import storage_errors as _storage_errors, write_json
+from app.services.git.checkout import checkout_lock
 
 PUBLICATION_FILES = ("_publication-v2.json", "_publication.json")
-_held_locks = local()
-
-
-@contextmanager
-def _storage_errors():
-    """Translate only I/O owned by this module, never a lock caller's body."""
-    try:
-        yield
-    except OSError as exc:
-        raise PublicationStorageError(*exc.args) from exc
-
-
-def write_json(path: Path, value):
-    with _storage_errors():
-        temporary = None
-        try:
-            mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
-            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as handle:
-                temporary = Path(handle.name)
-                json.dump(value, handle, indent=2, ensure_ascii=False)
-                handle.write("\n")
-                os.fchmod(handle.fileno(), mode)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary, path)
-            fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
-        finally:
-            if temporary:
-                temporary.unlink(missing_ok=True)
 
 
 class PublicationStore:
@@ -61,27 +25,9 @@ class PublicationStore:
 
     @contextmanager
     def locked(self):
-        held = getattr(_held_locks, "paths", set())
-        if self.directory in held:
+        with checkout_lock(self.work):
+            self.recover()
             yield self
-            return
-        with _storage_errors():
-            self.directory.mkdir(parents=True, exist_ok=True)
-            handle = (self.directory / "lock").open("a+")
-        try:
-            with _storage_errors():
-                fcntl.flock(handle, fcntl.LOCK_EX)
-            try:
-                _held_locks.paths = held | {self.directory}
-                self.recover()
-                yield self
-            finally:
-                _held_locks.paths = held
-                with _storage_errors():
-                    fcntl.flock(handle, fcntl.LOCK_UN)
-        finally:
-            with _storage_errors():
-                handle.close()
 
     def recover(self):
         with _storage_errors():

@@ -9,17 +9,19 @@ from pygit2 import (GIT_CHECKOUT_FORCE, GIT_DELTA_DELETED,
                     GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_INDEX_NEW,
                     GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED,
                     GIT_STATUS_WT_NEW, Commit, GitError, Oid, RemoteCallbacks,
-                    Repository, Signature, UserPass)
+                    Repository, Signature, UserPass, Index)
 from pygit2.enums import MergeFavor
 
 import app.services.git.utils as utils
 from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.directories.index import DirectoryIndex
+from app.services.git.checkout import checkout_lock
 from app.services.git.github_pull_requests import GithubPullRequests
 from app.services.git.publication import (PublicationPlan,
                                           build_publication_plan)
 from app.services.publications.store import PublicationStore
+from app.services.tags.store import TagStore
 
 
 class GitManager:
@@ -54,12 +56,14 @@ class GitManager:
                 remote.fetch()
                 # Fetch only updates remote refs/objects. Recover the local pair and
                 # read HEAD under the checkout lock before deciding how to merge.
-                lock = (
-                    PublicationStore(Path(branch.workdir)).locked()
-                    if Path(branch.workdir).resolve() == Path(self.unpublished.workdir).resolve()
-                    else nullcontext()
-                )
+                work = Path(branch.workdir).resolve()
+                unpublished = work == Path(self.unpublished.workdir).resolve()
+                lock = checkout_lock(work) if unpublished else nullcontext()
                 with lock:
+                    if unpublished:
+                        # A checkout-wide update can replace either domain's files.
+                        PublicationStore(work).recover()
+                        TagStore(work).recover()
                     branch.state_cleanup()
                     branch_name = branch.head.shorthand
                     remote_hash_id = branch.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target
@@ -101,7 +105,22 @@ class GitManager:
                                 merged = branch.merge_trees(base, branch.head.target, remote_hash_id)
                                 if merged.conflicts:
                                     # Check before modifying the index or working files.
-                                    raise ValueError("Publication sync conflicts with origin/unpublished. Resolve the Git conflict before retrying sync.")
+                                    raise ValueError("Git sync conflicts with origin/unpublished. Resolve the Git conflict before retrying sync.")
+                                # Merge committed trees, not the shared index: an
+                                # unrelated staged edit must remain uncommitted.
+                                tree_id = merged.write_tree(branch)
+                                tree = branch[tree_id]
+                                local = branch.head.peel(Commit)
+                                paths = [patch.delta.new_file.path for patch in branch.diff(local.tree, tree)]
+                                if paths:
+                                    branch.checkout_tree(tree, paths=paths)
+                                branch.create_commit(
+                                    "HEAD", self.author, self.committer,
+                                    f"Merged origin/{branch_name} into {branch_name}",
+                                    tree_id, [local.id, remote_hash_id],
+                                )
+                                branch.state_cleanup()
+                                return modified_files
                             branch.merge(remote_hash_id, favor=MergeFavor.NORMAL if fail_on_conflict else MergeFavor.OURS)
                             if branch.index.conflicts:
                                 conflicts = [conflict for conflict in branch.index.conflicts]
@@ -322,9 +341,28 @@ class GitManager:
     def commit(
         repo: Repository, author: Signature, committer: Signature, message: str, paths: list[Path] = None
     ) -> Oid | Literal[False]:
-        if not GitManager.has_status_changed(repo, paths):
+        if not paths:
             return False
-        return repo.create_commit("HEAD", author, committer, message, repo.index.write_tree(), [repo.head.target])
+        # Build this commit from HEAD plus the selected staged entries. The real
+        # index keeps unrelated staging, including staged deletions, untouched.
+        parent = repo.head.peel(Commit)
+        selected = Index()
+        selected.read_tree(parent.tree)
+        for path in paths:
+            name = str(path)
+            try:
+                entry = repo.index[name]
+            except KeyError:
+                try:
+                    selected.remove(name)
+                except KeyError:
+                    pass
+            else:
+                selected.add(entry)
+        tree = selected.write_tree(repo)
+        if tree == parent.tree.id:
+            return False
+        return repo.create_commit("HEAD", author, committer, message, tree, [parent.id])
 
     @staticmethod
     def push(repo, remote_name="origin", branch="unpublished", force=True):

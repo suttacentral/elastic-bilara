@@ -201,6 +201,15 @@
             all: revert;
         }
 
+        .tags-sync {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            overflow-wrap: anywhere;
+        }
+        .tags-sync p { margin: 0 0 0.5rem; }
+        button:disabled { opacity: 0.6; cursor: wait; }
     </style>
 </head>
 <body class="page-layout" x-init="await redirectNonPrivilegedUserFromAdminToNav()">
@@ -208,13 +217,22 @@
         <sc-bilara-nav></sc-bilara-nav>
     </header>
 
-    <main class="main-content" x-data="tagsManager()" x-init="init()">
+    <main class="main-content" x-data="tagsManager()">
         <div class="tags-container">
             <div class="tags-header">
                 <h1><i class="bi bi-tags"></i> Tag Management</h1>
-                <button class="btn-add" @click="showAddForm = !showAddForm">
+                <button class="btn-add" :disabled="saving" @click="showAddForm = !showAddForm">
                     <i class="bi bi-plus-circle"></i>
                     <span x-text="showAddForm ? 'Cancel' : 'Add Tag'"></span>
+                </button>
+            </div>
+
+            <p x-show="loadError" x-text="loadError" role="alert" x-cloak></p>
+            <div class="tags-sync" x-show="syncStatus" x-cloak>
+                <p role="status" aria-live="polite" x-text="syncStatus"></p>
+                <button class="btn-save" type="button" x-show="canRetrySync"
+                    :disabled="retryingSync || saving" @click="await retrySync()">
+                    <span x-text="retryingSync ? 'Retrying…' : 'Retry GitHub sync'"></span>
                 </button>
             </div>
 
@@ -223,21 +241,21 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="new-tag-name">Tag Name</label>
-                        <input id="new-tag-name" type="text" x-model="newTag.tag"
+                        <input id="new-tag-name" type="text" :disabled="saving" x-model="newTag.tag"
                             placeholder="e.g. practice" pattern="[a-z0-9\-]+">
                     </div>
                     <div class="form-group">
                         <label for="new-tag-expansion">Expansion</label>
-                        <input id="new-tag-expansion" type="text" x-model="newTag.expansion"
+                        <input id="new-tag-expansion" type="text" :disabled="saving" x-model="newTag.expansion"
                             placeholder="e.g. practice">
                     </div>
                     <div class="form-group">
                         <label for="new-tag-definition">Definition</label>
-                        <input id="new-tag-definition" type="text" x-model="newTag.definition"
+                        <input id="new-tag-definition" type="text" :disabled="saving" x-model="newTag.definition"
                             placeholder="e.g. Related to practice">
                     </div>
                     <div class="form-actions">
-                        <button class="btn-save" @click="await addTag()">Save</button>
+                        <button class="btn-save" :disabled="saving" @click="await addTag()">Save</button>
                     </div>
                 </div>
             </div>
@@ -266,40 +284,40 @@
                                 <td><span class="tag-badge" x-text="tag.tag"></span></td>
                             </template>
                             <template x-if="editingTag && editingTag._original === tag.tag">
-                                <td><input class="edit-input" type="text" x-model="editingTag.tag"></td>
+                                <td><input class="edit-input" type="text" :disabled="saving" x-model="editingTag.tag"></td>
                             </template>
 
                             <template x-if="!editingTag || editingTag._original !== tag.tag">
                                 <td x-text="tag.expansion"></td>
                             </template>
                             <template x-if="editingTag && editingTag._original === tag.tag">
-                                <td><input class="edit-input" type="text" x-model="editingTag.expansion"></td>
+                                <td><input class="edit-input" type="text" :disabled="saving" x-model="editingTag.expansion"></td>
                             </template>
 
                             <template x-if="!editingTag || editingTag._original !== tag.tag">
                                 <td x-text="tag.definition"></td>
                             </template>
                             <template x-if="editingTag && editingTag._original === tag.tag">
-                                <td><input class="edit-input" type="text" x-model="editingTag.definition"></td>
+                                <td><input class="edit-input" type="text" :disabled="saving" x-model="editingTag.definition"></td>
                             </template>
 
-                            <td class="tags-actions">
+                            <td>
                                 <template x-if="!editingTag || editingTag._original !== tag.tag">
                                     <div class="tags-actions">
-                                        <button class="btn-icon" @click="startEdit(tag)" title="Edit">
+                                        <button class="btn-icon" :disabled="saving" @click="startEdit(tag)" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon--danger" @click="await deleteTag(tag.tag)" title="Delete">
+                                        <button class="btn-icon btn-icon--danger" :disabled="saving" @click="await deleteTag(tag.tag)" title="Delete">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
                                 </template>
                                 <template x-if="editingTag && editingTag._original === tag.tag">
                                     <div class="tags-actions">
-                                        <button class="btn-icon" @click="await saveEdit()" title="Save">
+                                        <button class="btn-icon" :disabled="saving" @click="await saveEdit()" title="Save">
                                             <i class="bi bi-check-lg"></i>
                                         </button>
-                                        <button class="btn-icon" @click="cancelEdit()" title="Cancel">
+                                        <button class="btn-icon" :disabled="saving" @click="cancelEdit()" title="Cancel">
                                             <i class="bi bi-x-lg"></i>
                                         </button>
                                     </div>

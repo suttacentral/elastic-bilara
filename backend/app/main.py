@@ -12,7 +12,7 @@ from app.db.models.dictionary_note import DictionaryNote
 from app.db.models.dictionary_hidden_word import DictionaryHiddenWord
 from app.db.models.directory_index import DirectoryIndexEntry, DirectoryIndexState
 from app.services.directories.index import DirectoryIndex
-from app.services.publications.sync import dispatch_loop
+from app.services.sync_dispatch import dispatch_loop
 from fastapi import FastAPI
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
@@ -41,13 +41,13 @@ with engine.connect() as conn:
 async def lifespan(app: FastAPI):
     # The entrypoint may have pulled the checkout before starting the workers.
     await to_thread(DirectoryIndex().rebuild)
-    publication_sync = create_task(dispatch_loop(settings.WORK_DIR))
+    sync_dispatch = create_task(dispatch_loop(settings.WORK_DIR))
     try:
         yield
     finally:
-        publication_sync.cancel()
+        sync_dispatch.cancel()
         with suppress(CancelledError):
-            await publication_sync
+            await sync_dispatch
 
 
 app = FastAPI(

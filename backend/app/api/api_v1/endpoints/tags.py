@@ -1,5 +1,3 @@
-import json
-import re
 from pathlib import Path
 from typing import Annotated
 
@@ -7,243 +5,71 @@ from app.core.config import settings
 from app.db.schemas.user import UserBase
 from app.services.auth import utils
 from app.services.directories.index import create_indexed_directory
+from app.services.storage import StorageError, storage_errors, write_json
+from app.services.tags import sync
+from app.services.tags.service import TagService
+from app.services.tags.store import TagError, TagStore
 from app.services.users.permissions import is_admin_or_superuser, is_user_active
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from search.search import Search
-from search.utils import find_root_path, get_json_data, get_prefix, yield_file_path
+from search.utils import get_json_data, get_prefix, yield_file_path
 
 router = APIRouter(prefix="/tags")
-
-TAGS_FILE = settings.WORK_DIR / "_tags.json"
-
-TAG_NAME_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-
 search = Search()
 
 
-def _read_tags() -> list[dict]:
-    if not TAGS_FILE.exists():
-        return []
-    with open(TAGS_FILE, "r") as f:
-        return json.load(f)
-
-
-def _write_tags(tags: list[dict]) -> None:
-    with open(TAGS_FILE, "w") as f:
-        json.dump(tags, f, indent=2, ensure_ascii=False)
-
-
-def _validate_tag_name(tag_name: str) -> None:
-    if not TAG_NAME_PATTERN.match(tag_name):
+def tag_service():
+    try:
+        yield TagService(settings.WORK_DIR)
+    except TagError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+    except StorageError as exc:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid tag name '{tag_name}'. Must be lowercase alphanumeric with hyphens only.",
-        )
-
-
-def _find_all_tag_files() -> list[Path]:
-    """Find all tag files in the tag directory."""
-    tag_dir = settings.WORK_DIR / "tag"
-    if not tag_dir.exists():
-        return []
-
-    result = []
-    for f in yield_file_path(tag_dir, level=1):
-        if f.name.endswith("_tag.json"):
-            result.append(Path(f))
-    return result
-
-
-def _parse_tag_value(value: str) -> list[str]:
-    """Parse comma-separated tag value, preserving leading spaces.
-
-    Example: "practice, 4nt" -> ["practice", " 4nt"]
-    """
-    if not value or not value.strip():
-        return []
-    return value.split(",")
-
-
-def _serialize_tag_value(tags: list[str]) -> str:
-    """Serialize tag list back to comma-separated string.
-
-    Example: ["practice", " 4nt"] -> "practice, 4nt"
-    """
-    return ",".join(tags)
-
-
-def _delete_tag_from_files(tag_name: str) -> int:
-    """Remove a tag from all tag files. Returns the number of files modified."""
-    tag_files = _find_all_tag_files()
-    modified_count = 0
-
-    for tag_file in tag_files:
-        try:
-            with open(tag_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            changed = False
-            for segment_key in data:
-                tag_value = data[segment_key]
-                if not tag_value or not tag_value.strip():
-                    continue
-
-                # Parse the tag value
-                tags = _parse_tag_value(tag_value)
-                # Filter out tag_name (comparing stripped versions)
-                filtered_tags = [t for t in tags if t.strip() != tag_name]
-
-                if len(filtered_tags) != len(tags):
-                    # A tag was removed
-                    data[segment_key] = _serialize_tag_value(filtered_tags)
-                    changed = True
-
-            if changed:
-                with open(tag_file, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
-                modified_count += 1
-        except Exception as e:
-            # Continue with other files on error
-            continue
-
-    return modified_count
-
-
-def _update_tag_in_files(old_tag_name: str, new_tag_name: str) -> int:
-    """Rename a tag in all tag files. Returns the number of files modified."""
-    tag_files = _find_all_tag_files()
-    modified_count = 0
-
-    for tag_file in tag_files:
-        try:
-            with open(tag_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            changed = False
-            for segment_key in data:
-                tag_value = data[segment_key]
-                if not tag_value or not tag_value.strip():
-                    continue
-
-                # Parse the tag value
-                tags = _parse_tag_value(tag_value)
-                # Replace old_tag_name with new_tag_name
-                new_tags = []
-                segment_changed = False
-                for t in tags:
-                    if t.strip() == old_tag_name:
-                        # Replace with new name, preserving the leading spaces
-                        leading_spaces = len(t) - len(t.lstrip())
-                        new_tags.append(" " * leading_spaces + new_tag_name)
-                        segment_changed = True
-                    else:
-                        new_tags.append(t)
-
-                if segment_changed:
-                    data[segment_key] = _serialize_tag_value(new_tags)
-                    changed = True
-
-            if changed:
-                with open(tag_file, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
-                modified_count += 1
-        except Exception as e:
-            # Continue with other files on error
-            continue
-
-    return modified_count
+            status_code=503,
+            detail="Tag storage is unavailable. A saved operation may be awaiting recovery; reload before retrying.",
+        ) from exc
 
 
 @router.get("/")
-async def get_tags(
-    user: Annotated[UserBase, Depends(utils.get_current_user)],
-) -> list[dict]:
-    return _read_tags()
+def get_tags(user=Depends(utils.get_current_user), service=Depends(tag_service)):
+    return service.list()
 
 
-@router.post(
-    "/",
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
-)
-async def create_tag(
-    user: Annotated[UserBase, Depends(utils.get_current_user)],
-    data: dict,
-) -> dict:
-    tag_name = data.get("tag", "").strip()
-    if not tag_name:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tag name is required")
-    _validate_tag_name(tag_name)
-
-    tags = _read_tags()
-    if any(t["tag"] == tag_name for t in tags):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Tag '{tag_name}' already exists")
-
-    new_tag = {
-        "tag": tag_name,
-        "expansion": data.get("expansion", ""),
-        "definition": data.get("definition", ""),
-    }
-    tags.append(new_tag)
-    _write_tags(tags)
-    return new_tag
+@router.get("/sync/", dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)])
+def sync_status(service=Depends(tag_service)):
+    return sync.status(service.store.work)
 
 
-@router.patch(
-    "/{tag_name}/",
-    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
-)
-async def update_tag(
-    user: Annotated[UserBase, Depends(utils.get_current_user)],
-    tag_name: str,
-    data: dict,
-) -> dict:
-    tags = _read_tags()
-    for tag in tags:
-        if tag["tag"] == tag_name:
-            if "expansion" in data:
-                tag["expansion"] = data["expansion"]
-            if "definition" in data:
-                tag["definition"] = data["definition"]
-            if "tag" in data and data["tag"] != tag_name:
-                new_name = data["tag"].strip()
-                _validate_tag_name(new_name)
-                if any(t["tag"] == new_name for t in tags if t is not tag):
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail=f"Tag '{new_name}' already exists",
-                    )
-                # Update tag name in all tag files before updating the definition
-                files_modified = _update_tag_in_files(tag_name, new_name)
-                tag["tag"] = new_name
-            _write_tags(tags)
-            return tag
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Tag '{tag_name}' not found")
+@router.post("/sync/retry/", status_code=status.HTTP_202_ACCEPTED,
+             dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)])
+def retry_sync(background_tasks: BackgroundTasks, service=Depends(tag_service)):
+    result = sync.retry(service.store.work)
+    background_tasks.add_task(sync.dispatch_safely, service.store.work)
+    return result
 
 
-@router.delete(
-    "/{tag_name}/",
-    status_code=status.HTTP_200_OK,
-    dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
-)
-async def delete_tag(
-    user: Annotated[UserBase, Depends(utils.get_current_user)],
-    tag_name: str,
-) -> dict:
-    tags = _read_tags()
-    original_len = len(tags)
-    tags = [t for t in tags if t["tag"] != tag_name]
-    if len(tags) == original_len:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Tag '{tag_name}' not found")
+@router.post("/", status_code=status.HTTP_201_CREATED, dependencies=[Depends(is_user_active)])
+def create_tag(data: dict, background_tasks: BackgroundTasks,
+               user=Depends(is_admin_or_superuser), service=Depends(tag_service)):
+    result = service.mutate("create", user, data=data)
+    background_tasks.add_task(sync.dispatch_safely, service.store.work)
+    return result
 
-    # Delete tag from all tag files before removing from definitions
-    files_modified = _delete_tag_from_files(tag_name)
 
-    _write_tags(tags)
-    return {
-        "detail": f"Tag '{tag_name}' deleted",
-        "files_modified": files_modified,
-    }
+@router.patch("/{tag_name}/", dependencies=[Depends(is_user_active)])
+def update_tag(tag_name: str, data: dict, background_tasks: BackgroundTasks,
+               user=Depends(is_admin_or_superuser), service=Depends(tag_service)):
+    result = service.mutate("update", user, tag_name, data)
+    background_tasks.add_task(sync.dispatch_safely, service.store.work)
+    return result
+
+
+@router.delete("/{tag_name}/", dependencies=[Depends(is_user_active)])
+def delete_tag(tag_name: str, background_tasks: BackgroundTasks,
+               user=Depends(is_admin_or_superuser), service=Depends(tag_service)):
+    result = service.mutate("delete", user, tag_name)
+    background_tasks.add_task(sync.dispatch_safely, service.store.work)
+    return result
 
 
 @router.post(
@@ -251,46 +77,63 @@ async def delete_tag(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(is_admin_or_superuser), Depends(is_user_active)],
 )
-async def create_tag_data_file(
+def create_tag_data_file(
     user: Annotated[UserBase, Depends(utils.get_current_user)],
     prefix: str,
 ) -> dict:
     """Create a new tag data file for a given prefix, mirroring the root file structure."""
+    try:
+        return _ensure_tag_data_file(prefix)
+    except TagError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from exc
+    except StorageError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Tag storage is unavailable. Reload before retrying.",
+        ) from exc
+
+
+def _ensure_tag_data_file(prefix):
+    with TagStore(settings.WORK_DIR).locked():
+        tag_path = _find_tag_data_file(prefix)
+        root_path = None
+        if tag_path is None:
+            root_files = search.get_file_paths(muid="root-pli-ms", prefix=prefix, exact=True, _type="file_path")
+            roots = [Path(path) for path in root_files if Path(path).is_file()]
+            if not roots:
+                raise HTTPException(status_code=404, detail=f"Root file for prefix '{prefix}' not found")
+            root_path = roots[0]
+            relative = root_path.relative_to(settings.WORK_DIR / "root")
+            tag_path = settings.WORK_DIR / "tag" / relative.parent / f"{prefix}_tag.json"
+        result = _create_tag_data_file(prefix, tag_path, root_path)
+        with storage_errors():
+            indexed, error = search.add_to_index(tag_path)
+        if not indexed:
+            raise HTTPException(status_code=503, detail="Tag file exists, but indexing failed. Retry this operation.") from error
+        return result
+
+
+def _find_tag_data_file(prefix):
     # Check if tag file already exists on disk
     tag_dir = settings.WORK_DIR / "tag"
     if tag_dir.exists():
         for f in yield_file_path(tag_dir, level=1):
             if get_prefix(f) == prefix:
-                # File exists — ensure it's indexed and return
-                search.add_to_index(f)
-                return {"detail": f"Tag data file for '{prefix}' already exists", "path": str(f)}
+                return f
+    return None
 
-    # Find root file to get segment keys and directory structure
-    root_files: set[str] = search.get_file_paths(muid="root-pli-ms", prefix=prefix, exact=True, _type="file_path")
-    if not root_files:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Root file for prefix '{prefix}' not found",
-        )
-    root_path = Path(root_files.pop())
-    root_data = get_json_data(root_path)
 
-    # Build tag file path mirroring root directory structure
-    # root: root/pli/ms/sutta/sn/sn1/sn1.1_root-pli-ms.json
-    # tag:  tag/pli/ms/sutta/sn/sn1/sn1.1_tag.json
-    relative_parts = root_path.relative_to(settings.WORK_DIR / "root").parts
-    # relative_parts = ('pli', 'ms', 'sutta', 'sn', 'sn1', 'sn1.1_root-pli-ms.json')
-    tag_filename = f"{prefix}_tag.json"
-    tag_file_path = settings.WORK_DIR / "tag" / Path(*relative_parts[:-1]) / tag_filename
-
-    # Create directory and file
-    create_indexed_directory(tag_file_path.parent)
+def _create_tag_data_file(prefix, tag_file_path, root_path):
+    if root_path is None:
+        data = TagStore(settings.WORK_DIR).read_json(tag_file_path)
+        if not isinstance(data, dict) or any(not isinstance(value, str) for value in data.values()):
+            raise TagError(409, f"Invalid tag data in {tag_file_path.name}. Repair the file before retrying.")
+        return {"detail": f"Tag data file for '{prefix}' already exists", "path": str(tag_file_path)}
+    with storage_errors():
+        root_data = get_json_data(root_path)
+        create_indexed_directory(tag_file_path.parent)
     tag_data = {key: "" for key in root_data.keys()}
-    with open(tag_file_path, "w") as f:
-        json.dump(tag_data, f, indent=2, ensure_ascii=False)
-
-    # Index in ES
-    search.add_to_index(tag_file_path)
+    write_json(tag_file_path, tag_data)
 
     return {"detail": f"Tag data file created for '{prefix}'", "path": str(tag_file_path)}
 

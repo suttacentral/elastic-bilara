@@ -4,6 +4,7 @@ import fcntl
 import unittest
 from pathlib import Path
 
+from app.services.git.checkout import checkout_lock
 from app.services.projects.structure_engine import build_preview, apply_edits, load_rules
 from app.services.projects.structure_store import StructureStore, StructureConflict
 from unittest.mock import patch
@@ -103,6 +104,37 @@ class StructureTests(unittest.TestCase):
 
 
 class StoreTests(unittest.TestCase):
+    def test_pending_paths_tracks_multiple_roots_and_completion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'unpublished'
+            with checkout_lock(work):
+                self.assertEqual(list(StructureStore.pending_paths(work)), [])
+                for number in (1, 2):
+                    root = work / f'root/dn{number}.json'
+                    store = StructureStore(work, root)
+                    record = {'operation_id': f'00000000-0000-0000-0000-{number:012d}',
+                              'files': {f'root/dn{number}.json': {'dn1:1': 'A'}}}
+                    with store.lock():
+                        store.prepare(record)
+                self.assertEqual(set(StructureStore.pending_paths(work)), {'root/dn1.json', 'root/dn2.json'})
+                with store.lock():
+                    store.apply(record)
+                    store.finish(record, {})
+                self.assertEqual(list(StructureStore.pending_paths(work)), ['root/dn1.json'])
+
+    def test_pending_paths_reports_invalid_journal_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory) / 'unpublished'
+            store = StructureStore(work, work / 'root/dn1.json')
+            with checkout_lock(work), store.lock():
+                for content in (b'{broken', b'\xff'):
+                    with self.subTest(content=content):
+                        journal = store.directory / 'pending.json'
+                        journal.write_bytes(content)
+                        with self.assertRaisesRegex(StructureConflict, 'Invalid JSON'):
+                            list(StructureStore.pending_paths(work))
+                        self.assertEqual(journal.read_bytes(), content)
+
     def test_shared_locks_allow_readers_and_exclude_writers(self):
         with tempfile.TemporaryDirectory() as directory:
             store = StructureStore(Path(directory) / 'work', Path(directory) / 'work/root.json')

@@ -1,10 +1,13 @@
 """Application boundary for previewing and committing structural changes."""
 import json
+from contextlib import nullcontext
 import logging
 from pathlib import Path
 from typing import Literal
 
 from app.core.config import settings
+from app.services.git.checkout import checkout_lock
+from app.services.tags.store import TagStore, is_tag_path
 from app.services.projects.segment_permissions import ReadOnlyCommentError
 from app.services.projects.structure_engine import build_preview, apply_edits, load_rules, digest
 from app.services.projects.structure_store import StructureStore, StructureConflict
@@ -25,7 +28,9 @@ def read_project(project: Path | VirtualProjectFile) -> dict:
     virtual = isinstance(project, VirtualProjectFile)
     root = project.source_path if virtual else find_root_path(project)
     store = StructureStore(settings.WORK_DIR, root)
-    with store.lock(shared=True):
+    tag_project = not virtual and is_tag_path(Path(project).relative_to(settings.WORK_DIR))
+    guard = TagStore(settings.WORK_DIR).locked() if tag_project else nullcontext()
+    with guard, store.lock(shared=True):
         store.check_ready()
         data = {} if virtual else get_json_data(project)
         revision = store.revision(data if not virtual and project == root else None)
@@ -66,6 +71,8 @@ def preview_locked(root, operation, uid):
     files = {}
     rules = load_rules(operation)
     paths = sorted(work.glob(f'*/**/{prefix}_*.json'))
+    if any(is_tag_path(path.relative_to(work)) for path in paths):
+        TagStore(work).recover()
     roots = [path for path in paths if path.relative_to(work).parts[0] == 'root']
     if roots != [root]:
         raise ValueError('The text prefix must identify exactly one root file')
@@ -85,7 +92,7 @@ def preview_locked(root, operation, uid):
 
 def preview(root, operation, uid):
     store = StructureStore(settings.WORK_DIR, root)
-    with store.lock():
+    with checkout_lock(settings.WORK_DIR), store.lock():
         store.check_ready()
         result = preview_locked(root, operation, uid)
         result['structure_revision'] = store.revision()
@@ -94,38 +101,42 @@ def preview(root, operation, uid):
 
 
 def _complete(store, record, search):
+    """Resume a prepared operation after recovering the tag files it touches."""
+    if any(is_tag_path(path) for path in record['files']):
+        TagStore(store.work).recover()
+    return _finish_operation(store, record, search)
+
+
+def _finish_operation(store, record, search):
+    """Apply prepared data after tag recovery, retaining failed operations for retry."""
     try:
-        return _finish_operation(store, record, search)
+        completed = store.get(record['operation_id'])
+        if completed:
+            # A crash after recording the result but before clearing pending is safe.
+            store.write_json(store.directory / 'pending.json', None)
+            return completed['result']
+        store.apply(record)
+        previous = {project['path']: list(project['before']) for project in record['preview']['projects']}
+        for relative in record['files']:
+            indexed, error = search.replace_structure_segments(store.work / relative, previous[relative])
+            if not indexed:
+                raise RuntimeError(f'Could not index {relative}: {error}')
+        # Finish the structure before contacting the publication queue.
+        publication = {'auto_published_paths': [],
+                       'auto_publish_pending_paths': [format_split_merge_publish_path(store.work / p) for p in record['files']],
+                       'manual_publish_paths': [], 'auto_publish_task_id': None,
+                       'publication_status': 'pending'}
+        result = {**record['preview'], **publication, 'operation_id': record['operation_id'],
+                  'message': 'Structure operation completed', 'status': 'complete'}
+        for project in result['projects']:
+            project['data'] = record['files'][project['path']]
+        store.finish(record, result)
+        return result
     except Exception as error:
         # A prepared operation must not be mistaken for a preflight rejection:
         # its journal must remain available for recovery.
         logger.exception('Structure operation %s could not complete', record['operation_id'])
         raise StructureOperationIncomplete(record['operation_id']) from error
-
-
-def _finish_operation(store, record, search):
-    completed = store.get(record['operation_id'])
-    if completed:
-        # A crash after recording the result but before clearing pending is safe.
-        store.write_json(store.directory / 'pending.json', None)
-        return completed['result']
-    store.apply(record)
-    previous = {project['path']: list(project['before']) for project in record['preview']['projects']}
-    for relative in record['files']:
-        indexed, error = search.replace_structure_segments(store.work / relative, previous[relative])
-        if not indexed:
-            raise RuntimeError(f'Could not index {relative}: {error}')
-    # Finish the structure before contacting the publication queue.
-    publication = {'auto_published_paths': [],
-                   'auto_publish_pending_paths': [format_split_merge_publish_path(store.work / p) for p in record['files']],
-                   'manual_publish_paths': [], 'auto_publish_task_id': None,
-                   'publication_status': 'pending'}
-    result = {**record['preview'], **publication, 'operation_id': record['operation_id'],
-              'message': 'Structure operation completed', 'status': 'complete'}
-    for project in result['projects']:
-        project['data'] = record['files'][project['path']]
-    store.finish(record, result)
-    return result
 
 
 def commit_operation(root, payload, search, user):
@@ -137,7 +148,7 @@ def _commit_structure(root, payload, search, user):
     store = StructureStore(settings.WORK_DIR, root)
     fingerprint = digest(payload.model_dump(mode='json'))
     operation_id = str(payload.operation_id)
-    with store.lock():
+    with checkout_lock(settings.WORK_DIR), store.lock():
         completed = store.get(operation_id)
         if completed:
             if completed['fingerprint'] != fingerprint:
@@ -180,12 +191,13 @@ def _commit_structure(root, payload, search, user):
                   'user': str(user.github_id),
                   'files': {p['path']: edited[p['muid']] for p in planned['projects']}}
         store.prepare(record)
-        return _complete(store, record, search), record
+        # preview_locked already recovered tags under this same checkout lock.
+        return _finish_operation(store, record, search), record
 
 
 def operation_status(root, operation_id, search, user):
     store = StructureStore(settings.WORK_DIR, root)
-    with store.lock():
+    with checkout_lock(settings.WORK_DIR), store.lock():
         completed = store.get(str(operation_id))
         pending = store.pending()
         if completed:

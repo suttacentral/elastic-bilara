@@ -3,6 +3,7 @@ import os
 import re
 import stat
 import tempfile
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from app.core.text_types import TextType
 from app.db.schemas.user import User, UserBase
 from app.services.directories.index import create_indexed_directory
 from app.services.git import utils
+from app.services.tags.service import validate_segments
+from app.services.tags.store import TagError, TagStore, is_tag_path
 from app.services.projects.virtual_projects import VirtualProjectFile
 from app.services.projects.file_coordinator import project_file_lock
 from app.services.projects.structure_store import StructureStore, StructureConflict
@@ -124,8 +127,15 @@ def update_file(
     stored_user: UserBase = get_user(int(user.github_id))
 
     store = StructureStore(settings.WORK_DIR, root_path)
+    tag_project = is_tag_path(path.relative_to(settings.WORK_DIR))
     try:
-        with store.lock(), project_file_lock(path):
+        guard = TagStore(settings.WORK_DIR).locked() if tag_project else nullcontext()
+        with guard, store.lock(), project_file_lock(path):
+            if tag_project:
+                try:
+                    validate_segments(settings.WORK_DIR, data)
+                except TagError as error:
+                    return False, KeyError(str(error)), None
             store.check_ready()
             root_data = get_json_data(root_path)
             store.check_revision(structure_revision, root_data)

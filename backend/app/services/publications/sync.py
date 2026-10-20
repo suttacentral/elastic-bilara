@@ -1,20 +1,13 @@
 """Durable dispatch of saved publication metadata through the existing Git queue."""
-import asyncio
 import fcntl
 import logging
 import time
-from uuid import uuid4
-
-from kombu.exceptions import OperationalError
 
 from app.services.publications.errors import PublicationError
 from app.services.publications.store import PUBLICATION_FILES, PublicationStore
+from app.services.sync_dispatch import DELIVERY_LEASE, dispatch_pending as dispatch_sync
 
 logger = logging.getLogger(__name__)
-DISPATCH_INTERVAL = 15
-# Recover a lost delivery even when the broker/result backend lost its records.
-# Longer than GitTask's longest ordinary retry delay (about 30 minutes).
-DELIVERY_LEASE = 3600
 
 
 def public_status(state, user):
@@ -60,21 +53,7 @@ def dispatch_pending(work):
     """Reserve under the file lock; contact the broker only after releasing it."""
     from app.tasks import sync_publications
 
-    store = PublicationStore(work)
-    with store.locked():
-        state = store.read_sync()
-        if not state or state["status"] in ("synced", "failed") or state["dispatch_after"] > time.time():
-            return
-        task_id = str(uuid4())
-        generation = state["generation"]
-        state.update(status="queued", task_id=task_id, dispatch_after=time.time() + DELIVERY_LEASE)
-        store.write_sync(state)
-    try:
-        sync_publications.apply_async(args=[generation], task_id=task_id, retry=False)
-    except (OSError, OperationalError) as exc:
-        update_task_state(work, generation, task_id, status="pending", error=str(exc),
-                          dispatch_after=time.time() + DISPATCH_INTERVAL)
-        logger.warning("Publication sync remains pending: %s", exc)
+    dispatch_sync(PublicationStore(work), sync_publications, update_task_state)
 
 
 def dispatch_safely(work):
@@ -84,12 +63,6 @@ def dispatch_safely(work):
         dispatch_pending(work)
     except Exception:
         logger.exception("Unable to dispatch pending publication metadata")
-
-
-async def dispatch_loop(work):
-    while True:
-        await asyncio.to_thread(dispatch_safely, work)
-        await asyncio.sleep(DISPATCH_INTERVAL)
 
 
 def execute_sync(work, generation, task_id):
