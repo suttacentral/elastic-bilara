@@ -10,6 +10,7 @@
     <script src="./static/js/auth.js"></script>
     <script src="./static/js/elements/nav/sc-bilara-nav-footer.js" type="module"></script>
     <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-bg-manager.js"></script>
 </head>
 
 <body class="page-layout">
@@ -42,8 +43,42 @@
             </p>
         </div>
         <div class="bodhi-leaf-bg" aria-hidden="true">
-            <img src="./static/img/bodhi-leaf.png" alt="" />
+            <img alt="" />
+            <noscript><img src="./static/img/bodhi-leaf.png" alt="" /></noscript>
         </div>
+        <script>
+            (function() {
+                var map = {
+                    'bodhi-leaf': { src: './static/img/bodhi-leaf.png', cls: 'bodhi-leaf-bg--bodhi-leaf' },
+                    'bamboo-finches': { src: './static/img/bamboo-finches.png', cls: 'bodhi-leaf-bg--bamboo-finches' },
+                    'tripitaka-koreana': { src: './static/img/tripitaka-koreana.png', cls: 'bodhi-leaf-bg--tripitaka-koreana' },
+                    'palm-leaf': { src: './static/img/palm-leaf-manuscript.png', cls: 'bodhi-leaf-bg--palm-leaf' },
+                    'none': { src: '', cls: 'bodhi-leaf-bg--none' }
+                };
+                var illustrations = ['bodhi-leaf', 'bamboo-finches', 'tripitaka-koreana', 'palm-leaf'];
+                var saved = localStorage.getItem('bilara-index-bg') || 'random';
+                var selected = saved;
+                if (saved === 'random' || !(saved in map)) {
+                    selected = illustrations[Math.floor(Math.random() * illustrations.length)];
+                }
+                var conf = map[selected] || map['bodhi-leaf'];
+                var el = document.querySelector('.bodhi-leaf-bg');
+                if (el) {
+                    if (saved === 'random') {
+                        el.classList.add('bodhi-leaf-bg--random');
+                    }
+                    if (selected === 'none') {
+                        el.hidden = true;
+                        el.classList.add('bodhi-leaf-bg--none');
+                    } else {
+                        el.classList.add(conf.cls);
+                        el.dataset.activeBg = selected;
+                        var img = el.querySelector('img');
+                        if (img) img.src = conf.src;
+                    }
+                }
+            })();
+        </script>
     </main>
 
     <sc-bilara-nav-footer></sc-bilara-nav-footer>

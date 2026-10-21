@@ -13,6 +13,7 @@
     min-height: 50vh;
     padding: var(--space-xl) var(--space-md);
     position: relative; /* Containing block for the bodhi leaf */
+    overflow: hidden;
 }
 
 .index-main__title {
@@ -21,6 +22,8 @@
     color: var(--color-primary);
     margin-bottom: var(--space-md);
     text-align: center;
+    position: relative;
+    z-index: 1;
 }
 
 .index-main__card {
@@ -36,6 +39,8 @@
     gap: var(--space-md);
     border: 1px solid var(--color-border);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .index-main__card:hover {
@@ -142,11 +147,171 @@
     filter: grayscale(100%);
 }
 
+/* No Background Mode */
+.bodhi-leaf-bg.bodhi-leaf-bg--none {
+    display: none;
+}
+
+/* Finches and Bamboo (宋徽宗《竹禽图》) Background */
+.bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches {
+    right: 2vw;
+    bottom: 0;
+    width: 55%;
+    max-width: 620px;
+    transform: none;
+    mix-blend-mode: normal;
+    opacity: 0.4;
+}
+
+.bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches img {
+    filter: contrast(1.06) saturate(1.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches {
+        mix-blend-mode: normal;
+        opacity: 0.42;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches img {
+        filter: brightness(1.42) contrast(1.1) saturate(1.12);
+    }
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches {
+    mix-blend-mode: normal;
+    opacity: 0.42;
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches img,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches img {
+    filter: brightness(1.42) contrast(1.1) saturate(1.12);
+}
+
+body[data-theme-tone='light'] .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches img {
+    filter: contrast(1.06) saturate(1.08);
+}
+
+/* Tripitaka Koreana (《高丽大藏经》经板) Background */
+.bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana {
+    right: 0;
+    bottom: 0;
+    width: 58%;
+    max-width: 660px;
+    transform: none;
+    mix-blend-mode: normal;
+    opacity: 0.24;
+}
+
+.bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana img {
+    filter: invert(100%);
+}
+
+@media (prefers-color-scheme: dark) {
+    .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana {
+        mix-blend-mode: normal;
+        opacity: 0.26;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana img {
+        filter: none;
+    }
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana {
+    mix-blend-mode: normal;
+    opacity: 0.26;
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana img,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana img {
+    filter: none;
+}
+
+body[data-theme-tone='light'] .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana img {
+    filter: invert(100%);
+}
+
+/* Palm-leaf Manuscript (《比丘尼波罗提木叉》黑漆描金贝叶经) Full Background */
+.bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf {
+    inset: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md) var(--space-xl);
+    box-sizing: border-box;
+    transform: none;
+    mix-blend-mode: normal;
+    opacity: 0.22;
+}
+
+.bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf img {
+    width: 100%;
+    max-width: 1360px;
+    height: 100%;
+    max-height: 88vh;
+    object-fit: contain;
+    filter: contrast(1.04) saturate(1.05);
+}
+
+@media (prefers-color-scheme: dark) {
+    .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf {
+        mix-blend-mode: normal;
+        opacity: 0.25;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf img {
+        filter: brightness(1.12) contrast(1.06) saturate(1.08);
+    }
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf {
+    mix-blend-mode: normal;
+    opacity: 0.25;
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf img,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf img {
+    filter: brightness(1.12) contrast(1.06) saturate(1.08);
+}
+
+body[data-theme-tone='light'] .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf img {
+    filter: contrast(1.04) saturate(1.05);
+}
+
 @media (max-width: 768px) {
     .bodhi-leaf-bg {
         width: 60%;
         right: 5vw;
         bottom: 5vh;
         opacity: 0.1;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--bamboo-finches {
+        width: 78%;
+        right: 1vw;
+        bottom: 0;
+        opacity: 0.28;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--tripitaka-koreana {
+        width: 82%;
+        right: 0;
+        bottom: 0;
+        opacity: 0.18;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf {
+        width: 100%;
+        padding: var(--space-sm);
+        opacity: 0.16;
     }
 }

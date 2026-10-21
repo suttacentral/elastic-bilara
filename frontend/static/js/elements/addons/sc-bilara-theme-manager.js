@@ -1,5 +1,14 @@
 import { themes, defaultTheme, getThemeNames, validateTheme, commonVariables } from './sc-bilara-theme.js';
 
+const darkThemes = new Set([
+    'aruna', 'candima', 'yakkha', 'asura', 'gandhabba', 'mara',
+    'samādhi', 'shuyuan-yamo', 'kasaya', 'canghai-liujin', 'cangsong-liujin'
+]);
+
+function getThemeTone(themeName) {
+    return darkThemes.has(themeName) ? 'dark' : 'light';
+}
+
 class ThemeManager {
     constructor() {
         this.currentTheme = this.loadTheme();
@@ -24,12 +33,13 @@ class ThemeManager {
         const validTheme = validateTheme(themeName);
         document.body.classList.remove(...getThemeNames().map(name => `theme-${name}`));
         document.body.classList.add(`theme-${validTheme}`);
+        document.body.setAttribute('data-theme-tone', getThemeTone(validTheme));
         this.applyCSSVariables(validTheme);
         this.currentTheme = validTheme;
         this.saveTheme(validTheme);
 
         document.dispatchEvent(new CustomEvent('themeChanged', {
-            detail: { theme: validTheme }
+            detail: { theme: validTheme, tone: getThemeTone(validTheme) }
         }));
     }
 
