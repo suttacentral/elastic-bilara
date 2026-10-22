@@ -4,7 +4,8 @@ export const illustrationBackgrounds = [
     'bodhi-leaf',
     'bamboo-finches',
     'tripitaka-koreana',
-    'palm-leaf'
+    'palm-leaf',
+    'ink-bamboo'
 ];
 
 export function getRandomBackground() {
@@ -37,6 +38,11 @@ export const backgrounds = {
         label: 'Palm-leaf Manuscript',
         src: './static/img/palm-leaf-manuscript.png',
         className: 'bodhi-leaf-bg--palm-leaf'
+    },
+    'ink-bamboo': {
+        label: 'Ink Bamboo',
+        src: './static/img/ink-bamboo.png',
+        className: 'bodhi-leaf-bg--ink-bamboo'
     },
     'none': {
         label: 'No Background',

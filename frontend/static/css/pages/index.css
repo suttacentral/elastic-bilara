@@ -94,7 +94,7 @@
     .index-main-nav {
         font-size: var(--text-lg);
     }
-    
+
     .index-main__card {
         padding: var(--space-lg);
     }
@@ -287,6 +287,51 @@ body[data-theme-tone='light'] .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf img {
     filter: contrast(1.04) saturate(1.05);
 }
 
+/* Ink Bamboo Background */
+.bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo {
+    right: 8vw;
+    bottom: 2vh;
+    width: auto;
+    max-width: 36vw;
+    height: 67vh;
+    transform: none;
+    mix-blend-mode: normal;
+    opacity: 0.42;
+}
+
+.bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo img {
+    width: auto;
+    height: 100%;
+    object-fit: contain;
+    filter: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo {
+        mix-blend-mode: normal;
+        opacity: 0.36;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo img {
+        filter: invert(100%);
+    }
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo {
+    mix-blend-mode: normal;
+    opacity: 0.36;
+}
+
+:root[data-theme='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo img,
+body[data-theme-tone='dark'] .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo img {
+    filter: invert(100%);
+}
+
+body[data-theme-tone='light'] .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo img {
+    filter: none;
+}
+
 @media (max-width: 768px) {
     .bodhi-leaf-bg {
         width: 60%;
@@ -313,5 +358,14 @@ body[data-theme-tone='light'] .bodhi-leaf-bg.bodhi-leaf-bg--palm-leaf img {
         width: 100%;
         padding: var(--space-sm);
         opacity: 0.16;
+    }
+
+    .bodhi-leaf-bg.bodhi-leaf-bg--ink-bamboo {
+        width: auto;
+        max-width: 55vw;
+        height: 56vh;
+        right: 4vw;
+        bottom: 1vh;
+        opacity: 0.28;
     }
 }
