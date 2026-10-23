@@ -212,7 +212,18 @@ function fetchTranslation() {
                 .find(element => element.dataset.uid === uid);
             row?.scrollIntoView({ block: 'center', inline: 'nearest' });
         },
+        hasUnsavedChanges() {
+            return Object.keys(this.dirtySegments).length > 0 || !!this.structureDraft;
+        },
+        handleBeforeUnload(event) {
+            if (!this.hasUnsavedChanges()) return;
+            event.preventDefault();
+            event.returnValue = '';
+        },
         async init() {
+            // Same handler reference on retry, so addEventListener does not register twice.
+            this._beforeUnloadHandler ??= (event) => this.handleBeforeUnload(event);
+            window.addEventListener('beforeunload', this._beforeUnloadHandler);
             this.loading = true;
             this.loadError = '';
             try {
