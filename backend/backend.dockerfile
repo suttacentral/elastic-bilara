@@ -8,11 +8,11 @@ RUN pip install --upgrade pip && \
 
 RUN poetry config virtualenvs.create false
 
-# Copy poetry.lock* in case it doesn't exist in the repo
-COPY ./pyproject.toml ./poetry.lock* /app/
+# Install the reviewed lockfile; dependency resolution belongs to updates, not builds.
+COPY ./pyproject.toml ./poetry.lock /app/
 
 WORKDIR /app/
-RUN poetry lock --no-update && poetry install --no-interaction --no-ansi --no-root
+RUN poetry check --lock && poetry install --no-interaction --no-ansi --no-root
 
 RUN apt-get update && \
     apt-get install -y git && \

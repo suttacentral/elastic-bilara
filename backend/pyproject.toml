@@ -10,7 +10,8 @@ url = "https://mirrors.aliyun.com/pypi/simple/"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-uvicorn = "^0.22.0"
+# Pin the tested supervisor version: 0.22 does not replace dead workers.
+uvicorn = "0.54.0"
 fastapi = "^0.100.0"
 httpx = "^0.24.1"
 pydantic = {extras = ["email"], version = "^2.1.1"}
