@@ -11,6 +11,9 @@ from app.db.database import get_sess
 from app.core.config import settings
 from app.services.auth import utils as auth_utils
 from app.services.auth.schema import TokenData
+from app.services.notifications.history import (
+    HistoryBusy, HistoryTimeout, HistoryUnavailable, history_service,
+)
 from app.services.notifications.models import (
     GitCommitInfoOut,
     NotificationCountOut,
@@ -60,56 +63,41 @@ def _get_selected_authors_and_days(user: TokenData) -> tuple[list[str], int]:
     return selected_authors, selected_days
 
 
-def _count_unread_git_updates(user: TokenData) -> int:
-    return len(_get_unread_git_commit_ids(user))
-
-
-def _get_unread_git_commit_ids(user: TokenData) -> set[str]:
-    selected_authors, selected_days = _get_selected_authors_and_days(user)
-    done_commit_ids = set(get_all_commit_ids_in_db(_get_user_github_id(user)))
-
-    working_directory = settings.WORK_DIR
-    git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
-    git_log_cmd = git_base_cmd + [
-        "log",
-        "--pretty=format:%h|%an <%ae>",
-        f"--since={selected_days} days ago",
-        "--no-merges",
-    ]
-
+async def _get_unread_git_commit_ids(user: TokenData) -> set[str]:
+    selected_authors, selected_days = await asyncio.to_thread(
+        _get_selected_authors_and_days, user
+    )
     try:
-        result = subprocess.run(
-            git_log_cmd,
-            cwd=working_directory,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-    except OSError as error:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to read Git notification history",
-        ) from error
+        history = await history_service.history(settings.WORK_DIR, selected_days)
+    except HistoryBusy as error:
+        raise HTTPException(status_code=503, detail=str(error), headers={"Retry-After": "5"}) from error
+    except HistoryTimeout as error:
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except HistoryUnavailable as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    # Re-read mutable user state after the shared, immutable history completes.
+    done_commit_ids = set(await asyncio.to_thread(
+        get_all_commit_ids_in_db, _get_user_github_id(user)
+    ))
+    return {
+        commit_id for commit_id, author in history
+        if commit_id not in done_commit_ids
+        and any(selected_author in author for selected_author in selected_authors)
+    }
 
-    if result.returncode != 0:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to read Git notification history",
-        )
 
-    unread_commit_ids = set()
-    for raw_line in result.stdout.split("\n"):
-        if not raw_line.strip() or "|" not in raw_line:
-            continue
-
-        commit_id, author = raw_line.split("|", 1)
-        if commit_id in done_commit_ids:
-            continue
-
-        if any(selected_author in author for selected_author in selected_authors):
-            unread_commit_ids.add(commit_id)
-
-    return unread_commit_ids
+async def _while_connected(awaitable, request):
+    """ASGI cancels SSE iterators, but ordinary HTTP routes need a disconnect watch."""
+    task = asyncio.create_task(awaitable)
+    try:
+        while not task.done():
+            if request is not None and await request.is_disconnected():
+                raise HTTPException(status_code=499, detail="Client disconnected")
+            await asyncio.wait({task}, timeout=0.1)
+        return await task
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 def _count_unread_remark_notifications(github_id: int) -> int:
@@ -122,18 +110,21 @@ def _count_unread_remark_notifications(github_id: int) -> int:
         )
 
 
-def get_unread_notification_count(user: TokenData) -> int:
-    return _count_unread_git_updates(user) + _count_unread_remark_notifications(
-        _get_user_github_id(user)
+async def get_unread_notification_count(user: TokenData) -> int:
+    commit_ids = await _get_unread_git_commit_ids(user)
+    remark_count = await asyncio.to_thread(
+        _count_unread_remark_notifications, _get_user_github_id(user)
     )
+    return len(commit_ids) + remark_count
 
 
 @router.get("/count", response_model=NotificationCountOut)
-def get_notification_count(
+async def get_notification_count(
     user: TokenData = Depends(auth_utils.get_current_user),
+    request: Request = None,
 ) -> NotificationCountOut:
     return NotificationCountOut(
-        unread_count=get_unread_notification_count(user)
+        unread_count=await _while_connected(get_unread_notification_count(user), request)
     )
 
 
@@ -154,21 +145,34 @@ async def stream_notification_count(
                 break
 
             try:
-                current_count = await asyncio.to_thread(
-                    get_unread_notification_count,
-                    user,
+                current_count = await asyncio.wait_for(
+                    get_unread_notification_count(user),
+                    timeout=max(0, stream_deadline - loop.time()),
                 )
+                if loop.time() >= stream_deadline:
+                    break
                 if previous_count is None or current_count != previous_count:
                     payload = json.dumps({"unread_count": current_count})
                     yield f"event: unread_count\ndata: {payload}\n\n"
                     previous_count = current_count
                 else:
                     yield ": keepalive\n\n"
+            except asyncio.TimeoutError:
+                if loop.time() >= stream_deadline:
+                    break
+                payload = json.dumps({"error": "Notification query timed out"})
+                yield f"event: stream_error\ndata: {payload}\n\n"
+            except HTTPException as error:
+                payload = json.dumps({"error": error.detail})
+                yield f"event: stream_error\ndata: {payload}\n\n"
             except Exception as error:
                 payload = json.dumps({"error": str(error)})
                 yield f"event: stream_error\ndata: {payload}\n\n"
 
-            await asyncio.sleep(NOTIFICATION_STREAM_POLL_SECONDS)
+            remaining = stream_deadline - loop.time()
+            if remaining <= 0:
+                break
+            await asyncio.sleep(min(NOTIFICATION_STREAM_POLL_SECONDS, remaining))
 
     return StreamingResponse(
         event_generator(),
@@ -574,28 +578,32 @@ async def mark_notification_as_done(
 
 
 @router.post("/done-all", response_model=NotificationDoneOut)
-def mark_all_notifications_as_done(
+async def mark_all_notifications_as_done(
     user: TokenData = Depends(auth_utils.get_current_user),
+    request: Request = None,
 ):
     github_id = _get_user_github_id(user)
-    # Read all subscribed commit IDs without building notification details.
-    commit_ids = _get_unread_git_commit_ids(user)
+    # Same complete history as /count; never apply the feed's display limit.
+    commit_ids = await _while_connected(_get_unread_git_commit_ids(user), request)
+    await asyncio.to_thread(_persist_all_notifications_done, github_id, commit_ids)
+    return NotificationDoneOut(success=True)
+
+
+def _persist_all_notifications_done(github_id: int, commit_ids: set[str]) -> None:
     with get_sess() as sess:
         done_ids = {
             row[0] for row in sess.query(Notification.commit_id)
             .filter(Notification.github_id == github_id).all()
         }
-        commit_ids -= done_ids
         sess.add_all([
             Notification(github_id=github_id, commit_id=commit_id)
-            for commit_id in commit_ids
+            for commit_id in commit_ids - done_ids
         ])
         sess.query(RemarkNotification).filter(
             RemarkNotification.recipient_github_id == github_id,
             RemarkNotification.is_done.is_(False),
         ).update({RemarkNotification.is_done: True}, synchronize_session=False)
         sess.commit()
-    return NotificationDoneOut(success=True)
 
 
 @router.post("/done", response_model=NotificationDoneOut)

@@ -13,6 +13,7 @@ from app.db.models.dictionary_hidden_word import DictionaryHiddenWord
 from app.db.models.directory_index import DirectoryIndexEntry, DirectoryIndexState
 from app.services.directories.index import DirectoryIndex
 from app.services.sync_dispatch import dispatch_loop
+from app.services.notifications.history import history_service
 from fastapi import FastAPI
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
@@ -45,6 +46,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        await history_service.close()
         sync_dispatch.cancel()
         with suppress(CancelledError):
             await sync_dispatch

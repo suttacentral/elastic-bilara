@@ -1,4 +1,7 @@
 import asyncio
+import json
+
+import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, Mock
 
 from app.api.api_v1.endpoints.notifications import (
@@ -125,32 +128,29 @@ def test_get_notification_count_returns_only_unread_count():
         "app.api.api_v1.endpoints.notifications.get_unread_notification_count",
         return_value=7,
     ) as get_unread_count:
-        result = get_notification_count(user=user)
+        result = asyncio.run(get_notification_count(user=user))
 
     assert result == NotificationCountOut(unread_count=7)
     get_unread_count.assert_called_once_with(user)
 
 
-def test_notification_stream_runs_count_outside_event_loop():
+def test_notification_stream_awaits_cancellable_count():
     user = Mock(github_id=123)
     request = Mock()
     request.is_disconnected = AsyncMock(return_value=False)
 
     async def get_first_event():
         with patch(
-            "app.api.api_v1.endpoints.notifications.asyncio.to_thread",
+            "app.api.api_v1.endpoints.notifications.get_unread_notification_count",
             new=AsyncMock(return_value=4),
-        ) as to_thread:
+        ) as count:
             response = await stream_notification_count(request=request, user=user)
             event = await anext(response.body_iterator)
-            return event, to_thread
+            await response.body_iterator.aclose()
+            count.assert_awaited_once_with(user)
+            return event
 
-    event, to_thread = asyncio.run(get_first_event())
-
-    assert event == 'event: unread_count\ndata: {"unread_count": 4}\n\n'
-    to_thread.assert_awaited_once()
-    assert to_thread.await_args.args[0].__name__ == "get_unread_notification_count"
-    assert to_thread.await_args.args[1] is user
+    assert asyncio.run(get_first_event()) == 'event: unread_count\ndata: {"unread_count": 4}\n\n'
 
 
 def test_get_user_preferences_returns_default_authors_when_missing():
@@ -288,3 +288,142 @@ def test_mark_notification_as_done_by_type_commit_uses_legacy_endpoint():
 
     assert mocked.called
     assert result["success"] is True
+
+
+def test_http_disconnect_cancels_query():
+    from app.api.api_v1.endpoints import notifications
+    from fastapi import HTTPException
+
+    async def scenario():
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+        async def count(user):
+            started.set()
+            try:
+                await asyncio.Future()
+            finally:
+                cancelled.set()
+        async def disconnected():
+            return started.is_set()
+        request = Mock(is_disconnected=disconnected)
+        with patch.object(notifications, 'get_unread_notification_count', side_effect=count):
+            try:
+                await notifications.get_notification_count(user=Mock(), request=request)
+            except HTTPException as error:
+                assert error.status_code == 499
+            else:
+                raise AssertionError('disconnect must stop the query')
+        assert cancelled.is_set()
+    asyncio.run(scenario())
+
+
+def test_sse_cancellation_propagates_into_pending_query():
+    from app.api.api_v1.endpoints import notifications
+
+    async def scenario():
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+        async def count(user):
+            started.set()
+            try:
+                await asyncio.Future()
+            finally:
+                cancelled.set()
+        request = Mock(is_disconnected=AsyncMock(return_value=False))
+        with patch.object(notifications, 'get_unread_notification_count', side_effect=count):
+            response = await notifications.stream_notification_count(request, Mock())
+            read = asyncio.create_task(anext(response.body_iterator))
+            await started.wait()
+            read.cancel()
+            await asyncio.gather(read, return_exceptions=True)
+            await response.body_iterator.aclose()
+        assert cancelled.is_set()
+    asyncio.run(scenario())
+
+
+def test_sse_deadline_ends_without_error_event_or_poll_sleep():
+    from app.api.api_v1.endpoints import notifications
+
+    async def scenario():
+        cancelled = asyncio.Event()
+        async def slow_count(user):
+            try:
+                await asyncio.Future()
+            finally:
+                cancelled.set()
+        request = Mock(is_disconnected=AsyncMock(return_value=False))
+        with patch.object(notifications, 'NOTIFICATION_STREAM_MAX_RUNTIME_SECONDS', 0.02), patch.object(
+            notifications, 'get_unread_notification_count', side_effect=slow_count
+        ), patch.object(notifications.asyncio, 'sleep', new=AsyncMock()) as sleep:
+            response = await notifications.stream_notification_count(request, Mock())
+            try:
+                with pytest.raises(StopAsyncIteration):
+                    await asyncio.wait_for(anext(response.body_iterator), 0.5)
+                assert cancelled.is_set()
+                sleep.assert_not_awaited()
+            finally:
+                await response.body_iterator.aclose()
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize('status', [502, 503, 504, None])
+def test_sse_query_failures_keep_meaningful_error_messages(status):
+    from app.api.api_v1.endpoints import notifications
+    from fastapi import HTTPException
+
+    message = f'Git query failure {status}' if status else 'Notification query timed out'
+    error = HTTPException(status_code=status, detail=message) if status else asyncio.TimeoutError()
+    async def scenario():
+        request = Mock(is_disconnected=AsyncMock(return_value=False))
+        with patch.object(notifications, 'get_unread_notification_count', side_effect=error):
+            response = await notifications.stream_notification_count(request, Mock())
+            try:
+                event = await anext(response.body_iterator)
+                assert event.startswith('event: stream_error\n')
+                assert json.loads(event.split('data: ', 1)[1]) == {'error': message}
+            finally:
+                await response.body_iterator.aclose()
+    asyncio.run(scenario())
+
+
+def test_sse_last_poll_sleep_is_limited_to_remaining_lifetime():
+    from app.api.api_v1.endpoints import notifications
+
+    async def scenario():
+        request = Mock(is_disconnected=AsyncMock(return_value=False))
+        real_sleep = asyncio.sleep
+        with patch.object(notifications, 'NOTIFICATION_STREAM_MAX_RUNTIME_SECONDS', 0.05), patch.object(
+            notifications, 'get_unread_notification_count', new=AsyncMock(return_value=4)
+        ) as count, patch.object(notifications.asyncio, 'sleep', new=AsyncMock(wraps=real_sleep)) as sleep:
+            response = await notifications.stream_notification_count(request, Mock())
+            try:
+                assert 'event: unread_count' in await anext(response.body_iterator)
+                with pytest.raises(StopAsyncIteration):
+                    await asyncio.wait_for(anext(response.body_iterator), 0.5)
+                sleep.assert_awaited_once()
+                assert 0 < sleep.await_args.args[0] <= 0.05
+                count.assert_awaited_once()
+            finally:
+                await response.body_iterator.aclose()
+    asyncio.run(scenario())
+
+
+def test_sse_does_not_sleep_if_deadline_passed_while_event_was_consumed():
+    from app.api.api_v1.endpoints import notifications
+
+    async def scenario():
+        request = Mock(is_disconnected=AsyncMock(return_value=False))
+        with patch.object(notifications, 'NOTIFICATION_STREAM_MAX_RUNTIME_SECONDS', 0.05), patch.object(
+            notifications, 'get_unread_notification_count', new=AsyncMock(return_value=4)
+        ):
+            response = await notifications.stream_notification_count(request, Mock())
+            try:
+                assert 'event: unread_count' in await anext(response.body_iterator)
+                await asyncio.sleep(0.06)
+                with patch.object(notifications.asyncio, 'sleep', new=AsyncMock()) as sleep:
+                    with pytest.raises(StopAsyncIteration):
+                        await anext(response.body_iterator)
+                    sleep.assert_not_awaited()
+            finally:
+                await response.body_iterator.aclose()
+    asyncio.run(scenario())

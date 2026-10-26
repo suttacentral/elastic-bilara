@@ -3,7 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import List, Union
 
-from pydantic import AnyHttpUrl, ConfigDict, EmailStr, field_validator
+from pydantic import AnyHttpUrl, ConfigDict, EmailStr, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     GITHUB_REPO: str
     CELERY_BROKER_URL: str
     CELERY_BACKEND_URL: str
+    # Shared local path and identical budgets for every web worker in a container.
+    NOTIFICATION_HISTORY_DIR: Path = Path("/tmp/bilara-notification-history")
+    NOTIFICATION_GIT_CONCURRENCY: int = Field(default=2, ge=1)
+    NOTIFICATION_QUERY_CAPACITY: int = Field(default=32, ge=1)
+    NOTIFICATION_GIT_TIMEOUT: float = Field(default=15, gt=0)
+    NOTIFICATION_QUERY_WAIT_TIMEOUT: float = Field(default=5, gt=0)
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_PASSWORD: str
