@@ -193,16 +193,12 @@ def test_get_unread_git_updates_handles_missing_authors_preference():
     mock_get_sess.return_value.__enter__.return_value = mock_session
     mock_get_sess.return_value.__exit__.return_value = None
 
-    mock_process = MagicMock()
-    mock_process.communicate.return_value = (b"", b"")
-    mock_process.returncode = 0
-
     with patch(
         "app.api.api_v1.endpoints.notifications.get_sess",
         mock_get_sess,
     ), patch(
-        "app.api.api_v1.endpoints.notifications.subprocess.Popen",
-        return_value=mock_process,
+        "app.api.api_v1.endpoints.notifications.feed_service.metadata",
+        return_value=[],
     ), patch(
         "app.api.api_v1.endpoints.notifications.get_all_commit_ids_in_db",
         return_value=[],
@@ -239,8 +235,11 @@ def test_get_notifications_feed_merges_and_sorts():
     ]
 
     with patch(
-        "app.api.api_v1.endpoints.notifications.get_unread_git_update_items",
+        "app.api.api_v1.endpoints.notifications._get_git_candidates",
         return_value=commit_notifications,
+    ), patch(
+        "app.api.api_v1.endpoints.notifications._render_git_items",
+        side_effect=lambda items: items,
     ), patch(
         "app.api.api_v1.endpoints.notifications._build_remark_notification_items",
         return_value=remark_notifications,
@@ -252,11 +251,11 @@ def test_get_notifications_feed_merges_and_sorts():
     assert result.notifications[1]["notification_type"] == "commit"
 
 
-def test_get_notifications_feed_passes_limit_to_commit_source():
+def test_get_notifications_feed_selects_metadata_before_rendering():
     user = Mock(github_id=123)
 
     with patch(
-        "app.api.api_v1.endpoints.notifications.get_git_update_items",
+        "app.api.api_v1.endpoints.notifications._get_git_candidates",
         return_value=[],
     ) as git_update_items, patch(
         "app.api.api_v1.endpoints.notifications._build_remark_notification_items",
@@ -264,7 +263,7 @@ def test_get_notifications_feed_passes_limit_to_commit_source():
     ):
         result = get_notifications_feed(include_read=True, limit=50, user=user)
 
-    git_update_items.assert_called_once_with(user, include_done=True, limit=50)
+    git_update_items.assert_called_once_with(user, include_done=True)
     assert result.notifications == []
 
 

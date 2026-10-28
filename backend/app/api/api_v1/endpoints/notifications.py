@@ -1,6 +1,5 @@
 import asyncio
 import json
-import subprocess
 import re
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -14,6 +13,7 @@ from app.services.auth.schema import TokenData
 from app.services.notifications.history import (
     HistoryBusy, HistoryTimeout, HistoryUnavailable, history_service,
 )
+from app.services.notifications.feed import FeedUnavailable, feed_service
 from app.services.notifications.models import (
     GitCommitInfoOut,
     NotificationCountOut,
@@ -197,176 +197,58 @@ def get_unread_git_update_items(user: TokenData, limit: int | None = None):
     return get_git_update_items(user, include_done=False, limit=limit)
 
 
+def _get_git_candidates(user: TokenData, include_done: bool = False):
+    selected_authors, selected_days = _get_selected_authors_and_days(user)
+    rows = feed_service.metadata(settings.WORK_DIR, selected_days)
+    done_ids = set(get_all_commit_ids_in_db(_get_user_github_id(user)))
+    return [
+        {**row, 'is_done': row['commit'] in done_ids}
+        for row in rows
+        if any(author in row['author'] for author in selected_authors)
+        and (include_done or row['commit'] not in done_ids)
+    ]
+
+
+def _render_git_items(items):
+    rendered = []
+    for item in items:
+        details = feed_service.details(settings.WORK_DIR, item['_oid'])
+        parsed = parse_git_show_details(details['patch'])
+        files = []
+        for path in details['paths']:
+            file_name = path.rsplit('/', 1)[-1]
+            uid, separator, remainder = file_name.partition('_')
+            file_type = remainder.split('.')[0] if separator else ''
+            muids = file_type.split('-')
+            author_id = lang = ''
+            if len(muids) == 3:
+                file_type, lang, author_id = muids
+            files.append({
+                'file_name': file_name,
+                'file_type': file_type,
+                'uid': uid,
+                'author': author_id,
+                'lang': lang,
+                'sc_url': build_suttacentral_url(uid, lang, author_id),
+                'change_detail': format_diff_as_html(get_change_detail(file_name, parsed), file_name),
+            })
+        rendered.append({**{key: value for key, value in item.items() if key != '_oid'},
+                         'effected_files': files})
+    return rendered
+
+
 def get_git_update_items(
     user: TokenData,
     include_done: bool = False,
     limit: int | None = None,
 ):
-    recent_commits = []
-    working_directory = settings.WORK_DIR
-
-    # Get user preferences from database
-    with get_sess() as sess:
-        preference = (
-            sess.query(UserPreferenceModel)
-            .filter(UserPreferenceModel.github_id == _get_user_github_id(user))
-            .first()
-        )
-
-        if preference:
-            selected_authors = get_notification_authors_or_default(
-                preference.notification_authors
-            )
-            selected_days = preference.notification_days or 360
-        else:
-            # Use default values
-            selected_authors = ["sujato"]
-            selected_days = 360
-
-    git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
-    git_log_cmd = git_base_cmd + [
-        "log",
-        "--oneline",
-        "--abbrev-commit",
-        "--pretty=format:%h %s (%cr)",
-        f"--since={selected_days} days ago",
-        "--no-merges"
-    ]
-
-    try:
-        git_log_cmd_process = subprocess.Popen(
-            git_log_cmd,
-            cwd=working_directory,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        git_log_output, error = git_log_cmd_process.communicate()
-    except subprocess.CalledProcessError as e:
-        print(f"Git error: {e.stderr}")
+    if limit is not None and limit <= 0:
         return []
-
-    if git_log_cmd_process.returncode == 0:
-        all_done_commit_ids = set(get_all_commit_ids_in_db(_get_user_github_id(user)))
-        git_commits = git_log_output.decode('utf-8').split("\n")
-        for git_commit in git_commits:
-            if not git_commit.strip():
-                continue
-
-            commit_hash = git_commit.split(" ")[0]
-            git_show_name_only_cmd = git_base_cmd + [
-                "show", "--name-only", commit_hash
-            ]
-            git_show_cmd_process = subprocess.Popen(
-                git_show_name_only_cmd,
-                cwd=working_directory,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            git_show_output, error = git_show_cmd_process.communicate()
-
-            git_show_stdout = git_show_output.decode('utf-8')
-
-            if git_show_stdout.strip() == "":
-                continue
-
-            commit_match = re.search(r'commit (\w+)', git_show_stdout)
-            author_match = re.search(r'Author: (.+)', git_show_stdout)
-            date_match = re.search(r'Date:\s+(.+)', git_show_stdout)
-
-            commit = commit_match[1] if commit_match else None
-            author = author_match[1] if author_match else None
-            date = date_match[1] if date_match else None
-
-            # Skip if this line was a file path (not a real commit) — author will be None
-            if not author or not commit:
-                continue
-
-            # Check if author is in selected authors list
-            author_match_found = any(
-                selected_author in author
-                for selected_author in selected_authors
-            )
-            if not author_match_found:
-                continue
-
-            git_show_diff_cmd = git_base_cmd + ["show", commit_hash]
-            git_show_cmd_process = subprocess.Popen(
-                git_show_diff_cmd,
-                cwd=working_directory,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            git_show_diff_output, error = git_show_cmd_process.communicate()
-            git_show_details = git_show_diff_output.decode("utf-8")
-            parsed_git_show_details = parse_git_show_details(git_show_details)
-
-            json_files = re.findall(r'[\w/.-]+\.json', git_show_stdout)
-
-            formatted_json_files = []
-            for json_file in json_files:
-                file_name = json_file.split("/")[-1]
-                file_type = ''
-                uid = file_name.split("_")[0]
-                muids = file_name.split("_")[1].split(".")[0].split('-')
-                author_id = ''
-                lang = ''
-                if len(muids) == 3:
-                    author_id = muids[2]
-                    lang = muids[1]
-                    file_type = muids[0]
-
-                if not file_type:
-                    file_type = file_name.split('_')[1].split('.')[0]
-
-                change_detail = get_change_detail(
-                    file_name, parsed_git_show_details
-                )
-
-                formatted_json_files.append(
-                    {
-                        'file_name': file_name,
-                        'file_type': file_type,
-                        'uid': uid,
-                        'author': author_id,
-                        'lang': lang,
-                        'sc_url': build_suttacentral_url(
-                            uid,
-                            lang,
-                            author_id
-                        ),
-                        'change_detail': format_diff_as_html(
-                            change_detail,
-                            file_name,
-                        ),
-                    }
-                )
-
-            parts = git_commit.split(" ", 3)
-            commit = parts[0] if parts else ""
-
-            if len(parts) >= 3:
-                message = " ".join(parts[1:3])
-            elif len(parts) == 2:
-                message = parts[1]
-            else:
-                message = ""
-
-            git_detail = {
-                'info': git_commit,
-                'commit': commit,
-                'message': message,
-                'author': author,
-                'date': date,
-                'effected_files': formatted_json_files,
-                'is_done': commit in all_done_commit_ids,
-            }
-            if include_done or commit not in all_done_commit_ids:
-                recent_commits.append(git_detail)
-                if limit is not None and len(recent_commits) >= limit:
-                    break
-    else:
-        print(f"Error: {error.decode('utf-8')}")
-    return recent_commits
+    try:
+        candidates = _get_git_candidates(user, include_done)
+        return _render_git_items(candidates if limit is None else candidates[:limit])
+    except FeedUnavailable as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 def _build_remark_notification_items(
@@ -446,28 +328,24 @@ def get_notifications_feed(
     limit: int = 100,
     user: TokenData = Depends(auth_utils.get_current_user),
 ):
-    commit_items = []
-
-    if include_read:
-        commit_source = get_git_update_items(user, include_done=True, limit=limit)
-    else:
-        commit_source = get_unread_git_update_items(user, limit=limit)
-
-    for item in commit_source:
-        commit_items.append(
-            {
-                **item,
-                "notification_type": "commit",
-                "notification_ref": item.get("commit", ""),
-            }
+    if limit <= 0:
+        return NotificationFeedOut(notifications=[])
+    try:
+        commit_items = [
+            {**item, 'notification_type': 'commit', 'notification_ref': item['commit']}
+            for item in _get_git_candidates(user, include_done=include_read)
+        ]
+        remark_items = _build_remark_notification_items(
+            _get_user_github_id(user), include_done=include_read,
         )
-
-    remark_items = _build_remark_notification_items(
-        _get_user_github_id(user),
-        include_done=include_read,
-    )
-    notifications = sorted(commit_items + remark_items, key=_feed_sort_key, reverse=True)
-    return NotificationFeedOut(notifications=notifications[:limit])
+        selected = sorted(commit_items + remark_items, key=_feed_sort_key, reverse=True)[:limit]
+        # Merge and paginate before any diff lookup, including when remarks fill the page.
+        commits = iter(_render_git_items([item for item in selected if item['notification_type'] == 'commit']))
+        return NotificationFeedOut(notifications=[
+            next(commits) if item['notification_type'] == 'commit' else item for item in selected
+        ])
+    except FeedUnavailable as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 def get_all_commit_ids_in_db(github_id):
@@ -650,37 +528,11 @@ async def mark_notification_as_done_by_type(
 def get_all_authors(
     user: TokenData = Depends(auth_utils.get_current_user)
 ):
-    """Get all unique authors from git log."""
-    working_directory = settings.WORK_DIR
-    git_base_cmd = ["git", "-c", f"safe.directory={working_directory}"]
-    git_authors_cmd = git_base_cmd + [
-        "log",
-        "--all",
-        "--format=%an"
-    ]
-
+    """Reuse the raw author-name set for the current refs/HEAD snapshot."""
     try:
-        result = subprocess.run(
-            git_authors_cmd,
-            cwd=working_directory,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-
-        if result.returncode == 0:
-            authors = result.stdout.strip().split("\n")
-            # Remove duplicates and sort
-            unique_authors = sorted(
-                set(author.strip() for author in authors if author.strip())
-            )
-            return {"authors": unique_authors}
-        else:
-            print(f"Git error: {result.stderr}")
-            return {"authors": []}
-    except Exception as e:
-        print(f"Error getting authors: {e}")
-        return {"authors": []}
+        return {'authors': feed_service.authors(settings.WORK_DIR)}
+    except FeedUnavailable as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 @router.get("/preferences", response_model=UserPreference)

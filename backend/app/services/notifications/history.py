@@ -5,7 +5,8 @@ flock locks must live on the same local filesystem for every worker.
 Client interest is a separate shared lock, so an owner's disconnected client does not
 cancel a query still needed by another worker.
 
-Locks are released by the kernel on worker death. Cache entries contain no user preferences or read state.
+The query guardian retains owner/execution locks through cleanup after worker
+death. Client locks are not inherited. Cache entries contain no user preferences or read state.
 """
 import asyncio
 from contextlib import suppress
@@ -14,13 +15,12 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import signal
-import sys
 import tempfile
 import time
 from uuid import uuid4
 
 from app.core.config import settings
+from app.services.notifications.git_query import run_async
 
 
 class HistoryUnavailable(Exception):
@@ -239,7 +239,8 @@ class NotificationHistory:
             try:
                 await self._check_clients(key)
                 rows = await self._wait_for_query(
-                    key, self._snapshot(repository, lower_bound, key), self.timeout
+                    key, self._snapshot(repository, lower_bound, key, (owner.fileno(), slot.fileno())),
+                    self.timeout,
                 )
             finally:
                 slot.close()
@@ -269,9 +270,11 @@ class NotificationHistory:
             raise HistoryUnavailable("Unable to read Git notification history")
         return result["rows"]
 
-    async def _snapshot(self, repository, lower_bound, key):
+    async def _snapshot(self, repository, lower_bound, key, lock_fds=()):
         await self._check_clients(key)
-        revision = (await self._git(repository, "rev-parse", "--verify", "HEAD")).strip()
+        revision = (await self._git(
+            repository, "rev-parse", "--verify", "HEAD", lock_fds=lock_fds,
+        )).strip()
         cache_path = self.directory / f"{key}.cache"
         cached = _read(cache_path)
         if cached and cached["revision"] == revision:
@@ -280,6 +283,7 @@ class NotificationHistory:
         output = await self._git(
             repository, "log", revision, "--pretty=format:%h|%ct|%an <%ae>",
             f"--since=@{lower_bound}", "--no-merges",
+            lock_fds=lock_fds,
         )
         rows = []
         for line in output.splitlines():
@@ -298,34 +302,15 @@ class NotificationHistory:
                         path.with_suffix(".result").unlink(missing_ok=True)
         return rows
 
-    async def _git(self, repository, *arguments):
+    async def _git(self, repository, *arguments, lock_fds=()):
         command = ["git", "-c", f"safe.directory={repository}", *arguments]
-        # A tiny exec wrapper also kills Git if its owning worker is SIGKILLed.
-        launcher = Path(__file__).with_name("git_child.py")
-        process = None
-        launch = asyncio.create_task(asyncio.create_subprocess_exec(
-            sys.executable, str(launcher), str(os.getpid()), *command,
-            cwd=repository, stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE, start_new_session=True,
-        ))
         try:
-            # Do not lose the PID if cancellation arrives during subprocess spawn.
-            process = await asyncio.shield(launch)
-            stdout, _ = await process.communicate()
-            if process.returncode:
+            result = await run_async(command, cwd=repository, lock_fds=lock_fds)
+            if result.returncode:
                 raise HistoryUnavailable("Unable to read Git notification history")
-            return stdout.decode("utf-8", errors="replace")
+            return result.stdout.decode("utf-8", errors="replace")
         except OSError as error:
             raise HistoryUnavailable("Unable to read Git notification history") from error
-        finally:
-            if process is None:
-                with suppress(OSError):
-                    process = await launch
-            if process is not None:
-                # Kill the session even if Git exited but a descendant kept pipes open.
-                with suppress(ProcessLookupError):
-                    os.killpg(process.pid, signal.SIGKILL)
-                await process.wait()
 
     async def close(self):
         jobs = list(self.tasks.items())

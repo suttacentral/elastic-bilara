@@ -338,7 +338,7 @@ import ctypes, json, os, pathlib, signal, subprocess, sys, time
 assert ctypes.CDLL(None).prctl(36, 1, 0, 0, 0) == 0  # PR_SET_CHILD_SUBREAPER
 code = "import asyncio, sys; from app.services.notifications.history import NotificationHistory; asyncio.run(NotificationHistory(sys.argv[1]).history(sys.argv[2], 30))"
 worker = subprocess.Popen([sys.executable, '-c', code, sys.argv[1], sys.argv[2]])
-pid = None
+pid = guardian = None
 try:
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
@@ -350,26 +350,28 @@ try:
             break
         time.sleep(.01)
     assert pid is not None
+    status = pathlib.Path(f"/proc/{pid}/status").read_text()
+    guardian = int(next(line.split()[1] for line in status.splitlines() if line.startswith("PPid:")))
     worker.kill()
     worker.wait(timeout=2)
     deadline = time.monotonic() + 2
     while time.monotonic() < deadline:
-        reaped, status = os.waitpid(pid, os.WNOHANG)
+        reaped, status = os.waitpid(guardian, os.WNOHANG)
         if reaped:
-            assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+            assert os.WIFEXITED(status) and os.WEXITSTATUS(status) == 137
+            assert not pathlib.Path(f"/proc/{pid}").exists()
             break
         time.sleep(.01)
     else:
-        raise AssertionError('Git survived its owning worker')
+        raise AssertionError('Query guardian did not finish cleanup')
 finally:
     if worker.poll() is None:
         worker.kill()
         worker.wait()
-    if pid is not None:
+    if guardian is not None:
         try:
-            os.kill(pid, signal.SIGKILL)
-            os.waitpid(pid, 0)
-        except (ProcessLookupError, ChildProcessError):
+            os.waitpid(guardian, 0)
+        except ChildProcessError:
             pass
 '''
     result = subprocess.run(
@@ -484,8 +486,8 @@ def test_disconnect_after_revision_lookup_skips_history_scan(tmp_path, fake_git)
         revision_read = asyncio.Event()
         resume = asyncio.Event()
         original_git = service._git
-        async def git(*args):
-            result = await original_git(*args)
+        async def git(*args, **kwargs):
+            result = await original_git(*args, **kwargs)
             if 'rev-parse' in args:
                 revision_read.set()
                 await resume.wait()
