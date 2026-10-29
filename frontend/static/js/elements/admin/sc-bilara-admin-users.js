@@ -11,6 +11,7 @@ export class ScBilaraAdminUsers extends LitElement {
           <div x-data="dataTypes.users">
               <div class="admin-section-header">
                   <h1 class="admin-section-title">User Management</h1>
+                  <p class="admin-text-muted">Inactive accounts are listed first.</p>
               </div>
 
 
@@ -41,7 +42,8 @@ export class ScBilaraAdminUsers extends LitElement {
                                   <div class="admin-form-group">
                                       <label :for="key + '-role'" class="admin-label">Change Role</label>
                                       <select :name="key + '-role'" :id="key + '-role'" x-model="user.role"
-                                              x-on:change="await setUsersRole(user.github_id, user.role); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
+                                              :disabled="user.isUpdatingStatus"
+                                              x-on:change="await setUsersRole(user.github_id, user.role); await redirectNonPrivilegedUserFromAdminToNav(); Object.assign(user, await getUser(user.github_id)); user.selectedStatus = String(user.is_active); user.showDetails = !user.showDetails"
                                               class="admin-select">
                                           <template x-for="role in ROLES">
                                               <option x-text="role" :value="role" :selected="role === user.role"></option>
@@ -50,14 +52,18 @@ export class ScBilaraAdminUsers extends LitElement {
                                   </div>
                                   <div class="admin-form-group">
                                       <label :for="key + '-state'" class="admin-label">Account Status</label>
-                                      <select :name="key + '-state'" :id="key + '-state'" x-model="user.is_active"
-                                              x-on:change="await activateUser(user.github_id, user.is_active); await redirectNonPrivilegedUserFromAdminToNav(); user=await getUser(user.github_id); user.showDetails = !user.showDetails"
+                                      <select :name="key + '-state'" :id="key + '-state'" x-model="user.selectedStatus"
+                                              :disabled="user.isUpdatingStatus" :aria-busy="user.isUpdatingStatus"
+                                              x-on:change="await changeUserStatus(user)"
                                               class="admin-select">
                                           <template x-for="state in ['true', 'false']">
                                               <option x-text="state === 'true' ? 'Active' : 'Inactive'" :value="state"
-                                                      :selected="user.is_active === (state === 'true')"></option>
+                                                      :selected="user.selectedStatus === state"></option>
                                           </template>
                                       </select>
+                                      <p x-cloak x-show="user.isUpdatingStatus" class="admin-text-muted" role="status">Saving account status…</p>
+                                      <p x-cloak x-show="user.statusError" x-text="user.statusError"
+                                         class="admin-alert admin-alert-danger" role="alert"></p>
                                   </div>
                               </div>
                               <!-- Info Grid -->
@@ -88,6 +94,7 @@ export class ScBilaraAdminUsers extends LitElement {
                               <!-- Delete Action -->
                               <div class="admin-user-actions" x-data="{ modalShown: false, selectedUser: null }">
                                   <button class="btn admin-btn admin-btn-danger"
+                                          :disabled="user.isUpdatingStatus"
                                           @click.prevent="selectedUser = user; modalShown = true">
                                       <i class="bi-trash"></i>
                                       Delete User
