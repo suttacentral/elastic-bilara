@@ -15,8 +15,47 @@ export class ScBilaraAdminUsers extends LitElement {
               </div>
 
 
+              <div class="admin-user-filters" role="group" aria-label="Filter users">
+                  <div class="admin-form-group">
+                      <label for="user-search" class="admin-label">Search users</label>
+                      <input id="user-search" type="search" class="admin-input" x-model="searchQuery"
+                             :placeholder="canViewUserEmail() ? 'Username, GitHub ID or email' : 'Username or GitHub ID'">
+                  </div>
+                  <div class="admin-form-group">
+                      <label for="user-status-filter" class="admin-label">Account status</label>
+                      <select id="user-status-filter" class="admin-select" x-model="filterStatus">
+                          <option value="">All statuses</option>
+                          <option value="false">Inactive</option>
+                          <option value="true">Active</option>
+                      </select>
+                  </div>
+                  <div class="admin-form-group">
+                      <label for="user-role-filter" class="admin-label">Role</label>
+                      <select id="user-role-filter" class="admin-select" x-model="filterRole">
+                          <option value="">All roles</option>
+                          <template x-for="role in ROLES" :key="role">
+                              <option :value="role" x-text="role"></option>
+                          </template>
+                      </select>
+                  </div>
+                  <button type="button" class="btn admin-btn admin-btn-secondary" @click="clearFilters()"
+                          :disabled="!hasFilters">Clear filters</button>
+              </div>
+              <p class="admin-text-muted" role="status" aria-live="polite" aria-atomic="true"
+                 x-text="'Showing ' + filteredUsers.length + ' / ' + users.length + ' users'"></p>
+              <p x-cloak x-show="operationMessage" x-text="operationMessage"
+                 class="admin-alert admin-alert-success" role="status"></p>
+              <p x-cloak x-show="operationError" x-text="operationError"
+                 class="admin-alert admin-alert-danger" role="alert"></p>
+              <div x-cloak x-show="usersLoaded && filteredUsers.length === 0" class="admin-card admin-mb-3">
+                  <div class="admin-card-body">
+                      <p x-text="hasFilters ? 'No users match the current filters.' : 'No users yet.'"></p>
+                      <button x-show="hasFilters" type="button" class="btn admin-btn admin-btn-secondary"
+                              @click="clearFilters()">Clear filters</button>
+                  </div>
+              </div>
               <ul class="admin-user-list">
-                  <template x-for="(user, key) in users" :key="user.id">
+                  <template x-for="user in filteredUsers" :key="user.id">
                       <li class="admin-user-item">
                           <!-- User Header (Clickable) -->
                           <div class="admin-user-header" @click="user.showDetails = !user.showDetails">
@@ -40,20 +79,23 @@ export class ScBilaraAdminUsers extends LitElement {
                           <div x-cloak x-show="user.showDetails" class="admin-user-details">
                               <div class="admin-user-controls">
                                   <div class="admin-form-group">
-                                      <label :for="key + '-role'" class="admin-label">Change Role</label>
-                                      <select :name="key + '-role'" :id="key + '-role'" x-model="user.role"
-                                              :disabled="user.isUpdatingStatus"
-                                              x-on:change="await setUsersRole(user.github_id, user.role); await redirectNonPrivilegedUserFromAdminToNav(); Object.assign(user, await getUser(user.github_id)); user.selectedStatus = String(user.is_active); user.showDetails = !user.showDetails"
+                                      <label :for="'user-' + user.id + '-role'" class="admin-label">Change Role</label>
+                                      <select :name="'user-' + user.id + '-role'" :id="'user-' + user.id + '-role'" x-model="user.selectedRole"
+                                              :disabled="user.isUpdatingStatus || user.isUpdatingRole" :aria-busy="user.isUpdatingRole"
+                                              x-on:change="await changeUserRole(user)"
                                               class="admin-select">
                                           <template x-for="role in ROLES">
-                                              <option x-text="role" :value="role" :selected="role === user.role"></option>
+                                              <option x-text="role" :value="role" :selected="role === user.selectedRole"></option>
                                           </template>
                                       </select>
+                                      <p x-cloak x-show="user.isUpdatingRole" class="admin-text-muted" role="status">Saving user role…</p>
+                                      <p x-cloak x-show="user.roleError" x-text="user.roleError"
+                                         class="admin-alert admin-alert-danger" role="alert"></p>
                                   </div>
                                   <div class="admin-form-group">
-                                      <label :for="key + '-state'" class="admin-label">Account Status</label>
-                                      <select :name="key + '-state'" :id="key + '-state'" x-model="user.selectedStatus"
-                                              :disabled="user.isUpdatingStatus" :aria-busy="user.isUpdatingStatus"
+                                      <label :for="'user-' + user.id + '-state'" class="admin-label">Account Status</label>
+                                      <select :name="'user-' + user.id + '-state'" :id="'user-' + user.id + '-state'" x-model="user.selectedStatus"
+                                              :disabled="user.isUpdatingStatus || user.isUpdatingRole" :aria-busy="user.isUpdatingStatus"
                                               x-on:change="await changeUserStatus(user)"
                                               class="admin-select">
                                           <template x-for="state in ['true', 'false']">
@@ -94,7 +136,7 @@ export class ScBilaraAdminUsers extends LitElement {
                               <!-- Delete Action -->
                               <div class="admin-user-actions" x-data="{ modalShown: false, selectedUser: null }">
                                   <button class="btn admin-btn admin-btn-danger"
-                                          :disabled="user.isUpdatingStatus"
+                                          :disabled="user.isUpdatingStatus || user.isUpdatingRole"
                                           @click.prevent="selectedUser = user; modalShown = true">
                                       <i class="bi-trash"></i>
                                       Delete User

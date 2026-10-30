@@ -400,6 +400,19 @@
     gap: var(--space-sm);
 }
 
+.admin-user-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto;
+    gap: var(--space-sm);
+    align-items: end;
+    margin-bottom: var(--space-md);
+}
+
+.admin-user-filters .admin-form-group {
+    min-width: 0;
+    margin-bottom: 0;
+}
+
 .admin-modal-overlay {
     position: fixed;
     inset: 0;
@@ -850,6 +863,10 @@
 }
 
 @media (max-width: 768px) {
+    .admin-user-filters {
+        grid-template-columns: 1fr;
+    }
+
     .admin-user-header {
         flex-direction: column;
         align-items: flex-start;
