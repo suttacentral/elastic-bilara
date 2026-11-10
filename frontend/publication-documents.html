@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publication Documents · Bilara</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.3/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.12/dist/purify.min.js"></script>
+    <script src="./static/js/utils.js"></script>
+    <script src="./static/js/auth.js"></script>
+    <script src="./static/js/publication-documents.js"></script>
+    <script type="module" src="./static/js/elements/nav/sc-bilara-nav.js"></script>
+    <script type="module" src="./static/js/elements/addons/sc-bilara-theme-manager.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/themes/light.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="./static/css/style.css">
+    <link rel="stylesheet" href="./static/css/main.css">
+    <link rel="stylesheet" href="./static/css/pages/publications.css">
+    <link rel="stylesheet" href="./static/css/pages/publication-documents.css">
+</head>
+<body class="pub-page">
+    <header x-data="getUserInfo()" x-init="getRole()"><sc-bilara-nav></sc-bilara-nav></header>
+    <main class="doc-page" x-data="publicationDocumentEditor()"
+          @keydown.ctrl.s.window.prevent="save()" @keydown.meta.s.window.prevent="save()">
+        <nav class="doc-breadcrumb" aria-label="Breadcrumb">
+            <a href="/publications" @click="leave($event)">Publications</a>
+            <span aria-hidden="true">/</span><span x-text="number"></span><span aria-hidden="true">/</span><span>Documents</span>
+        </nav>
+        <div class="doc-heading">
+            <div><p class="doc-eyebrow">PUBLICATION DOCUMENTS</p>
+                <h1 x-text="publication?.translation_title || 'Publication documents'"></h1>
+                <p class="doc-muted"><span x-text="publication?.creator_name"></span>
+                    <span x-show="publication"> · </span><span x-text="publication?.translation_lang_iso"></span>
+                    <span x-show="publication"> · <span x-text="documents.length"></span> documents</span></p>
+            </div>
+            <button class="pub-btn" x-show="selected" @click="sidebarOpen = !sidebarOpen" :aria-expanded="sidebarOpen" aria-controls="document-navigation">Toggle navigation</button>
+        </div>
+        <p class="doc-error" role="alert" x-cloak x-show="error" x-text="error"></p>
+        <p class="doc-notice" role="status" x-cloak x-show="notice" x-text="notice"></p>
+        <p role="status" x-show="loading">Loading publication documents…</p>
+        <p x-cloak x-show="!loading && !documents.length && !error">No companion documents are configured for this publication.</p>
+
+        <div class="doc-workspace" :class="{ 'doc-workspace--full': !sidebarOpen }" x-cloak x-show="!loading && documents.length">
+            <aside id="document-navigation" class="doc-sidebar" x-show="sidebarOpen" aria-label="Document navigation">
+                <div class="doc-switches">
+                    <button class="pub-btn pub-btn-sm" @click="sidebar = 'documents'" :aria-pressed="sidebar === 'documents'">Documents</button>
+                    <button class="pub-btn pub-btn-sm" @click="sidebar = 'outline'" :aria-pressed="sidebar === 'outline'">Outline</button>
+                </div>
+                <div x-show="sidebar === 'documents'">
+                    <label class="doc-sr-only" for="document-search">Find document</label>
+                    <input id="document-search" class="doc-input" type="search" x-model="query" placeholder="Find document…">
+                    <ul class="doc-file-list">
+                        <template x-for="doc in filteredDocuments" :key="doc.id">
+                            <li><button class="doc-file" :class="{ 'doc-file--selected': selected === doc.id }"
+                                        :aria-current="selected === doc.id ? 'page' : null" :disabled="loadingDocument || saving"
+                                        @click="chooseDocument(doc.id)">
+                                <span class="doc-file-title" x-text="doc.title"></span>
+                                <span class="doc-file-name" x-text="doc.filename"></span>
+                                <span class="doc-file-status" x-show="doc.changed">Unpublished changes</span>
+                                <span class="doc-file-status" x-show="doc.request_outdated">Pull request needs updating</span>
+                            </button></li>
+                        </template>
+                    </ul>
+                    <p class="doc-muted" x-show="!filteredDocuments.length">No matching documents.</p>
+                </div>
+                <div x-show="sidebar === 'outline'">
+                    <p class="doc-muted" x-show="validationStale">Updating outline…</p>
+                    <p class="doc-muted" x-show="!validation.headings.length">No headings in this document.</p>
+                    <ol class="doc-outline">
+                        <template x-for="(heading, index) in validation.headings" :key="index">
+                            <li><button :style="'padding-inline-start:' + (Math.min(heading.level, 4) - 1) * 10 + 'px'"
+                                        :disabled="validationStale" @click="goToHeading(heading, index)" x-text="heading.title"></button></li>
+                        </template>
+                    </ol>
+                </div>
+            </aside>
+
+            <section class="doc-editor" aria-label="Document editor" :aria-busy="loadingDocument">
+                <div class="doc-editor-heading">
+                    <div><h2 x-text="currentTitle"></h2><p class="doc-muted" x-text="currentFilename"></p></div>
+                    <span class="doc-dirty" role="status" x-text="dirty ? 'Unsaved changes' : 'Saved content'"></span>
+                </div>
+                <details class="doc-editions"><summary>Used by <span x-text="editions.length"></span> edition(s)</summary>
+                    <ul><template x-for="edition in editions" :key="edition.publication_number + edition.number">
+                        <li x-text="edition.publication_number + ' · ' + edition.number + ' · ' + edition.type"></li>
+                    </template></ul>
+                    <p>Changes apply to these editions when their published content is updated.</p>
+                </details>
+                <div class="doc-warning" x-show="publishedChanged">
+                    <p>The published version changed since this draft began. Review the published comparison before adopting the new baseline.</p>
+                    <button class="pub-btn pub-btn-sm" @click="comparison = 'published'; setMode('diff')">Compare with published</button>
+                    <button class="pub-btn pub-btn-sm" :disabled="dirty || saving" @click="acknowledgeBaseline()">I reviewed the changes · use this baseline</button>
+                </div>
+                <div class="doc-warning" x-show="conflict">
+                    <p>Your edits are preserved here. Copy them if needed, then reload to compare with the latest saved content.</p>
+                    <button class="pub-btn pub-btn-sm" @click="reload()">Reload document…</button>
+                </div>
+                <div class="doc-editor-toolbar">
+                    <div class="doc-switches" aria-label="Editor view">
+                        <button class="pub-btn pub-btn-sm" :aria-pressed="mode === 'source'" @click="setMode('source')">Source</button>
+                        <button class="pub-btn pub-btn-sm" :aria-pressed="mode === 'preview'" @click="setMode('preview')">Preview</button>
+                        <button class="pub-btn pub-btn-sm" :aria-pressed="mode === 'split'" @click="setMode('split')">Side by side</button>
+                        <button class="pub-btn pub-btn-sm" :aria-pressed="mode === 'diff'" @click="setMode('diff')">Changes</button>
+                    </div>
+                    <button class="pub-btn pub-btn-sm" :disabled="saving || loadingDocument" @click="reload()">Reload…</button>
+                </div>
+                <details class="doc-find" x-show="mode !== 'diff'">
+                    <summary>Find and replace</summary>
+                    <div class="doc-find-controls">
+                        <label>Find <input class="doc-input" x-model="findText" @keydown.enter.prevent="findNext()"></label>
+                        <label>Replace with <input class="doc-input" x-model="replacement"></label>
+                        <label class="doc-checkbox"><input type="checkbox" x-model="matchCase"> Match case</label>
+                        <button class="pub-btn pub-btn-sm" @click="findNext()">Find next</button>
+                        <button class="pub-btn pub-btn-sm" :disabled="loadingDocument" @click="replaceMatch()">Replace</button>
+                        <span role="status" x-text="findNotice"></span>
+                    </div>
+                </details>
+                <div class="doc-panes" x-ref="panes" x-show="mode !== 'diff'"
+                     :class="{ 'doc-panes--split': mode === 'split', 'doc-panes--resizing': splitDrag !== null }"
+                     :style="{ '--doc-source-share': splitPosition + 'fr', '--doc-preview-share': (100 - splitPosition) + 'fr' }">
+                    <div id="document-source-pane" class="doc-source-pane" x-show="mode === 'source' || mode === 'split'">
+                        <label class="doc-pane-label" for="document-source">HTML source</label>
+                        <textarea id="document-source" x-ref="source" :value="sourceValue" @input="onInput($event.target.value)"
+                                  :disabled="loadingDocument" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+                    </div>
+                    <div class="doc-splitter" x-ref="splitter" role="separator" tabindex="0" aria-orientation="vertical"
+                         aria-label="Resize source and preview" aria-controls="document-source-pane document-preview-pane"
+                         :aria-valuemin="splitMin.toFixed(1)" :aria-valuemax="splitMax.toFixed(1)" :aria-valuenow="splitPosition.toFixed(1)"
+                         :aria-valuetext="'Source ' + Math.round(splitPosition) + '%, Preview ' + Math.round(100 - splitPosition) + '%'"
+                         title="Drag or use Left/Right arrows to resize. Double-click or press Enter to reset."
+                         @pointerdown="startSplitResize($event)" @pointermove="resizeSplit($event)"
+                         @pointerup="stopSplitResize($event)" @pointercancel="stopSplitResize($event)"
+                         @lostpointercapture="stopSplitResize($event)" @blur="stopSplitResize()" @blur.window="stopSplitResize()"
+                         @keydown.escape.window="stopSplitResize()" @keydown="resizeSplitWithKeyboard($event)"
+                         @dblclick="splitRatio = 50"></div>
+                    <div id="document-preview-pane" class="doc-preview-pane" x-show="mode === 'preview' || mode === 'split'">
+                        <span class="doc-pane-label">Content preview · final edition layout may differ</span>
+                        <!-- Same-origin permits parent-driven outline navigation; scripts remain forbidden. -->
+                        <iframe title="Publication document preview" x-ref="preview" sandbox="allow-same-origin"
+                                referrerpolicy="no-referrer" :srcdoc="previewHtml" @load="previewLoaded()"></iframe>
+                    </div>
+                </div>
+                <div class="doc-diff" x-show="mode === 'diff'">
+                    <label>Compare with <select class="doc-input" x-model="comparison" @change="loadDiff()">
+                        <option value="published">Published version</option><option value="saved">Last saved draft</option>
+                    </select></label>
+                    <pre tabindex="0" aria-label="Document changes" x-text="diffText"></pre>
+                </div>
+                <details class="doc-validation" :open="validation.issues.length > 0">
+                    <summary x-text="validationSummary"></summary>
+                    <ul><template x-for="(issue, index) in validation.issues" :key="index">
+                        <li><button @click="locate(issue)" :disabled="validationStale">
+                            <span x-text="'Line ' + issue.line + ':' + issue.column + ' · '"></span><span x-text="issue.message"></span>
+                            <strong x-show="issue.blocks_save"> · Blocks saving</strong>
+                        </button></li>
+                    </template></ul>
+                </details>
+            </section>
+        </div>
+
+        <footer class="doc-save-bar" x-cloak x-show="selected">
+            <div class="doc-operation-status" aria-live="polite">
+                <div><span x-text="syncLabel"></span> <button class="doc-text-button" x-show="sync.can_retry" @click="retry('sync')">Retry sync</button></div>
+                <p class="doc-error" x-show="sync.error" x-text="sync.error"></p>
+                <div><span x-text="publishLabel"></span> <a x-show="publish.url" :href="publish.url" target="_blank" rel="noopener noreferrer">View pull request</a>
+                    <button class="doc-text-button" x-show="publish.can_retry" @click="retry('publish')">Retry request</button></div>
+                <p class="doc-error" x-show="publish.error" x-text="publish.error"></p>
+            </div>
+            <div class="doc-actions">
+                <button class="pub-btn" :disabled="checking || loadingDocument" @click="check()" x-text="checking ? 'Checking…' : 'Check HTML'"></button>
+                <button class="pub-btn pub-btn-primary" :disabled="!dirty || saving || conflict || loadingDocument" @click="save()" x-text="saving ? 'Saving…' : 'Save draft'"></button>
+                <button class="pub-btn" :disabled="!canPublish || preparingRelease" @click="prepareRelease()">Submit for publication…</button>
+            </div>
+        </footer>
+
+        <dialog x-ref="discardDialog" class="doc-dialog" aria-labelledby="discard-title" @cancel="pendingAction = null">
+            <h2 id="discard-title">Unsaved changes</h2><p>Save this draft before leaving the document?</p>
+            <p class="doc-error" role="alert" x-show="error" x-text="error"></p>
+            <div class="doc-actions">
+                <button class="pub-btn" :disabled="saving" @click="resolveNavigation('stay')" autofocus>Stay here</button>
+                <button class="pub-btn" :disabled="saving" @click="resolveNavigation('discard')">Discard and continue</button>
+                <button class="pub-btn pub-btn-primary" :disabled="saving || conflict" @click="resolveNavigation('save')">Save and continue</button>
+            </div>
+        </dialog>
+        <dialog x-ref="releaseDialog" class="doc-dialog doc-dialog--release" aria-labelledby="release-title">
+            <h2 id="release-title">Submit document changes</h2>
+            <p>Select the saved drafts to include in a pull request. Review and merge are required before publication.</p>
+            <p class="doc-error" role="alert" x-show="error" x-text="error"></p>
+            <p x-show="!releaseDocuments.length">No unpublished changes.</p>
+            <template x-for="doc in releaseDocuments" :key="doc.id">
+                <div class="doc-release-item">
+                    <label class="doc-checkbox"><input type="checkbox" :value="doc.id" x-model="releaseSelection"
+                        :disabled="!doc.validation.valid || doc.published_changed || preparingRelease"><strong x-text="doc.filename"></strong></label>
+                    <p class="doc-muted" x-text="'Used by: ' + doc.editions.map(edition => edition.type).join(', ')"></p>
+                    <p class="doc-error" x-show="!doc.validation.valid">Resolve HTML and link errors before selecting this document.</p>
+                    <p class="doc-error" x-show="doc.published_changed">The published baseline changed. Review it in the editor first.</p>
+                    <details><summary>Review saved changes</summary><div class="doc-release-comparison">
+                        <div><h3>Published</h3><pre x-text="doc.published_content"></pre></div>
+                        <div><h3>Saved draft</h3><pre x-text="doc.content"></pre></div>
+                    </div></details>
+                </div>
+            </template>
+            <div class="doc-actions">
+                <button class="pub-btn" :disabled="preparingRelease" @click="$refs.releaseDialog.close()">Cancel</button>
+                <button class="pub-btn pub-btn-primary" :disabled="!releaseSelection.length || preparingRelease" @click="submitRelease()"
+                        x-text="preparingRelease ? 'Submitting…' : 'Create or update pull request'"></button>
+            </div>
+        </dialog>
+    </main>
+</body>
+</html>

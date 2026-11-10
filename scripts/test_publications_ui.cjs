@@ -39,6 +39,7 @@ const runChecks = async () => {
         await Alpine.nextTick();
         check(window.requests.filter(item => item.url === 'publications/').length === 1, 'List must load exactly once');
         check(state.isAdmin === window.adminMode, 'Incorrect publication permissions');
+        await waitFor(() => document.querySelector('a[href="/publication-documents?publication=scpub1"]')?.textContent.includes('(20)'));
         check(![...document.querySelectorAll('button')].some(el => /Publish to GitHub|Check status/.test(el.textContent)), 'Manual publication controls must be removed');
         check([...document.querySelectorAll('button')].filter(el => /New Publication/.test(el.textContent)).every(el => Boolean(el.getClientRects().length) === window.adminMode), 'Incorrect create action visibility');
         document.querySelector('button[aria-label="Edit publication"]').click();
@@ -147,6 +148,7 @@ const runChecks = async () => {
             check(!Object.hasOwn(created, 'legacy'), 'New team must only send v2 fields');
             check(['edition_number', 'publisher', 'publication_type'].every(key => !Object.hasOwn(created, key)), 'Conversion options leaked into new metadata');
         }
+        check(window.requests.filter(item => item.url === 'publication-documents/counts/').length === 1, 'Document counts must load exactly once');
         check(window.runtimeErrors.length === 0, window.runtimeErrors.join('; '));
         document.getElementById('results').textContent = JSON.stringify({ passed: true, requests: window.requests.length });
     } catch (error) {
@@ -173,6 +175,7 @@ try {
             window.getCurrentUser = async () => ({ role: window.adminMode ? 'administrator' : 'writer', is_active: true, username: 'alice' });
             window.requestWithTokenRetry = async (url, options) => {
                 requests.push({url, options});
+                if (url === 'publication-documents/counts/') return { ok: true, status: 200, json: async () => ({ scpub1: 20 }) };
                 if (url === 'publications/sync/') return { ok: true, status: 200, json: async () => window.syncState };
                 if (url === 'publications/next-number/') return { ok: true, status: 200, json: async () => ({ next_number: 'scpub2' }) };
                 if (options?.method === 'POST') window.fixture = { ...JSON.parse(options.body), _revision: 'new-revision' };

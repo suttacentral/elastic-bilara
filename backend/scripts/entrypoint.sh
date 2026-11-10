@@ -15,9 +15,11 @@ import sys
 from app.services.git.checkout import checkout_lock
 from app.services.publications.store import PublicationStore
 from app.services.tags.store import TagStore
+from app.services.publication_documents.store import recover_all
 with checkout_lock(sys.argv[1]):
     PublicationStore(sys.argv[1]).recover()
     TagStore(sys.argv[1]).recover()
+    recover_all(sys.argv[1])
     subprocess.run(["git", "-C", sys.argv[1], "merge", "--no-edit", "@{u}"], check=True)
 PYTHON
     else

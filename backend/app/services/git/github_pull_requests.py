@@ -23,6 +23,9 @@ class GithubPullRequests:
             title=title, body=body, base=base, head=head
         )
 
+    def get(self, number: int) -> PullRequest:
+        return self._repository.get_pull(number)
+
     @staticmethod
     def close(pull_request: PullRequest) -> None:
         pull_request.edit(state="closed")

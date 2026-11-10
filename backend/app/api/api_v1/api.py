@@ -6,6 +6,7 @@ from app.api.api_v1.endpoints import (
     languages,
     projects,
     publications,
+    publication_documents,
     pull_request,
     remarks,
     search,
@@ -40,3 +41,4 @@ api_router.include_router(dictionary.router, tags=["dictionary"])
 api_router.include_router(settings.router, tags=["settings"])
 api_router.include_router(tags.router, tags=["tags"])
 api_router.include_router(publications.router, tags=["publications"])
+api_router.include_router(publication_documents.router, tags=["publication-documents"])

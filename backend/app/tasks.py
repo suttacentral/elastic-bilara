@@ -18,6 +18,7 @@ from app.services.git.manager import GitManager
 from app.services.git.task import GitTask
 from app.services.publications.store import PUBLICATION_FILES, PublicationStore
 from app.services.publications.sync import execute_sync, update_task_state
+from app.services.publication_documents import sync as document_sync
 from app.services.sync_dispatch import DELIVERY_LEASE
 from app.services.tags import sync as tag_sync
 from app.services.tags.store import TagStore, is_tag_path
@@ -29,6 +30,23 @@ logger = logging.getLogger(__name__)
 
 class PrTask(GitTask):
     pass
+
+
+class DocumentTask(GitTask):
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        document_sync.update_task_state(settings.WORK_DIR, args[0], task_id, args[1], args[2],
+                                       status="retrying", error=str(exc), dispatch_after=time.time() + DELIVERY_LEASE)
+        super().on_retry(exc, task_id, args, kwargs, einfo)
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        document_sync.update_task_state(settings.WORK_DIR, args[0], task_id, args[1], args[2], status="failed", error=str(exc))
+        super().on_failure(exc, task_id, args, kwargs, einfo)
+
+
+@app.task(name="process_publication_documents", base=DocumentTask, bind=True, queue="commit_queue",
+          acks_late=True, reject_on_worker_lost=True)
+def process_publication_documents(self, generation, number, operation):
+    return document_sync.execute(settings.WORK_DIR, settings.PUBLISHED_DIR, generation, self.request.id, number, operation)
 
 
 class PublicationSyncTask(GitTask):
@@ -84,6 +102,9 @@ def sync_tags(self, generation):
 def _prepare_commit(manager, paths, *, add=True):
     """Recover selected data and commit overlapping tag work under checkout_lock."""
     work = Path(manager.unpublished.workdir)
+    if any(path.parts and path.parts[0] == "_publication" for path in paths):
+        from app.services.publication_documents.store import recover_all
+        recover_all(work)
     if any(path.as_posix() in PUBLICATION_FILES for path in paths):
         PublicationStore(work).recover()
     if any(is_tag_path(path) for path in paths):
@@ -94,41 +115,48 @@ def _prepare_commit(manager, paths, *, add=True):
     return False
 
 
-@app.task(name="commit", base=GitTask, queue="commit_queue")
-def commit(user: dict, file_paths: list[str], message: str, add: bool = True, safe_push: bool = False) -> bool:
-    file_paths = [file_paths] if isinstance(file_paths, str) else file_paths
-    paths = [utils.clean_path(path) for path in file_paths if path]
-    if not paths:
-        return False
-
-    user_data = UserBase(**user)
-    manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
+def commit_local(manager, paths, message, *, add=True):
+    """Recover and commit selected working files, without any remote I/O."""
     git_operation = GitManager.add if add else GitManager.remove
-
     work = Path(manager.unpublished.workdir)
     with checkout_lock(work):
         _prepare_commit(manager, paths, add=add)
-        if add:
-            safe_push = safe_push or any(is_tag_path(path) for path in paths)
         if not git_operation(manager.unpublished, paths):
             return False
         # A retry after a failed push may already have committed these files.
         # No new commit is needed in that case, but the existing commit must be pushed.
         # commit() returns False only for no changes; write failures raise and stop here.
         GitManager.commit(manager.unpublished, manager.author, manager.committer, message, paths)
+    return True
 
-    if safe_push:
-        changed_files = manager.pull(manager.unpublished, fail_on_conflict=True)
-        GitManager.push(manager.unpublished, "origin", "unpublished", force=False)
-    else:
-        changed_files = manager.pull(manager.unpublished)
-        GitManager.push(manager.unpublished, "origin", "unpublished")
+
+def sync_committed(manager, *, safe_push=False):
+    """Sync committed files and return the immutable commit after merging remote changes."""
+    changed_files = manager.pull(manager.unpublished, fail_on_conflict=True) if safe_push else manager.pull(manager.unpublished)
+    with checkout_lock(Path(manager.unpublished.workdir)):
+        synced_commit = manager.unpublished.head.peel()
+    GitManager.push(manager.unpublished, "origin", "unpublished", force=not safe_push)
 
     existing_paths, not_existing_paths = manager.separate_existing_files(changed_files)
     if existing_paths:
         es.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, existing_paths)
     if not_existing_paths:
         es.update_indexes(settings.ES_INDEX, settings.ES_SEGMENTS_INDEX, not_existing_paths, delete=True)
+    return synced_commit
+
+
+@app.task(name="commit", base=GitTask, queue="commit_queue")
+def commit(user: dict, file_paths: list[str], message: str, add: bool = True, safe_push: bool = False) -> bool:
+    file_paths = [file_paths] if isinstance(file_paths, str) else file_paths
+    paths = [utils.clean_path(path) for path in file_paths if path]
+    if not paths:
+        return False
+    user_data = UserBase(**user)
+    manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, user_data)
+    if not commit_local(manager, paths, message, add=add):
+        return False
+    safe_push = safe_push or (add and any(is_tag_path(path) for path in paths))
+    sync_committed(manager, safe_push=safe_push)
     return True
 
 

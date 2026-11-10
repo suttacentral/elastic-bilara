@@ -64,6 +64,8 @@ class GitManager:
                         # A checkout-wide update can replace either domain's files.
                         PublicationStore(work).recover()
                         TagStore(work).recover()
+                        from app.services.publication_documents.store import recover_all
+                        recover_all(work)
                     branch.state_cleanup()
                     branch_name = branch.head.shorthand
                     remote_hash_id = branch.lookup_reference(f"refs/remotes/{remote_name}/{branch_name}").target

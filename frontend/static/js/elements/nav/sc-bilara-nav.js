@@ -65,8 +65,8 @@ export class SCBilaraNav extends LitElement {
                         Publication Queue
                       </a>
                     </sl-menu-item>
-                    <sl-menu-item x-show="role === 'writer' && isActive">
-                      <a href="/publications" class="menu-item-link">My Publication Information</a>
+                    <sl-menu-item x-show="(role === 'writer' || isAdmin) && isActive">
+                      <a href="/publications" class="menu-item-link">Publications</a>
                     </sl-menu-item>
                     <sl-menu-item x-show="isAdmin && isActive">
                       <a href="/admin" target="_blank" rel="noopener noreferrer" class="menu-item-link">Admin</a>

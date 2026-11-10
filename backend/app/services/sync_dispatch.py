@@ -33,12 +33,14 @@ def dispatch_pending(store, task, update_state):
 
 
 def dispatch_all(work):
+    from app.services.publication_documents import sync as documents
     from app.services.publications import sync as publications
     from app.services.tags import sync as tags
 
     # Each entry point contains its own failures so both domains are checked.
     publications.dispatch_safely(work)
     tags.dispatch_safely(work)
+    documents.dispatch_safely(work)
 
 
 async def dispatch_loop(work):

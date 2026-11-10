@@ -21,7 +21,7 @@ export class ScBilaraPublications extends LitElement {
 
               <div>
                   <div class="pub-header">
-                      <h1 class="pub-title" x-text="isAdmin ? 'Publication Metadata' : 'My Publication Information'"></h1>
+                      <h1 class="pub-title">Publications</h1>
                       <div style="display:flex;gap:.5rem">
                           <button class="pub-btn pub-btn-primary" @click="await showCreateForm()" x-show="isAdmin">
                               <i class="bi-plus-lg"></i> New Publication
@@ -30,6 +30,7 @@ export class ScBilaraPublications extends LitElement {
                   </div>
 
                   <p x-cloak x-show="loadError" x-text="loadError" role="alert" class="pub-form-error-text"></p>
+                  <p x-cloak x-show="documentCountsError" x-text="documentCountsError" role="status"></p>
                   <div x-cloak x-show="syncStatus" class="pub-publish-status" role="status">
                       <span x-text="syncStatus"></span>
                       <button class="pub-btn pub-btn-sm" x-show="canRetrySync" :disabled="retryingSync" @click="await retrySync()">Retry sync</button>
@@ -87,6 +88,7 @@ export class ScBilaraPublications extends LitElement {
                                   <th @click="toggleSort('is_published')">
                                       Status <i :class="sortIcon('is_published')"></i>
                                   </th>
+                                  <th>Documents</th>
                                   <th>Actions</th>
                               </tr>
                           </thead>
@@ -112,6 +114,12 @@ export class ScBilaraPublications extends LitElement {
                                                 :class="pub.is_published ? 'pub-badge-published' : 'pub-badge-unpublished'"
                                                 x-text="pub.is_published ? 'Published' : 'Unpublished'">
                                           </span>
+                                      </td>
+                                      <td>
+                                          <a class="pub-btn pub-btn-sm" :href="documentUrl(pub.publication_number)"
+                                             x-show="documentCounts[pub.publication_number] !== 0"
+                                             x-text="documentCounts[pub.publication_number] === undefined ? 'Edit documents' : 'Edit documents (' + documentCounts[pub.publication_number] + ')' "></a>
+                                          <span x-show="documentCounts[pub.publication_number] === 0">No documents</span>
                                       </td>
                                       <td>
                                           <div class="pub-actions">

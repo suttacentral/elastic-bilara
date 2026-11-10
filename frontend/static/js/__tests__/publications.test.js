@@ -22,7 +22,7 @@ beforeEach(() => { jest.useFakeTimers(); });
 afterEach(() => { jest.clearAllTimers(); jest.useRealTimers(); });
 
 test('inactive users and reviewers cannot load publication records', async () => {
-    for (const overrides of [{ role: 'reviewer' }, { is_active: false }]) {
+    for (const overrides of [{ role: 'reviewer' }, { is_active: false }, { role: 'administrator', is_active: false }]) {
         const { manager, request } = setup(false, overrides);
         await manager.init();
         expect(request).not.toHaveBeenCalled();
@@ -31,15 +31,71 @@ test('inactive users and reviewers cannot load publication records', async () =>
     }
 });
 
-test('writer loads the server-filtered list and uses a fresh detail revision', async () => {
-    const { manager, request } = setup();
-    request.mockResolvedValueOnce(response([record()])).mockResolvedValueOnce(response({ status: "idle" })).mockResolvedValueOnce(response(record()));
+test.each(['writer', 'administrator', 'superuser'])('%s initializes the list, sync status and counts, then uses a fresh detail revision', async role => {
+    const admin = role !== 'writer';
+    const { manager, request } = setup(admin, { role });
+    const replies = {
+        'publications/': [record()],
+        'publications/sync/': { status: 'idle' },
+        'publication-documents/counts/': { scpub1: 20 },
+        'publications/scpub1': record(),
+    };
+    request.mockImplementation(async url => {
+        if (!Object.hasOwn(replies, url)) throw new Error('Unexpected request: ' + url);
+        return response(replies[url]);
+    });
     await manager.init();
+    expect(request.mock.calls.map(([url]) => url).sort()).toEqual([
+        'publication-documents/counts/', 'publications/', 'publications/sync/',
+    ]);
+    expect(manager.documentCounts).toEqual({ scpub1: 20 });
+    expect(manager.documentCountsError).toBe('');
     await manager.showEditForm(manager.publications[0]);
-    expect(manager.isAdmin).toBe(false);
+    expect(manager.isAdmin).toBe(admin);
     expect(manager.form.creator_name).toEqual(['Alice', 'Bob']);
     expect(manager.revision).toBe('revision-1');
     expect(request).toHaveBeenLastCalledWith('publications/scpub1');
+});
+
+test.each(['http', 'network'])('document count %s failures do not block the list or sync status', async failure => {
+    const { manager, request } = setup();
+    request.mockImplementation(async url => {
+        if (url === 'publications/') return response([record()]);
+        if (url === 'publications/sync/') return response({ status: 'synced' });
+        if (url === 'publication-documents/counts/') {
+            if (failure === 'network') throw new Error('offline');
+            return response({ detail: 'offline' }, 503);
+        }
+        throw new Error('Unexpected request: ' + url);
+    });
+    await manager.init();
+    expect(manager.authorized).toBe(true);
+    expect(manager.publications).toEqual([record()]);
+    expect(manager.loading).toBe(false);
+    expect(manager.loadError).toBe('');
+    expect(manager.syncState).toBe('synced');
+    expect(manager.documentCounts).toEqual({});
+    expect(manager.documentCountsError).toBe('Document counts unavailable: offline');
+});
+
+test('slow document counts do not delay displaying the list or checking sync', async () => {
+    const { manager, request } = setup();
+    let finishCounts, initialized = false;
+    request.mockImplementation(async url => {
+        if (url === 'publications/') return response([record()]);
+        if (url === 'publications/sync/') return response({ status: 'synced' });
+        if (url === 'publication-documents/counts/') return new Promise(resolve => { finishCounts = resolve; });
+        throw new Error('Unexpected request: ' + url);
+    });
+    const initialization = manager.init().then(() => { initialized = true; });
+    await jest.advanceTimersByTimeAsync(0);
+    expect(initialized).toBe(false);
+    expect(manager.publications).toEqual([record()]);
+    expect(manager.loading).toBe(false);
+    expect(manager.syncState).toBe('synced');
+    finishCounts(response({ scpub1: 20 }));
+    await initialization;
+    expect(manager.documentCounts).toEqual({ scpub1: 20 });
 });
 
 test('writer sends only changed v2 fields and preserves arrays', async () => {
@@ -117,12 +173,17 @@ test('save status automatically polls and only confirms a completed push', async
 
 test('reload restores in-flight sync and failure permits retry', async () => {
     const { manager, request } = setup();
-    request.mockResolvedValueOnce(response([record()]))
-        .mockResolvedValueOnce(response({ status: 'retrying', error: 'offline' }))
-        .mockResolvedValueOnce(response({ status: 'failed', error: 'offline', can_retry: true }))
-        .mockResolvedValueOnce(response({ status: 'pending' }, 202));
+    let syncStatus = { status: 'retrying', error: 'offline' };
+    request.mockImplementation(async url => {
+        if (url === 'publications/') return response([record()]);
+        if (url === 'publication-documents/counts/') return response({ scpub1: 20 });
+        if (url === 'publications/sync/') return response(syncStatus);
+        if (url === 'publications/sync/retry/') return response({ status: 'pending' }, 202);
+        throw new Error('Unexpected request: ' + url);
+    });
     await manager.init();
     expect(manager.syncStatus).toMatch(/retrying automatically/);
+    syncStatus = { status: 'failed', error: 'offline', can_retry: true };
     await jest.advanceTimersByTimeAsync(3000);
     expect(manager.canRetrySync).toBe(true);
     expect(manager.syncStatus).toMatch(/Saved, but GitHub sync failed/);

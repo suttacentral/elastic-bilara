@@ -29,6 +29,8 @@ function publicationDefaults() {
 function publicationsManager(adminPage = false) {
     return {
         publications: [],
+        documentCounts: {},
+        documentCountsError: '',
         isAdmin: false,
         authorized: false,
         loadError: '',
@@ -73,8 +75,11 @@ function publicationsManager(adminPage = false) {
                     this.loadError = 'An active writer or administrator account is required.';
                     return;
                 }
-                await this.loadPublications();
-                await this.checkSyncStatus();
+                await Promise.all([
+                    this.loadPublications(),
+                    this.checkSyncStatus(),
+                    this.loadDocumentCounts(),
+                ]);
             } catch (error) {
                 this.loadError = error.message;
             }
@@ -85,6 +90,21 @@ function publicationsManager(adminPage = false) {
                 return data.detail.map(error => `${error.loc.slice(1).join('.')}: ${error.msg}`).join('; ');
             }
             return data.detail || 'Request failed';
+        },
+
+        async loadDocumentCounts() {
+            try {
+                const response = await requestWithTokenRetry('publication-documents/counts/');
+                const data = await response.json();
+                if (!response.ok) throw new Error(this.errorMessage(data));
+                this.documentCounts = data;
+            } catch (error) {
+                this.documentCountsError = 'Document counts unavailable: ' + error.message;
+            }
+        },
+
+        documentUrl(number) {
+            return '/publication-documents?publication=' + encodeURIComponent(number);
         },
 
         async loadPublications() {
