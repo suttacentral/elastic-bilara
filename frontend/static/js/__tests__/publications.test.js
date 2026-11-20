@@ -21,6 +21,209 @@ const record = (overrides = {}) => ({
 beforeEach(() => { jest.useFakeTimers(); });
 afterEach(() => { jest.clearAllTimers(); jest.useRealTimers(); });
 
+test.each(['idle', 'synced'])('publication waits for the first sync response before allowing %s', async status => {
+    const { manager, request } = setup(true);
+    let finish;
+    request.mockImplementation(async url => {
+        if (url === 'publications/sync/') return new Promise(resolve => { finish = resolve; });
+        return response(url === 'publications/' ? [] : {});
+    });
+    const initialization = manager.init();
+    await jest.advanceTimersByTimeAsync(0);
+    expect(manager.authorized && manager.isAdmin).toBe(true);
+    await manager.publishMetadata();
+    expect(request).not.toHaveBeenCalledWith('publications/publish/', expect.anything());
+    finish(response({ status }));
+    await initialization;
+    request.mockResolvedValueOnce(response({ task_id: 'task' }))
+        .mockResolvedValueOnce(response({ status: 'SUCCESS', result: '' }));
+    await manager.publishMetadata();
+    expect(request).toHaveBeenCalledWith('publications/publish/', expect.objectContaining({ method: 'POST' }));
+});
+
+test.each(['network', 'http'])('first sync %s failure keeps publication blocked until recovery', async failure => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    if (failure === 'network') request.mockRejectedValueOnce(new Error('offline'));
+    else request.mockResolvedValueOnce(response({ detail: 'offline' }, 503));
+    await manager.checkSyncStatus();
+    await manager.publishMetadata();
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(manager.syncStatus).toMatch(/Unable to check/);
+    request.mockResolvedValueOnce(response({ status: 'idle' }));
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(manager.syncState).toBe('idle');
+});
+
+test.each(['success', 'http', 'network'])('deletion blocks publication until %s completion and releases saving', async outcome => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    manager.syncState = 'synced';
+    manager.publications = [record()];
+    let finish, fail;
+    request.mockReturnValueOnce(new Promise((resolve, reject) => { finish = resolve; fail = reject; }))
+        .mockResolvedValueOnce(response([]));
+    const previousConfirm = global.confirm;
+    global.confirm = () => true;
+    try {
+        const deleting = manager.deletePub('scpub1');
+        expect(manager.saving).toBe(true);
+        await manager.publishMetadata();
+        await manager.deletePub('scpub1');
+        expect(request).toHaveBeenCalledTimes(1);
+        if (outcome === 'network') fail(new Error('offline'));
+        else finish(outcome === 'http' ? response({ detail: 'failed' }, 500)
+            : response({ _sync: { status: 'pending' } }));
+        await deleting;
+        expect(manager.saving).toBe(false);
+        expect(manager.syncState).toBe(outcome === 'success' ? 'pending' : 'synced');
+    } finally {
+        global.confirm = previousConfirm;
+    }
+});
+
+test('only an authorized admin can submit metadata and duplicate clicks are ignored', async () => {
+    const { manager, request } = setup(true);
+    await manager.publishMetadata();
+    manager.authorized = true;
+    await manager.publishMetadata();
+    expect(request).not.toHaveBeenCalled();
+    manager.isAdmin = true;
+    manager.syncState = 'synced';
+    request.mockResolvedValueOnce(response({ task_id: 'publish-1' }))
+        .mockResolvedValueOnce(response({ status: 'PENDING' }))
+        .mockResolvedValueOnce(response({ status: 'SUCCESS', result: 'https://example.org/pull/1' }));
+    await manager.publishMetadata();
+    await manager.publishMetadata();
+    expect(request.mock.calls.filter(([url]) => url === 'publications/publish/')).toHaveLength(1);
+    expect(manager.publishing).toBe(true);
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(manager.publishing).toBe(false);
+    expect(manager.publishUrl).toBe('https://example.org/pull/1');
+    expect(manager.publishStatus).toMatch(/merge it on GitHub/);
+});
+
+test.each([
+    ['empty', 'No metadata changes to publish.'],
+    ['failure', 'Unable to publish metadata: Publication failed'],
+    ['revoked', 'Unable to publish metadata: Publication failed'],
+    ['http', 'Unable to complete publication check: offline'],
+    ['network', 'Unable to complete publication check: offline'],
+    ['unsafe-url', 'Unable to complete publication check: Invalid pull request URL.'],
+])('metadata publication handles %s results', async (kind, expectedStatus) => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    manager.syncState = 'synced';
+    request.mockResolvedValueOnce(response({ task_id: 'publish-1' }));
+    if (kind === 'network') request.mockRejectedValueOnce(new Error('offline'));
+    else request.mockResolvedValueOnce(kind === 'http' ? response({ detail: 'offline' }, 503) : response({
+        status: kind === 'failure' ? 'FAILURE' : kind === 'revoked' ? 'REVOKED' : 'SUCCESS',
+        error: 'Publication failed', result: kind === 'unsafe-url' ? 'javascript:alert(1)' : '',
+    }));
+    await manager.publishMetadata();
+    expect(manager.publishing).toBe(false);
+    expect(manager.publishUrl).toBe('');
+    expect(manager.publishStatus).toBe(expectedStatus);
+    await jest.advanceTimersByTimeAsync(6000);
+    expect(request).toHaveBeenCalledTimes(2);
+});
+
+test('metadata submission errors allow retry and destroy stops task polling', async () => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    manager.syncState = 'synced';
+    request.mockResolvedValueOnce(response({ detail: 'Wait for sync' }, 409));
+    await manager.publishMetadata();
+    expect(manager.publishing).toBe(false);
+    expect(manager.publishStatus).toMatch(/Wait for sync/);
+    request.mockResolvedValueOnce(response({ task_id: 'publish-1' }))
+        .mockResolvedValueOnce(response({ status: 'RETRY' }));
+    await manager.publishMetadata();
+    manager.destroy();
+    await jest.advanceTimersByTimeAsync(6000);
+    expect(request).toHaveBeenCalledTimes(3);
+});
+
+test.each(['saving', 'pending', 'queued', 'syncing', 'retrying', 'failed'])('publish method blocks %s independently of the button', async state => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    manager.syncState = 'synced';
+    manager.saving = state === 'saving';
+    manager.syncState = state === 'saving' ? 'synced' : state;
+    await manager.publishMetadata();
+    expect(request).not.toHaveBeenCalled();
+    expect(manager.publishing).toBe(false);
+});
+
+test.each(['create', 'edit', 'delete'])('%s clears the old PR result even if the save is already synced', async action => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    manager.syncState = 'synced';
+    manager.form = { ...manager.form, ...record() };
+    manager.originalForm = JSON.parse(JSON.stringify(manager.form));
+    manager.form.translation_title = 'Updated';
+    manager.editingPub = action === 'edit' ? 'scpub1' : null;
+    manager.publications = [record()];
+    manager.publishStatus = 'Pull request ready. Review and merge it on GitHub.';
+    manager.publishUrl = 'https://example.org/pull/1';
+    request.mockResolvedValueOnce(response({ ...record(), _sync: { status: 'synced' } }))
+        .mockResolvedValueOnce(response([record()]));
+    const previousConfirm = global.confirm;
+    global.confirm = () => true;
+    try {
+        if (action === 'delete') await manager.deletePub('scpub1');
+        else await manager.submitForm();
+    } finally {
+        global.confirm = previousConfirm;
+    }
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(manager.publishStatus).toBe('');
+    expect(manager.publishUrl).toBe('');
+});
+
+test('a normal synced poll preserves the PR link but a pending sync clears it and its timer', async () => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    manager.syncState = 'synced';
+    manager.publishStatus = 'PR ready';
+    manager.publishUrl = 'https://example.org/pull/1';
+    manager.setSyncStatus({ status: 'synced' });
+    expect(manager.publishUrl).toBe('https://example.org/pull/1');
+    request.mockResolvedValueOnce(response({ task_id: 'publish-1' }))
+        .mockResolvedValueOnce(response({ status: 'PENDING' }));
+    await manager.publishMetadata();
+    manager.setSyncStatus({ status: 'pending' });
+    manager.setSyncStatus({ status: 'synced' });
+    await jest.advanceTimersByTimeAsync(3000);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(manager.publishStatus).toBe('');
+    expect(manager.publishUrl).toBe('');
+    expect(manager.publishing).toBe(false);
+});
+
+test.each(['submission', 'task-success', 'task-failure'])('late %s cannot restore an obsolete PR result after a save', async phase => {
+    const { manager, request } = setup(true);
+    manager.authorized = manager.isAdmin = true;
+    manager.syncState = 'synced';
+    let complete;
+    const delayed = new Promise(resolve => { complete = resolve; });
+    if (phase !== 'submission') request.mockResolvedValueOnce(response({ task_id: 'publish-1' }));
+    request.mockReturnValueOnce(delayed);
+    const publishing = manager.publishMetadata();
+    await jest.advanceTimersByTimeAsync(0);
+    manager.setSyncStatus({ status: 'pending' }, true);
+    manager.setSyncStatus({ status: 'synced' });
+    complete(response(phase === 'submission' ? { task_id: 'publish-1' } : {
+        status: phase === 'task-success' ? 'SUCCESS' : 'FAILURE',
+        result: 'https://example.org/pull/1', error: 'Old error',
+    }));
+    await publishing;
+    expect(manager.publishStatus).toBe('');
+    expect(manager.publishUrl).toBe('');
+    expect(manager.publishing).toBe(false);
+    expect(request).toHaveBeenCalledTimes(phase === 'submission' ? 1 : 2);
+});
+
 test('inactive users and reviewers cannot load publication records', async () => {
     for (const overrides of [{ role: 'reviewer' }, { is_active: false }, { role: 'administrator', is_active: false }]) {
         const { manager, request } = setup(false, overrides);

@@ -193,6 +193,14 @@ def pr(user, file_paths) -> str:
     return pull_request_url
 
 
+@app.task(name="publish_publication_metadata", base=PrTask, queue="pr_queue",
+          acks_late=True, reject_on_worker_lost=True)
+def publish_publication_metadata(github_id):
+    from app.services.publications.publish import publish_metadata
+
+    return publish_metadata(settings.WORK_DIR, settings.PUBLISHED_DIR, github_id)
+
+
 @app.task(name="pull", base=GitTask, queue="sync_queue")
 def pull(user_data: dict, branch_name: str, force: bool = False, remote_name: str = "origin") -> None:
     manager = GitManager(settings.PUBLISHED_DIR, settings.WORK_DIR, UserBase(**user_data))

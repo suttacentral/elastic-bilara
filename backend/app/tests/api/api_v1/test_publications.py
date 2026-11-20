@@ -118,6 +118,78 @@ async def test_inactive_or_reviewer_rejected(async_client, publication_files, re
 @pytest.mark.asyncio
 async def test_authentication_required(async_client, publication_files):
     assert (await async_client.get("/publications/")).status_code == 401
+    assert (await async_client.post("/publications/publish/")).status_code == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role,active", [("writer", True), ("reviewer", True), ("administrator", False)])
+async def test_publish_requires_active_admin(async_client, publication_files, requester, monkeypatch, role, active):
+    requester.role, requester.is_active = role, active
+    queue = Mock()
+    monkeypatch.setattr(tasks.publish_publication_metadata, "apply_async", queue)
+    assert (await async_client.post("/publications/publish/")).status_code == 403
+    queue.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["administrator", "superuser"])
+async def test_publish_queues_admin_identity_only(async_client, publication_files, requester, monkeypatch, role):
+    requester.role = role
+    queue = Mock(return_value=SimpleNamespace(id="metadata-task"))
+    monkeypatch.setattr(tasks.publish_publication_metadata, "apply_async", queue)
+    result = await async_client.post("/publications/publish/", json={"paths": ["other.json"]})
+    assert result.status_code == 202
+    assert result.json() == {"task_id": "metadata-task"}
+    queue.assert_called_once_with(args=[123], retry=False)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state", ["pending", "queued", "syncing", "retrying", "failed"])
+async def test_publish_waits_for_sync(async_client, publication_files, requester, monkeypatch, state):
+    requester.role = "administrator"
+    store = storage.PublicationStore(publication_files)
+    with store.locked():
+        store.write_sync({"status": state})
+    queue = Mock()
+    monkeypatch.setattr(tasks.publish_publication_metadata, "apply_async", queue)
+    assert (await async_client.post("/publications/publish/")).status_code == 409
+    queue.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_publish_queue_failure_is_retryable(async_client, publication_files, requester, monkeypatch):
+    requester.role = "administrator"
+    monkeypatch.setattr(tasks.publish_publication_metadata, "apply_async", Mock(side_effect=OperationalError("offline")))
+    result = await async_client.post("/publications/publish/")
+    assert result.status_code == 503
+    assert "retry" in result.json()["detail"]
+
+
+@pytest.mark.parametrize("role,active", [("writer", True), ("administrator", False)])
+def test_publish_task_rechecks_current_permissions(publication_files, requester, monkeypatch, role, active):
+    from app.services.publications import publish
+
+    requester.role, requester.is_active = role, active
+    monkeypatch.setattr("app.services.users.utils.get_user", lambda _: requester)
+    manager = Mock()
+    monkeypatch.setattr(publish, "GitManager", manager)
+    with pytest.raises(PublicationError):
+        tasks.publish_publication_metadata.run(requester.github_id)
+    manager.assert_not_called()
+
+
+def test_publish_task_uses_current_user_and_returns_pr_url(publication_files, requester, monkeypatch):
+    from app.services.publications import publish
+
+    requester.role = "administrator"
+    monkeypatch.setattr("app.services.users.utils.get_user", lambda _: requester)
+    manager = Mock()
+    monkeypatch.setattr(publish, "GitManager", manager)
+    submit = Mock(return_value="https://example.org/pull/1")
+    monkeypatch.setattr(publish, "_publish_metadata", submit)
+    assert tasks.publish_publication_metadata.run(123) == "https://example.org/pull/1"
+    manager.assert_called_once_with(settings.PUBLISHED_DIR, publication_files, requester)
+    submit.assert_called_once_with(manager.return_value)
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, status
+from kombu.exceptions import OperationalError
 
 from app.core.config import settings
 from app.services.auth import utils as auth_utils
@@ -41,6 +42,19 @@ def retry_sync(background_tasks: BackgroundTasks, service=Depends(publication_se
 @router.get("/")
 def list_publications(service=Depends(publication_service)):
     return service.list()
+
+
+@router.post("/publish/", status_code=status.HTTP_202_ACCEPTED)
+def publish_publications(service=Depends(publication_service)):
+    from app.services.publications.publish import require_publishable
+    from app.tasks import publish_publication_metadata
+
+    require_publishable(service)
+    try:
+        task = publish_publication_metadata.apply_async(args=[service.user.github_id], retry=False)
+    except (OSError, OperationalError) as exc:
+        raise HTTPException(status_code=503, detail="Unable to queue publication. Please retry.") from exc
+    return {"task_id": task.id}
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)

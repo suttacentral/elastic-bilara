@@ -43,7 +43,7 @@ function publicationsManager(adminPage = false) {
         singleAuthorIndex: '',
         revision: '',
         syncStatus: '',
-        syncState: 'idle',
+        syncState: 'loading',
         canRetrySync: false,
         syncTimer: null,
         syncVersion: 0,
@@ -59,6 +59,12 @@ function publicationsManager(adminPage = false) {
         sortField: 'publication_number',
         sortAsc: true,
         retryingSync: false,
+        publishing: false,
+        publishStatus: '',
+        publishUrl: '',
+        publishTimer: null,
+        publishDeadline: 0,
+        publishVersion: 0,
 
         form: publicationDefaults(),
         formErrors: {},
@@ -361,7 +367,7 @@ function publicationsManager(adminPage = false) {
                     throw new Error(this.errorMessage(data));
                 }
 
-                this.setSyncStatus(data._sync);
+                this.setSyncStatus(data._sync, true);
                 this.showToast(
                     isEdit ? 'Publication saved. Syncing to GitHub.' : 'Publication created. Syncing to GitHub.',
                     'success'
@@ -377,8 +383,9 @@ function publicationsManager(adminPage = false) {
         },
 
         async deletePub(pubNumber) {
-            if (!this.isAdmin) return;
+            if (!this.isAdmin || this.saving) return;
             if (!confirm(`Delete ${pubNumber}? This cannot be undone.`)) return;
+            this.saving = true;
             try {
                 const res = await requestWithTokenRetry(`publications/${encodeURIComponent(pubNumber)}`, {
                     method: 'DELETE',
@@ -387,11 +394,13 @@ function publicationsManager(adminPage = false) {
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(this.errorMessage(data));
-                this.setSyncStatus(data._sync);
+                this.setSyncStatus(data._sync, true);
                 this.showToast(`${pubNumber} deleted. Syncing to GitHub.`, 'success');
                 await this.loadPublications();
             } catch (e) {
                 this.showToast('Error: ' + e.message, 'error');
+            } finally {
+                this.saving = false;
             }
         },
 
@@ -429,13 +438,79 @@ function publicationsManager(adminPage = false) {
         destroy() {
             this.destroyed = true;
             clearTimeout(this.syncTimer);
+            clearTimeout(this.publishTimer);
         },
 
-        setSyncStatus(data) {
+        async publishMetadata() {
+            if (this.destroyed || !this.authorized || !this.isAdmin || this.publishing
+                || this.saving || !['idle', 'synced'].includes(this.syncState)) return;
+            const version = ++this.publishVersion;
+            this.publishing = true;
+            this.publishUrl = '';
+            this.publishStatus = 'Submitting metadata for review…';
+            try {
+                const res = await requestWithTokenRetry('publications/publish/', { method: 'POST', credentials: 'include' });
+                const data = await res.json();
+                if (this.destroyed || version !== this.publishVersion) return;
+                if (!res.ok) throw new Error(this.errorMessage(data));
+                if (!data.task_id) throw new Error('No publication task was returned.');
+                this.publishDeadline = Date.now() + 65 * 60 * 1000;
+                await this.checkPublishTask(data.task_id, version);
+            } catch (error) {
+                if (this.destroyed || version !== this.publishVersion) return;
+                this.publishStatus = 'Unable to submit metadata: ' + error.message;
+                this.publishing = false;
+            }
+        },
+
+        async checkPublishTask(taskId, version) {
+            if (this.destroyed || version !== this.publishVersion) return;
+            try {
+                const res = await requestWithTokenRetry(`tasks/${encodeURIComponent(taskId)}/`);
+                const data = await res.json();
+                if (this.destroyed || version !== this.publishVersion) return;
+                if (!res.ok) throw new Error(this.errorMessage(data));
+                if (data.status === 'SUCCESS') {
+                    if (data.result) {
+                        const url = new URL(data.result);
+                        if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid pull request URL.');
+                        this.publishUrl = url.href;
+                    }
+                    this.publishStatus = this.publishUrl
+                        ? 'Pull request ready. Review and merge it on GitHub.'
+                        : 'No metadata changes to publish.';
+                    this.publishing = false;
+                    return;
+                }
+                if (['FAILURE', 'REVOKED'].includes(data.status)) {
+                    this.publishStatus = 'Unable to publish metadata: ' + (data.error || 'Publication failed.');
+                    this.publishing = false;
+                    return;
+                }
+                if (!['PENDING', 'RECEIVED', 'STARTED', 'RETRY', 'PROGRESS'].includes(data.status)) {
+                    throw new Error('Unknown publication task status.');
+                }
+                if (Date.now() >= this.publishDeadline) throw new Error('Status checking timed out; the task may still be running.');
+                this.publishTimer = setTimeout(() => this.checkPublishTask(taskId, version), 3000);
+            } catch (error) {
+                if (this.destroyed || version !== this.publishVersion) return;
+                this.publishStatus = 'Unable to complete publication check: ' + error.message;
+                this.publishing = false;
+            }
+        },
+
+        setSyncStatus(data, saved = false) {
             if (this.destroyed) return;
             this.syncVersion++;
             clearTimeout(this.syncTimer);
             this.syncState = data?.status || 'pending';
+            if (saved || !['idle', 'synced'].includes(this.syncState)) {
+                this.publishVersion++;
+                clearTimeout(this.publishTimer);
+                this.publishing = false;
+                this.publishStatus = '';
+                this.publishUrl = '';
+            }
             this.canRetrySync = Boolean(data?.can_retry);
             const messages = {
                 idle: '',

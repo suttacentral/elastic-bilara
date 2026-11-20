@@ -42,6 +42,8 @@ const runChecks = async () => {
         await waitFor(() => document.querySelector('a[href="/publication-documents?publication=scpub1"]')?.textContent.includes('(20)'));
         check(![...document.querySelectorAll('button')].some(el => /Publish to GitHub|Check status/.test(el.textContent)), 'Manual publication controls must be removed');
         check([...document.querySelectorAll('button')].filter(el => /New Publication/.test(el.textContent)).every(el => Boolean(el.getClientRects().length) === window.adminMode), 'Incorrect create action visibility');
+        const publishButton = [...document.querySelectorAll('button')].find(el => el.textContent.includes('Publish metadata'));
+        check(Boolean(publishButton.getClientRects().length) === window.adminMode, 'Incorrect metadata publish visibility');
         document.querySelector('button[aria-label="Edit publication"]').click();
         await waitFor(() => state.view === 'form' && document.querySelector('input[aria-label="Creator name 2"]'));
         check(document.querySelector('#pub-source_url').readOnly === !window.adminMode, 'Source path must be read only');
@@ -65,6 +67,15 @@ const runChecks = async () => {
         await waitFor(() => state.syncState === 'synced');
         check(document.querySelector('.pub-publish-status').textContent.includes('synced to the unpublished branch'), 'Automatic sync result missing');
         check(!window.requests.some(item => item.url === 'publications/publish/'), 'Save must not invoke manual publishing');
+        if (window.adminMode) {
+            check(!publishButton.disabled, 'Synced metadata should be publishable');
+            publishButton.click();
+            await waitFor(() => state.publishUrl && !state.publishing);
+            await Alpine.nextTick();
+            const link = [...document.querySelectorAll('a')].find(el => el.textContent === 'View PR');
+            await waitFor(() => link.href === 'https://example.test/pull/1' && link.getClientRects().length);
+            check(state.publishStatus.includes('merge it on GitHub'), 'Manual merge instruction missing');
+        }
         if (window.adminMode && window.syncOnly) {
             [...document.querySelectorAll('button')].find(el => el.textContent.includes('New Publication')).click();
             await waitFor(() => state.view === 'form' && !state.editingPub && document.querySelector('input[aria-label="Creator UID"]'));
@@ -74,6 +85,7 @@ const runChecks = async () => {
             document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
             await waitFor(() => state.view === 'list' && !state.saving && state.syncState === 'synced');
             check(window.requests.some(item => item.url === 'publications/' && item.options?.method === 'POST'), 'Create was not saved');
+            check(state.publishStatus === '' && state.publishUrl === '', 'A new save must clear the previous PR result');
             document.querySelector('button[aria-label="Delete publication"]').click();
             await waitFor(() => state.publications.length === 0 && state.syncState === 'synced');
             check(window.requests.some(item => item.options?.method === 'DELETE'), 'Delete was not saved');
@@ -175,6 +187,8 @@ try {
             window.getCurrentUser = async () => ({ role: window.adminMode ? 'administrator' : 'writer', is_active: true, username: 'alice' });
             window.requestWithTokenRetry = async (url, options) => {
                 requests.push({url, options});
+                if (url === 'publications/publish/') return { ok: true, status: 202, json: async () => ({ task_id: 'metadata-task' }) };
+                if (url === 'tasks/metadata-task/') return { ok: true, status: 200, json: async () => ({ status: 'SUCCESS', result: 'https://example.test/pull/1' }) };
                 if (url === 'publication-documents/counts/') return { ok: true, status: 200, json: async () => ({ scpub1: 20 }) };
                 if (url === 'publications/sync/') return { ok: true, status: 200, json: async () => window.syncState };
                 if (url === 'publications/next-number/') return { ok: true, status: 200, json: async () => ({ next_number: 'scpub2' }) };

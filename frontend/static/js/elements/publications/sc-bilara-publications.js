@@ -23,6 +23,12 @@ export class ScBilaraPublications extends LitElement {
                   <div class="pub-header">
                       <h1 class="pub-title">Publications</h1>
                       <div style="display:flex;gap:.5rem">
+                          <button class="pub-btn" x-cloak x-show="authorized && isAdmin"
+                                  :disabled="publishing || saving || !['idle', 'synced'].includes(syncState)"
+                                  @click="await publishMetadata()"
+                                  title="Submit all saved metadata changes for review on GitHub">
+                              <span x-text="publishing ? 'Submitting…' : 'Publish metadata'"></span>
+                          </button>
                           <button class="pub-btn pub-btn-primary" @click="await showCreateForm()" x-show="isAdmin">
                               <i class="bi-plus-lg"></i> New Publication
                           </button>
@@ -34,6 +40,10 @@ export class ScBilaraPublications extends LitElement {
                   <div x-cloak x-show="syncStatus" class="pub-publish-status" role="status">
                       <span x-text="syncStatus"></span>
                       <button class="pub-btn pub-btn-sm" x-show="canRetrySync" :disabled="retryingSync" @click="await retrySync()">Retry sync</button>
+                  </div>
+                  <div x-cloak x-show="publishStatus" class="pub-publish-status" role="status">
+                      <span x-text="publishStatus"></span>
+                      <a x-show="publishUrl" :href="publishUrl" target="_blank" rel="noopener noreferrer">View PR</a>
                   </div>
                   <div class="pub-stats" x-show="authorized">
                       <span>Total: <span class="pub-stat-value" x-text="publications.length"></span></span>
